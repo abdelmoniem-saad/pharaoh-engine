@@ -3,137 +3,112 @@ Tactics screen — formation and mentality selection.
 """
 from __future__ import annotations
 
-from kivy.uix.screenmanager import Screen
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.uix.spinner import Spinner
-from kivy.metrics import dp
-from kivy.app import App
+import flet as ft
 
 from src.data import queries
-from src.core.tactics import (
-    get_available_formations, PRESETS, preset_to_tactics,
-)
+from src.core.tactics import get_available_formations, PRESETS
 from src.utils.config import Mentality
+from src.ui.widgets.nav_bar import build_nav_bar
 
 
-class TacticsScreen(Screen):
-    """Tactical setup — choose formation, mentality, and presets."""
+def build_tactics_screen(page: ft.Page) -> ft.Column:
+    """Build the tactical setup content."""
+    from src.ui.app import app_state, navigate
 
-    def on_enter(self):
-        self.clear_widgets()
-        app = App.get_running_app()
+    # Set the navigation bar
+    page.navigation_bar = build_nav_bar(page, 1)
 
-        if not app.db_conn or not app.game_state:
-            self.add_widget(Label(text="No game loaded"))
-            return
+    if not app_state.db_conn or not app_state.game_state:
+        return ft.Column(controls=[ft.Text("No game loaded")])
 
-        conn = app.db_conn
-        club = queries.get_club(conn, app.game_state.user_club_id)
-        if not club:
-            return
+    conn = app_state.db_conn
+    gs = app_state.game_state
+    club = queries.get_club(conn, gs.user_club_id)
+    if not club:
+        return ft.Column(controls=[ft.Text("Club not found")])
 
-        layout = BoxLayout(orientation="vertical", padding=dp(15), spacing=dp(10))
+    formations = get_available_formations()
+    mentality_options = [
+        ft.dropdown.Option(m.name.replace("_", " ").title()) for m in Mentality
+    ]
 
-        # Title
-        layout.add_widget(Label(
-            text="⚙️ Tactics",
-            font_size=dp(22), bold=True,
-            size_hint_y=None, height=dp(45),
-        ))
+    def on_formation_change(e):
+        club_obj = queries.get_club(conn, gs.user_club_id)
+        if club_obj:
+            club_obj.formation = e.control.value
+            queries.update_club(conn, club_obj)
 
-        # Formation picker
-        layout.add_widget(Label(
-            text="Formation:", font_size=dp(15),
-            size_hint_y=None, height=dp(25),
-            halign="left",
-        ))
-
-        formations = get_available_formations()
-        formation_spinner = Spinner(
-            text=club.formation,
-            values=formations,
-            size_hint_y=None, height=dp(45),
-            font_size=dp(16),
-        )
-        formation_spinner.bind(text=lambda inst, val: self._update_formation(val))
-        layout.add_widget(formation_spinner)
-
-        # Mentality picker
-        layout.add_widget(Label(
-            text="Mentality:", font_size=dp(15),
-            size_hint_y=None, height=dp(25),
-            halign="left",
-        ))
-
-        mentality_names = [m.name.replace("_", " ").title() for m in Mentality]
-        mentality_spinner = Spinner(
-            text=club.mentality.name.replace("_", " ").title(),
-            values=mentality_names,
-            size_hint_y=None, height=dp(45),
-            font_size=dp(16),
-        )
-        mentality_spinner.bind(text=lambda inst, val: self._update_mentality(val))
-        layout.add_widget(mentality_spinner)
-
-        # Presets section
-        layout.add_widget(Label(
-            text="Quick Presets:", font_size=dp(15),
-            size_hint_y=None, height=dp(30),
-            halign="left",
-        ))
-
-        for key, preset in PRESETS.items():
-            btn = Button(
-                text=f"{preset.name}\n{preset.description[:50]}...",
-                size_hint_y=None, height=dp(55),
-                font_size=dp(12),
-                halign="center",
-            )
-            btn.preset_key = key
-            btn.bind(on_press=lambda inst: self._apply_preset(inst.preset_key))
-            layout.add_widget(btn)
-
-        # Back button
-        back_btn = Button(
-            text="← Back to Squad",
-            size_hint_y=None, height=dp(45),
-            font_size=dp(15),
-        )
-        back_btn.bind(on_press=lambda inst: setattr(self.manager, 'current', 'squad'))
-        layout.add_widget(back_btn)
-
-        self.add_widget(layout)
-
-    def _update_formation(self, formation: str):
-        app = App.get_running_app()
-        club = queries.get_club(app.db_conn, app.game_state.user_club_id)
-        if club:
-            club.formation = formation
-            queries.update_club(app.db_conn, club)
-
-    def _update_mentality(self, mentality_name: str):
-        app = App.get_running_app()
-        club = queries.get_club(app.db_conn, app.game_state.user_club_id)
-        if club:
-            mentality_key = mentality_name.upper().replace(" ", "_")
+    def on_mentality_change(e):
+        club_obj = queries.get_club(conn, gs.user_club_id)
+        if club_obj:
+            key = e.control.value.upper().replace(" ", "_")
             try:
-                club.mentality = Mentality[mentality_key]
-                queries.update_club(app.db_conn, club)
+                club_obj.mentality = Mentality[key]
+                queries.update_club(conn, club_obj)
             except KeyError:
                 pass
 
-    def _apply_preset(self, preset_key: str):
-        app = App.get_running_app()
-        preset = PRESETS.get(preset_key)
-        if not preset:
-            return
+    def make_preset_handler(preset_key):
+        def handler(e):
+            preset = PRESETS[preset_key]
+            club_obj = queries.get_club(conn, gs.user_club_id)
+            if club_obj:
+                club_obj.formation = preset.formation
+                club_obj.mentality = preset.mentality
+                queries.update_club(conn, club_obj)
+                navigate(page, "/tactics")  # Refresh
+        return handler
 
-        club = queries.get_club(app.db_conn, app.game_state.user_club_id)
-        if club:
-            club.formation = preset.formation
-            club.mentality = preset.mentality
-            queries.update_club(app.db_conn, club)
-            self.on_enter()  # Refresh screen
+    # Preset cards
+    preset_cards = []
+    for key, preset in PRESETS.items():
+        preset_cards.append(
+            ft.Card(
+                content=ft.Container(
+                    content=ft.ListTile(
+                        leading=ft.Icon(ft.Icons.PLAY_ARROW),
+                        title=ft.Text(preset.name, weight=ft.FontWeight.W_500),
+                        subtitle=ft.Text(
+                            f"{preset.formation} | {preset.description[:60]}",
+                            size=11, color=ft.Colors.GREY_400,
+                        ),
+                        on_click=make_preset_handler(key),
+                    ),
+                    padding=ft.padding.symmetric(vertical=2),
+                ),
+            )
+        )
 
+    return ft.Column(
+        expand=True,
+        scroll=ft.ScrollMode.AUTO,
+        controls=[
+            ft.Container(
+                padding=15,
+                content=ft.Column(
+                    spacing=10,
+                    controls=[
+                        ft.Text("⚙️ Tactics", size=22, weight=ft.FontWeight.BOLD),
+                        ft.Divider(height=1),
+                        ft.Dropdown(
+                            label="Formation",
+                            value=club.formation,
+                            options=[ft.dropdown.Option(f) for f in formations],
+                            on_select=on_formation_change,
+                            width=300,
+                        ),
+                        ft.Dropdown(
+                            label="Mentality",
+                            value=club.mentality.name.replace("_", " ").title(),
+                            options=mentality_options,
+                            on_select=on_mentality_change,
+                            width=300,
+                        ),
+                        ft.Container(height=10),
+                        ft.Text("Quick Presets", size=16, weight=ft.FontWeight.W_500),
+                        *preset_cards,
+                    ],
+                ),
+            ),
+        ],
+    )

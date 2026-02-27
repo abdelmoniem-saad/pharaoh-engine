@@ -1,38 +1,34 @@
 """
-Player card widget — reusable player info display.
+Player card widget — reusable player info display for Flet.
 """
 from __future__ import annotations
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
-from kivy.metrics import dp
+
+import flet as ft
+
 from src.data.models import Player
 from src.core.player import calculate_overall_rating
 
 
-class PlayerCard(BoxLayout):
-    """Compact player info card for use in lists and popups."""
+def player_card(player: Player) -> ft.ListTile:
+    """Create a compact player info tile."""
+    ovr = calculate_overall_rating(player)
+    fit_color = (
+        ft.Colors.GREEN_400 if player.fitness >= 80
+        else ft.Colors.YELLOW_400 if player.fitness >= 50
+        else ft.Colors.RED_400
+    )
+    ovr_color = ft.Colors.GREEN_300 if ovr >= 70 else ft.Colors.WHITE
 
-    def __init__(self, player: Player, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = "horizontal"
-        self.size_hint_y = None
-        self.height = dp(40)
-        self.spacing = dp(5)
-
-        ovr = calculate_overall_rating(player)
-
-        self.add_widget(Label(text=player.name, font_size=dp(13),
-            size_hint_x=0.35, halign="left", text_size=(dp(100), None)))
-        self.add_widget(Label(text=player.position.value, font_size=dp(12),
-            size_hint_x=0.1))
-        self.add_widget(Label(text=str(player.age), font_size=dp(12),
-            size_hint_x=0.1))
-        self.add_widget(Label(text=str(ovr), font_size=dp(13), bold=True,
-            size_hint_x=0.1,
-            color=(0.3, 1, 0.3, 1) if ovr >= 70 else (1, 1, 1, 1)))
-        self.add_widget(Label(text=f"{player.fitness}%", font_size=dp(12),
-            size_hint_x=0.1,
-            color=(0, 1, 0, 1) if player.fitness >= 80 else (1, 0, 0, 1)))
-        self.add_widget(Label(text=f"{player.form:.1f}", font_size=dp(12),
-            size_hint_x=0.1))
-
+    return ft.ListTile(
+        leading=ft.Text(player.position.value, size=12, color=ft.Colors.AMBER_300),
+        title=ft.Text(player.name, size=13, weight=ft.FontWeight.W_500),
+        subtitle=ft.Text(f"Age {player.age} | Form {player.form:.1f}", size=11, color=ft.Colors.GREY_400),
+        trailing=ft.Row(
+            spacing=12,
+            tight=True,
+            controls=[
+                ft.Text(str(ovr), size=14, weight=ft.FontWeight.BOLD, color=ovr_color),
+                ft.Text(f"{player.fitness}%", size=12, color=fit_color),
+            ],
+        ),
+    )

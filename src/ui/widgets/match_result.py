@@ -1,32 +1,37 @@
 """
-Match result widget — compact result display.
+Match result widget — compact result display for Flet.
 """
 from __future__ import annotations
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
-from kivy.metrics import dp
+
+import flet as ft
+
 from src.data.models import MatchResult
 
 
-class MatchResultWidget(BoxLayout):
-    """Compact match result display."""
-
-    def __init__(self, result: MatchResult, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = "horizontal"
-        self.size_hint_y = None
-        self.height = dp(35)
-
-        self.add_widget(Label(
-            text=result.home_club_name, font_size=dp(12),
-            size_hint_x=0.35, halign="right", text_size=(dp(100), None),
-        ))
-        self.add_widget(Label(
-            text=f"{result.home_goals} - {result.away_goals}",
-            font_size=dp(14), bold=True, size_hint_x=0.15,
-        ))
-        self.add_widget(Label(
-            text=result.away_club_name, font_size=dp(12),
-            size_hint_x=0.35, halign="left", text_size=(dp(100), None),
-        ))
-
+def match_result_row(result: MatchResult) -> ft.Row:
+    """Create a compact match result display row."""
+    return ft.Row(
+        alignment=ft.MainAxisAlignment.CENTER,
+        spacing=10,
+        controls=[
+            ft.Text(
+                result.home_club_name,
+                size=13, text_align=ft.TextAlign.RIGHT,
+                width=120,
+            ),
+            ft.Container(
+                content=ft.Text(
+                    f"{result.home_goals} - {result.away_goals}",
+                    size=15, weight=ft.FontWeight.BOLD,
+                ),
+                bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.WHITE),
+                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                border_radius=5,
+            ),
+            ft.Text(
+                result.away_club_name,
+                size=13, text_align=ft.TextAlign.LEFT,
+                width=120,
+            ),
+        ],
+    )

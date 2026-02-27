@@ -1,70 +1,79 @@
 """
-Main Kivy application — screen manager and app lifecycle.
+Main Flet application — navigation, shared state, and app lifecycle.
 """
 from __future__ import annotations
 
 import os
 import sys
+import sqlite3
 
 # Ensure src is on the path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from kivy.app import App
-from kivy.uix.screenmanager import ScreenManager, SlideTransition
-from kivy.core.window import Window
+import flet as ft
 
-from src.ui.screens.main_menu import MainMenuScreen
-from src.ui.screens.squad import SquadScreen
-from src.ui.screens.tactics import TacticsScreen
-from src.ui.screens.match_day import MatchDayScreen
-from src.ui.screens.table import TableScreen
-from src.ui.screens.inbox import InboxScreen
-
-# Set mobile-friendly window size for desktop testing
-Window.size = (400, 700)
+from src.data.models import GameState
 
 
-class PharaohScreenManager(ScreenManager):
-    """Manages all game screens."""
-    pass
+class AppState:
+    """Shared application state accessible from all views."""
+
+    def __init__(self):
+        self.db_conn: sqlite3.Connection | None = None
+        self.game_state: GameState | None = None
 
 
-class PharaohEngineApp(App):
-    """Main application class."""
+# Global state instance
+app_state = AppState()
 
-    title = "Pharaoh Engine"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.db_conn = None
-        self.game_state = None
+def navigate(page: ft.Page, route: str):
+    """
+    Navigate to a screen by replacing page controls.
 
-    def build(self):
-        self.sm = PharaohScreenManager(transition=SlideTransition())
+    This is the central navigation function used by all screens.
+    """
+    from src.ui.screens.main_menu import build_main_menu
+    from src.ui.screens.squad import build_squad_screen
+    from src.ui.screens.tactics import build_tactics_screen
+    from src.ui.screens.match_day import build_match_day_screen
+    from src.ui.screens.table import build_table_screen
+    from src.ui.screens.inbox import build_inbox_screen
 
-        # Add all screens
-        self.sm.add_widget(MainMenuScreen(name="main_menu"))
-        self.sm.add_widget(SquadScreen(name="squad"))
-        self.sm.add_widget(TacticsScreen(name="tactics"))
-        self.sm.add_widget(MatchDayScreen(name="match_day"))
-        self.sm.add_widget(TableScreen(name="table"))
-        self.sm.add_widget(InboxScreen(name="inbox"))
+    builders = {
+        "/": build_main_menu,
+        "/main_menu": build_main_menu,
+        "/squad": build_squad_screen,
+        "/tactics": build_tactics_screen,
+        "/match_day": build_match_day_screen,
+        "/table": build_table_screen,
+        "/inbox": build_inbox_screen,
+    }
 
-        return self.sm
+    builder = builders.get(route, build_main_menu)
+    content = builder(page)
 
-    def on_stop(self):
-        """Clean up on app exit."""
-        if self.db_conn:
-            from src.data.database import close
-            close()
+    page.controls.clear()
+    page.controls.append(content)
+    page.update()
 
-    def switch_screen(self, screen_name: str, direction: str = "left"):
-        """Navigate to a different screen."""
-        self.sm.transition.direction = direction
-        self.sm.current = screen_name
+
+def main(page: ft.Page):
+    """Flet app entry point — configures the page and sets up routing."""
+    page.title = "Pharaoh Engine"
+    page.window.width = 420
+    page.window.height = 780
+    page.theme_mode = ft.ThemeMode.DARK
+    page.theme = ft.Theme(
+        color_scheme_seed=ft.Colors.AMBER,
+        font_family="Roboto",
+    )
+    page.padding = 0
+
+    # Show main menu
+    navigate(page, "/")
 
 
 def run_app():
-    """Entry point to launch the application."""
-    PharaohEngineApp().run()
-
+    """Entry point to launch the Flet application."""
+    ft.run(main)

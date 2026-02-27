@@ -2,69 +2,97 @@
 Inbox screen — game messages and news feed.
 """
 from __future__ import annotations
-from kivy.uix.screenmanager import Screen
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.uix.scrollview import ScrollView
-from kivy.metrics import dp
-from kivy.app import App
+
+import flet as ft
+
 from src.data import queries
+from src.ui.widgets.nav_bar import build_nav_bar
 
 
-class InboxScreen(Screen):
-    """Display in-game messages — match reports, news, board updates."""
+def build_inbox_screen(page: ft.Page) -> ft.Column:
+    """Build the inbox/messages content."""
+    from src.ui.app import app_state, navigate
 
-    def on_enter(self):
-        self.clear_widgets()
-        app = App.get_running_app()
-        if not app.db_conn or not app.game_state:
-            self.add_widget(Label(text="No game loaded"))
-            return
+    # Set the navigation bar
+    page.navigation_bar = build_nav_bar(page, 4)
 
-        conn = app.db_conn
-        messages = queries.get_inbox(conn, limit=30)
+    if not app_state.db_conn or not app_state.game_state:
+        return ft.Column(controls=[ft.Text("No game loaded")])
 
-        layout = BoxLayout(orientation="vertical", padding=dp(10), spacing=dp(5))
-        layout.add_widget(Label(
-            text="Inbox", font_size=dp(20), bold=True,
-            size_hint_y=None, height=dp(40),
-        ))
+    conn = app_state.db_conn
+    messages = queries.get_inbox(conn, limit=30)
 
-        if not messages:
-            layout.add_widget(Label(text="No messages yet.", font_size=dp(14)))
-        else:
-            scroll = ScrollView(size_hint=(1, 1))
-            msg_list = BoxLayout(orientation="vertical", size_hint_y=None, spacing=dp(5))
-            msg_list.bind(minimum_height=msg_list.setter("height"))
+    cat_icons = {
+        "match": ft.Icons.SPORTS_SOCCER,
+        "media": ft.Icons.NEWSPAPER,
+        "board": ft.Icons.ACCOUNT_BALANCE,
+        "transfer": ft.Icons.ATTACH_MONEY,
+        "general": ft.Icons.MAIL,
+    }
 
-            for msg in messages:
-                read_indicator = "" if msg.is_read else "[NEW] "
-                cat_icon = {"match": "⚽", "media": "📰", "board": "🏛️",
-                            "transfer": "💰"}.get(msg.category, "📧")
+    msg_tiles = []
+    if not messages:
+        msg_tiles.append(
+            ft.Container(
+                content=ft.Text(
+                    "No messages yet.",
+                    size=14, color=ft.Colors.GREY_500,
+                    text_align=ft.TextAlign.CENTER,
+                ),
+                padding=40,
+                alignment="center",
+            )
+        )
+    else:
+        for msg in messages:
+            icon = cat_icons.get(msg.category, ft.Icons.MAIL)
+            icon_color = ft.Colors.AMBER_300 if not msg.is_read else ft.Colors.GREY_600
+            title_weight = ft.FontWeight.BOLD if not msg.is_read else ft.FontWeight.NORMAL
+            new_badge = ft.Text(" NEW", size=9, color=ft.Colors.RED_400) if not msg.is_read else None
 
-                btn = Button(
-                    text=f"{cat_icon} {read_indicator}{msg.subject}\n{msg.date.strftime('%d %b')} — {msg.body[:60]}...",
-                    size_hint_y=None, height=dp(60), font_size=dp(11),
-                    halign="left", text_size=(dp(350), None),
+            def make_handler(mid=msg.id):
+                def handler(e):
+                    queries.mark_message_read(conn, mid)
+                    navigate(page, "/inbox")  # Refresh
+                return handler
+
+            title_row = ft.Row(
+                controls=[
+                    ft.Text(msg.subject, size=13, weight=title_weight, expand=True),
+                ],
+                spacing=5,
+            )
+            if new_badge:
+                title_row.controls.append(new_badge)
+
+            msg_tiles.append(
+                ft.ListTile(
+                    leading=ft.Icon(icon, color=icon_color, size=22),
+                    title=title_row,
+                    subtitle=ft.Text(
+                        f"{msg.date.strftime('%d %b')} — {msg.body[:70]}",
+                        size=11, color=ft.Colors.GREY_400,
+                        max_lines=2,
+                        overflow=ft.TextOverflow.ELLIPSIS,
+                    ),
+                    on_click=make_handler(),
                 )
-                btn.msg_id = msg.id
-                btn.bind(on_press=lambda inst: self._mark_read(conn, inst.msg_id))
-                msg_list.add_widget(btn)
+            )
 
-            scroll.add_widget(msg_list)
-            layout.add_widget(scroll)
-
-        nav = BoxLayout(size_hint_y=None, height=dp(45), spacing=dp(5))
-        for target, text in [("squad", "Squad"), ("match_day", "Match"), ("table", "Table")]:
-            btn = Button(text=text, font_size=dp(13))
-            btn.screen_target = target
-            btn.bind(on_press=lambda inst: setattr(self.manager, 'current', inst.screen_target))
-            nav.add_widget(btn)
-        layout.add_widget(nav)
-        self.add_widget(layout)
-
-    def _mark_read(self, conn, msg_id):
-        queries.mark_message_read(conn, msg_id)
-        self.on_enter()
-
+    return ft.Column(
+        expand=True,
+        scroll=ft.ScrollMode.AUTO,
+        controls=[
+            ft.Container(
+                padding=10,
+                content=ft.Column(
+                    spacing=5,
+                    controls=[
+                        ft.Text("📧 Inbox", size=22, weight=ft.FontWeight.BOLD),
+                        ft.Divider(height=1),
+                        *msg_tiles,
+                    ],
+                ),
+            ),
+        ],
+    )

@@ -3,114 +3,86 @@ Squad management screen — view players, set starting XI.
 """
 from __future__ import annotations
 
-from kivy.uix.screenmanager import Screen
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.uix.scrollview import ScrollView
-from kivy.metrics import dp
-from kivy.app import App
+import flet as ft
 
 from src.data import queries
 from src.core.player import calculate_overall_rating
+from src.ui.widgets.nav_bar import build_nav_bar
 
 
-class SquadScreen(Screen):
-    """Display the user's squad with key attributes."""
+def build_squad_screen(page: ft.Page) -> ft.Column:
+    """Build the squad management content."""
+    from src.ui.app import app_state
 
-    def on_enter(self):
-        self.clear_widgets()
-        app = App.get_running_app()
+    # Set the navigation bar
+    page.navigation_bar = build_nav_bar(page, 0)
 
-        if not app.db_conn or not app.game_state:
-            self.add_widget(Label(text="No game loaded"))
-            return
+    if not app_state.db_conn or not app_state.game_state:
+        return ft.Column(controls=[ft.Text("No game loaded")])
 
-        conn = app.db_conn
-        game_state = app.game_state
-        squad = queries.get_players_by_club(conn, game_state.user_club_id)
+    conn = app_state.db_conn
+    gs = app_state.game_state
+    squad = queries.get_players_by_club(conn, gs.user_club_id)
 
-        layout = BoxLayout(orientation="vertical", padding=dp(10), spacing=dp(5))
-
-        # Header
-        header = BoxLayout(size_hint_y=None, height=dp(50))
-        header.add_widget(Label(
-            text=f"📋 {game_state.user_club_name} — Squad",
-            font_size=dp(20), bold=True, halign="left",
-        ))
-        layout.add_widget(header)
-
-        # Date display
-        date_label = Label(
-            text=f"Date: {game_state.current_date.strftime('%d %b %Y')}",
-            size_hint_y=None, height=dp(25), font_size=dp(13),
-            color=(0.7, 0.7, 0.7, 1),
+    # Build player rows for the DataTable
+    rows = []
+    for player in squad:
+        ovr = calculate_overall_rating(player)
+        fit_color = (
+            ft.Colors.GREEN_400 if player.fitness >= 80
+            else ft.Colors.YELLOW_400 if player.fitness >= 50
+            else ft.Colors.RED_400
         )
-        layout.add_widget(date_label)
+        ovr_color = ft.Colors.GREEN_300 if ovr >= 70 else ft.Colors.WHITE
 
-        # Column headers
-        col_header = GridLayout(cols=5, size_hint_y=None, height=dp(30), spacing=dp(2))
-        for text in ["Name", "Pos", "Age", "OVR", "Fit"]:
-            col_header.add_widget(Label(
-                text=text, font_size=dp(12), bold=True,
-                color=(0.9, 0.8, 0.3, 1),
-            ))
-        layout.add_widget(col_header)
-
-        # Player list
-        scroll = ScrollView(size_hint=(1, 1))
-        player_list = GridLayout(
-            cols=5, size_hint_y=None, spacing=dp(2), padding=dp(2),
+        rows.append(
+            ft.DataRow(
+                cells=[
+                    ft.DataCell(ft.Text(player.name, size=13)),
+                    ft.DataCell(ft.Text(player.position.value, size=12)),
+                    ft.DataCell(ft.Text(str(player.age), size=12)),
+                    ft.DataCell(ft.Text(str(ovr), size=13, weight=ft.FontWeight.BOLD, color=ovr_color)),
+                    ft.DataCell(ft.Text(f"{player.fitness}%", size=12, color=fit_color)),
+                    ft.DataCell(ft.Text(f"{player.form:.1f}", size=12)),
+                ],
+            )
         )
-        player_list.bind(minimum_height=player_list.setter("height"))
 
-        for player in squad:
-            ovr = calculate_overall_rating(player)
-            fit_color = (0, 1, 0, 1) if player.fitness >= 80 else \
-                        (1, 1, 0, 1) if player.fitness >= 50 else (1, 0, 0, 1)
+    data_table = ft.DataTable(
+        columns=[
+            ft.DataColumn(ft.Text("Name", size=12, weight=ft.FontWeight.BOLD)),
+            ft.DataColumn(ft.Text("Pos", size=12, weight=ft.FontWeight.BOLD)),
+            ft.DataColumn(ft.Text("Age", size=12, weight=ft.FontWeight.BOLD), numeric=True),
+            ft.DataColumn(ft.Text("OVR", size=12, weight=ft.FontWeight.BOLD), numeric=True),
+            ft.DataColumn(ft.Text("Fit", size=12, weight=ft.FontWeight.BOLD)),
+            ft.DataColumn(ft.Text("Form", size=12, weight=ft.FontWeight.BOLD), numeric=True),
+        ],
+        rows=rows,
+        column_spacing=12,
+        horizontal_lines=ft.BorderSide(0.3, ft.Colors.WHITE24),
+    )
 
-            player_list.add_widget(Label(
-                text=player.name, font_size=dp(12),
-                size_hint_y=None, height=dp(35),
-                text_size=(dp(120), None), halign="left",
-            ))
-            player_list.add_widget(Label(
-                text=player.position.value, font_size=dp(12),
-                size_hint_y=None, height=dp(35),
-            ))
-            player_list.add_widget(Label(
-                text=str(player.age), font_size=dp(12),
-                size_hint_y=None, height=dp(35),
-            ))
-            player_list.add_widget(Label(
-                text=str(ovr), font_size=dp(14), bold=True,
-                size_hint_y=None, height=dp(35),
-                color=(0.3, 1, 0.3, 1) if ovr >= 70 else (1, 1, 1, 1),
-            ))
-            player_list.add_widget(Label(
-                text=f"{player.fitness}%", font_size=dp(12),
-                size_hint_y=None, height=dp(35),
-                color=fit_color,
-            ))
-
-        scroll.add_widget(player_list)
-        layout.add_widget(scroll)
-
-        # Navigation buttons
-        nav = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(5))
-
-        for screen_name, label_text in [
-            ("tactics", "⚙ Tactics"),
-            ("match_day", "⚽ Match"),
-            ("table", "📊 Table"),
-            ("inbox", "📧 Inbox"),
-        ]:
-            btn = Button(text=label_text, font_size=dp(13))
-            btn.screen_target = screen_name
-            btn.bind(on_press=lambda inst: setattr(self.manager, 'current', inst.screen_target))
-            nav.add_widget(btn)
-
-        layout.add_widget(nav)
-        self.add_widget(layout)
-
+    return ft.Column(
+        expand=True,
+        scroll=ft.ScrollMode.AUTO,
+        controls=[
+            ft.Container(
+                padding=ft.padding.only(left=10, right=10, top=10),
+                content=ft.Column(
+                    spacing=5,
+                    controls=[
+                        ft.Text(
+                            f"📋 {gs.user_club_name} — Squad",
+                            size=22, weight=ft.FontWeight.BOLD,
+                        ),
+                        ft.Text(
+                            f"Date: {gs.current_date.strftime('%d %b %Y')}",
+                            size=13, color=ft.Colors.GREY_500,
+                        ),
+                        ft.Divider(height=1),
+                        data_table,
+                    ],
+                ),
+            ),
+        ],
+    )

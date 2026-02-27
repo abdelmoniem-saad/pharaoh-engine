@@ -27,11 +27,11 @@ A deeply authentic football management game centered on the Egyptian league ecos
 | Layer | Technology |
 |---|---|
 | Language | Python 3.11+ |
-| Mobile UI | Kivy + KivyMD |
+| UI Framework | Flet (Flutter-backed, pure Python) |
 | Database | SQLite (stdlib) |
 | Data Models | Pydantic v2 |
-| Android Build | Buildozer |
-| iOS Build | kivy-ios |
+| Mobile Build | `flet build apk` / `flet build ipa` |
+| Web Deploy | `flet run --web` |
 | Testing | pytest |
 
 ## 📁 Project Structure
@@ -100,8 +100,17 @@ pytest tests/ -v
 
 ### Build for Android
 ```bash
-pip install buildozer
-buildozer android debug
+flet build apk
+```
+
+### Build for iOS
+```bash
+flet build ipa
+```
+
+### Run as Web App
+```bash
+flet run --web main.py
 ```
 
 ## 🗺️ Development Roadmap

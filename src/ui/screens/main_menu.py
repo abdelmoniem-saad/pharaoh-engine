@@ -3,177 +3,171 @@ Main Menu screen — New Game, Continue, Settings.
 """
 from __future__ import annotations
 
-from kivy.uix.screenmanager import Screen
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.popup import Popup
-from kivy.metrics import dp
+import flet as ft
 
-from src.data.database import connect, init_schema, close, delete_save
+from src.data.database import connect, delete_save
 from src.data.seed import seed_database
 from src.data import queries
 from src.core.league import create_league_season
 from src.utils import rng
 
 
-class MainMenuScreen(Screen):
-    """Main menu with New Game, Continue, and Settings options."""
+def build_main_menu(page: ft.Page) -> ft.Column:
+    """Build the main menu content."""
 
-    def on_enter(self):
-        self.clear_widgets()
-        layout = BoxLayout(orientation="vertical", padding=dp(20), spacing=dp(15))
+    def new_game_click(e):
+        _show_club_selection(page)
 
-        # Title
-        title = Label(
-            text="⚽ PHARAOH ENGINE ⚽",
-            font_size=dp(28),
-            bold=True,
-            size_hint_y=0.3,
-            halign="center",
-        )
-        layout.add_widget(title)
+    def continue_click(e):
+        _continue_game(page)
 
-        subtitle = Label(
-            text="Egyptian Football Manager",
-            font_size=dp(16),
-            size_hint_y=0.1,
-            halign="center",
-            color=(0.8, 0.7, 0.3, 1),
-        )
-        layout.add_widget(subtitle)
-
-        # Buttons
-        btn_style = {
-            "size_hint_y": None,
-            "height": dp(55),
-            "font_size": dp(18),
-        }
-
-        new_game_btn = Button(text="New Game", **btn_style)
-        new_game_btn.bind(on_press=self._show_club_selection)
-        layout.add_widget(new_game_btn)
-
-        continue_btn = Button(text="Continue", **btn_style)
-        continue_btn.bind(on_press=self._continue_game)
-        layout.add_widget(continue_btn)
-
-        settings_btn = Button(text="Settings", **btn_style)
-        settings_btn.bind(on_press=self._open_settings)
-        layout.add_widget(settings_btn)
-
-        # Version
-        version = Label(
-            text="v0.1.0 — MVP",
-            font_size=dp(12),
-            size_hint_y=0.1,
-            color=(0.5, 0.5, 0.5, 1),
-        )
-        layout.add_widget(version)
-
-        self.add_widget(layout)
-
-    def _show_club_selection(self, instance):
-        """Show a popup to pick a club for a new game."""
-        # Seed the database
-        delete_save("default")
-        conn = connect("default")
-        game_state = seed_database(conn, game_seed=rng.randint(1, 999999))
-
-        # Generate league fixtures
-        clubs = queries.get_all_clubs(conn)
-        create_league_season(conn, clubs, game_state.season_year)
-
-        # Show club picker
-        content = BoxLayout(orientation="vertical", spacing=dp(5))
-        scroll = ScrollView(size_hint=(1, 0.9))
-        club_list = BoxLayout(orientation="vertical", size_hint_y=None, spacing=dp(5))
-        club_list.bind(minimum_height=club_list.setter("height"))
-
-        popup = Popup(
-            title="Choose Your Club",
-            size_hint=(0.9, 0.8),
-        )
-
-        for club in clubs:
-            btn = Button(
-                text=f"{club.name} ({club.city}) — Rep: {club.reputation}",
-                size_hint_y=None,
-                height=dp(45),
-                font_size=dp(14),
+    def settings_click(e):
+        page.show_dialog(
+            ft.AlertDialog(
+                title=ft.Text("Settings"),
+                content=ft.Text("Settings coming in Phase 2!"),
             )
-            btn.club_id = club.id
-            btn.club_name = club.name
-            btn.bind(on_press=lambda inst: self._select_club(inst, conn, game_state, popup))
-            club_list.add_widget(btn)
-
-        scroll.add_widget(club_list)
-        content.add_widget(scroll)
-
-        cancel_btn = Button(text="Cancel", size_hint_y=None, height=dp(45))
-        cancel_btn.bind(on_press=popup.dismiss)
-        content.add_widget(cancel_btn)
-
-        popup.content = content
-        popup.open()
-
-    def _select_club(self, instance, conn, game_state, popup):
-        """Handle club selection."""
-        game_state.user_club_id = instance.club_id
-        game_state.user_club_name = instance.club_name
-        queries.save_game_state(conn, game_state)
-
-        # Mark club as user controlled
-        club = queries.get_club(conn, instance.club_id)
-        if club:
-            club.is_user_controlled = True
-            queries.update_club(conn, club)
-
-        app = self.manager.parent if hasattr(self.manager, 'parent') else None
-        if hasattr(self.manager, '_app'):
-            self.manager._app.db_conn = conn
-            self.manager._app.game_state = game_state
-
-        # Store on the app
-        from kivy.app import App
-        app = App.get_running_app()
-        app.db_conn = conn
-        app.game_state = game_state
-
-        popup.dismiss()
-        self.manager.current = "squad"
-
-    def _continue_game(self, instance):
-        """Load an existing save game."""
-        from kivy.app import App
-        try:
-            conn = connect("default")
-            game_state = queries.load_game_state(conn)
-            if game_state:
-                app = App.get_running_app()
-                app.db_conn = conn
-                app.game_state = game_state
-                self.manager.current = "squad"
-            else:
-                self._show_error("No save game found. Start a New Game!")
-        except Exception as e:
-            self._show_error(f"Error loading save: {e}")
-
-    def _open_settings(self, instance):
-        """Open settings popup. Placeholder."""
-        popup = Popup(
-            title="Settings",
-            content=Label(text="Settings coming in Phase 2!"),
-            size_hint=(0.8, 0.4),
         )
-        popup.open()
 
-    def _show_error(self, message: str):
-        popup = Popup(
-            title="Error",
-            content=Label(text=message),
-            size_hint=(0.8, 0.3),
+    # No navigation bar on main menu
+    page.navigation_bar = None
+
+    return ft.Column(
+        alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        expand=True,
+        controls=[
+            ft.Container(expand=2),
+            ft.Text(
+                "⚽ PHARAOH ENGINE ⚽",
+                size=32, weight=ft.FontWeight.BOLD,
+                text_align=ft.TextAlign.CENTER,
+            ),
+            ft.Text(
+                "Egyptian Football Manager",
+                size=16,
+                color=ft.Colors.AMBER_400,
+                text_align=ft.TextAlign.CENTER,
+            ),
+            ft.Container(expand=1),
+            ft.Button(
+                "New Game",
+                width=280, height=55,
+                style=ft.ButtonStyle(text_style=ft.TextStyle(size=18)),
+                on_click=new_game_click,
+            ),
+            ft.Button(
+                "Continue",
+                width=280, height=55,
+                style=ft.ButtonStyle(text_style=ft.TextStyle(size=18)),
+                on_click=continue_click,
+            ),
+            ft.OutlinedButton(
+                "Settings",
+                width=280, height=50,
+                on_click=settings_click,
+            ),
+            ft.Container(expand=2),
+            ft.Text(
+                "v0.1.0 — MVP",
+                size=12, color=ft.Colors.GREY_600,
+            ),
+        ],
+    )
+
+
+def _show_club_selection(page: ft.Page):
+    """Create a new game and show club selection dialog."""
+    from src.ui.app import app_state, navigate
+
+    # Seed the database
+    delete_save("default")
+    conn = connect("default")
+    game_state = seed_database(conn, game_seed=rng.randint(1, 999999))
+
+    # Generate league fixtures
+    clubs = queries.get_all_clubs(conn)
+    create_league_season(conn, clubs, game_state.season_year)
+
+    # Build club list
+    club_buttons = []
+    for club in clubs:
+        def make_handler(c=club):
+            def handler(e):
+                _select_club(page, conn, game_state, c.id, c.name, dlg)
+            return handler
+
+        club_buttons.append(
+            ft.ListTile(
+                leading=ft.Icon(ft.Icons.SPORTS_SOCCER, color=club.primary_color),
+                title=ft.Text(club.name, weight=ft.FontWeight.W_500),
+                subtitle=ft.Text(f"{club.city} — Rep: {club.reputation}"),
+                on_click=make_handler(),
+            )
         )
-        popup.open()
 
+    dlg = ft.AlertDialog(
+        title=ft.Text("Choose Your Club"),
+        content=ft.Container(
+            content=ft.ListView(
+                controls=club_buttons,
+                spacing=2,
+            ),
+            width=350,
+            height=450,
+        ),
+        actions=[
+            ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),
+        ],
+    )
+    page.show_dialog(dlg)
+
+
+def _select_club(page: ft.Page, conn, game_state, club_id: int,
+                  club_name: str, dlg: ft.AlertDialog):
+    """Handle club selection."""
+    from src.ui.app import app_state, navigate
+
+    game_state.user_club_id = club_id
+    game_state.user_club_name = club_name
+    queries.save_game_state(conn, game_state)
+
+    # Mark club as user controlled
+    club = queries.get_club(conn, club_id)
+    if club:
+        club.is_user_controlled = True
+        queries.update_club(conn, club)
+
+    # Store in shared state
+    app_state.db_conn = conn
+    app_state.game_state = game_state
+
+    page.pop_dialog()
+    navigate(page, "/squad")
+
+
+def _continue_game(page: ft.Page):
+    """Load an existing save game."""
+    from src.ui.app import app_state, navigate
+
+    try:
+        conn = connect("default")
+        game_state = queries.load_game_state(conn)
+        if game_state:
+            app_state.db_conn = conn
+            app_state.game_state = game_state
+            navigate(page, "/squad")
+        else:
+            page.show_dialog(
+                ft.AlertDialog(
+                    title=ft.Text("No Save Found"),
+                    content=ft.Text("No save game found. Start a New Game!"),
+                )
+            )
+    except Exception as e:
+        page.show_dialog(
+            ft.AlertDialog(
+                title=ft.Text("Error"),
+                content=ft.Text(f"Error loading save: {e}"),
+            )
+        )

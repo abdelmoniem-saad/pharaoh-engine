@@ -1,49 +1,37 @@
 """
-Stat bar widget — visual attribute/stat bar.
+Stat bar widget — visual attribute/stat bar for Flet.
 """
 from __future__ import annotations
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.label import Label
-from kivy.uix.progressbar import ProgressBar
-from kivy.metrics import dp
+
+import flet as ft
 
 
-class StatBar(BoxLayout):
-    """A labeled progress bar for displaying a stat value."""
+def stat_bar(label: str, value: int, max_value: int = 20) -> ft.Row:
+    """Create a labeled progress bar for displaying a stat value."""
+    ratio = value / max_value if max_value > 0 else 0
 
-    def __init__(self, label: str, value: int, max_value: int = 20, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = "horizontal"
-        self.size_hint_y = None
-        self.height = dp(25)
-        self.spacing = dp(5)
+    if ratio >= 0.8:
+        bar_color = ft.Colors.GREEN_400
+    elif ratio >= 0.6:
+        bar_color = ft.Colors.LIGHT_GREEN_400
+    elif ratio >= 0.4:
+        bar_color = ft.Colors.YELLOW_400
+    elif ratio >= 0.2:
+        bar_color = ft.Colors.ORANGE_400
+    else:
+        bar_color = ft.Colors.RED_400
 
-        self.add_widget(Label(
-            text=label, font_size=dp(11),
-            size_hint_x=0.4, halign="left",
-            text_size=(dp(80), None),
-        ))
-
-        bar = ProgressBar(max=max_value, value=value, size_hint_x=0.45)
-        self.add_widget(bar)
-
-        self.add_widget(Label(
-            text=str(value), font_size=dp(11), bold=True,
-            size_hint_x=0.15,
-            color=self._color_for_value(value, max_value),
-        ))
-
-    @staticmethod
-    def _color_for_value(value: int, max_value: int) -> tuple:
-        ratio = value / max_value
-        if ratio >= 0.8:
-            return (0.2, 1.0, 0.2, 1)
-        elif ratio >= 0.6:
-            return (0.8, 1.0, 0.2, 1)
-        elif ratio >= 0.4:
-            return (1.0, 1.0, 0.2, 1)
-        elif ratio >= 0.2:
-            return (1.0, 0.6, 0.2, 1)
-        else:
-            return (1.0, 0.2, 0.2, 1)
-
+    return ft.Row(
+        spacing=8,
+        controls=[
+            ft.Text(label, size=11, width=90),
+            ft.ProgressBar(
+                value=ratio,
+                color=bar_color,
+                bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.WHITE),
+                width=130,
+                bar_height=8,
+            ),
+            ft.Text(str(value), size=11, weight=ft.FontWeight.BOLD, color=bar_color, width=25),
+        ],
+    )
