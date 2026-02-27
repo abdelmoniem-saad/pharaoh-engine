@@ -1,0 +1,300 @@
+"""
+Pydantic data models for all core game entities.
+
+These models serve as the single source of truth for data structures
+throughout the simulation engine, database layer, and UI.
+"""
+from typing import Optional
+
+import datetime as _dt
+from pydantic import BaseModel, Field
+from src.utils.config import (
+    Position, Foot, Mentality, MatchEventType, CompetitionType,
+    ATTR_MIN, ATTR_MAX, ABILITY_MIN, ABILITY_MAX,
+)
+
+
+# ── Player Models ────────────────────────────────────────────────────────────
+
+class PlayerAttributes(BaseModel):
+    """Player skill attributes (1-20 scale)."""
+    # Technical
+    finishing: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    passing: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    dribbling: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    first_touch: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    crossing: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    heading: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    long_shots: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    tackling: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    marking: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    free_kicks: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+
+    # Physical
+    pace: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    stamina: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    strength: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    agility: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    jumping: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+
+    # Mental
+    composure: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    vision: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    work_rate: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    leadership: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    aggression: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    positioning: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+    decisions: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
+
+    # Goalkeeper-specific
+    gk_reflexes: int = Field(default=5, ge=ATTR_MIN, le=ATTR_MAX)
+    gk_handling: int = Field(default=5, ge=ATTR_MIN, le=ATTR_MAX)
+    gk_positioning: int = Field(default=5, ge=ATTR_MIN, le=ATTR_MAX)
+    gk_one_on_ones: int = Field(default=5, ge=ATTR_MIN, le=ATTR_MAX)
+    gk_kicking: int = Field(default=5, ge=ATTR_MIN, le=ATTR_MAX)
+
+
+class PlayerContract(BaseModel):
+    """Player contract details."""
+    wage_weekly: int = 0          # EGP per week
+    contract_expiry: Optional[_dt.date] = None
+    release_clause: Optional[int] = None
+    signing_bonus: int = 0
+
+
+class PlayerSeasonStats(BaseModel):
+    """Per-season statistics for a player."""
+    appearances: int = 0
+    goals: int = 0
+    assists: int = 0
+    clean_sheets: int = 0
+    yellow_cards: int = 0
+    red_cards: int = 0
+    minutes_played: int = 0
+    average_rating: float = 0.0
+    man_of_the_match: int = 0
+
+
+class Player(BaseModel):
+    """Complete player model."""
+    id: int = 0
+    name: str
+    age: int = Field(ge=15, le=45)
+    nationality: str = "Egyptian"
+    governorate: str = "Cairo"
+    position: Position
+    secondary_positions: list[Position] = Field(default_factory=list)
+    preferred_foot: Foot = Foot.RIGHT
+
+    attributes: PlayerAttributes = Field(default_factory=PlayerAttributes)
+    current_ability: int = Field(default=100, ge=ABILITY_MIN, le=ABILITY_MAX)
+    potential_ability: int = Field(default=120, ge=ABILITY_MIN, le=ABILITY_MAX)
+
+    contract: PlayerContract = Field(default_factory=PlayerContract)
+    season_stats: PlayerSeasonStats = Field(default_factory=PlayerSeasonStats)
+
+    morale: int = Field(default=50, ge=0, le=100)       # 0=terrible, 100=ecstatic
+    fitness: int = Field(default=100, ge=0, le=100)      # 0=injured, 100=peak
+    form: float = Field(default=7.0, ge=0.0, le=10.0)   # rolling match rating average
+
+    club_id: Optional[int] = None
+    is_captain: bool = False
+    shirt_number: Optional[int] = None
+
+
+# ── Club Models ──────────────────────────────────────────────────────────────
+
+class ClubFinances(BaseModel):
+    """Club financial state."""
+    balance: int = 0                   # Current cash (EGP)
+    transfer_budget: int = 0           # Available for transfers
+    wage_budget_weekly: int = 0        # Max weekly wage spend
+    wage_bill_weekly: int = 0          # Current weekly wage bill
+    matchday_income: int = 0           # Revenue per home match
+    sponsorship_income_yearly: int = 0
+    tv_revenue_yearly: int = 0
+    prize_money: int = 0
+
+
+class BoardObjective(BaseModel):
+    """A board-set objective for the season."""
+    description: str
+    target: str                        # e.g., "finish_top_4", "win_cup"
+    priority: str = "medium"           # low, medium, high, critical
+    achieved: bool = False
+
+
+class Club(BaseModel):
+    """Complete club model."""
+    id: int = 0
+    name: str
+    short_name: str
+    city: str
+    governorate: str
+    reputation: int = Field(default=100, ge=1, le=200)
+    facilities_level: int = Field(default=5, ge=1, le=10)
+    youth_rating: int = Field(default=5, ge=1, le=10)
+    stadium_name: str = ""
+    stadium_capacity: int = 10000
+
+    primary_color: str = "#FFFFFF"
+    secondary_color: str = "#000000"
+
+    finances: ClubFinances = Field(default_factory=ClubFinances)
+    board_objectives: list[BoardObjective] = Field(default_factory=list)
+    board_confidence: int = Field(default=60, ge=0, le=100)
+    fan_happiness: int = Field(default=50, ge=0, le=100)
+
+    formation: str = "4-2-3-1"
+    mentality: Mentality = Mentality.BALANCED
+
+    is_user_controlled: bool = False
+
+
+# ── Match Models ─────────────────────────────────────────────────────────────
+
+class MatchEvent(BaseModel):
+    """A single event during a match."""
+    minute: int
+    event_type: MatchEventType
+    player_id: Optional[int] = None
+    player_name: str = ""
+    second_player_id: Optional[int] = None   # e.g., assist provider
+    second_player_name: str = ""
+    club_id: Optional[int] = None
+    description: str = ""
+
+
+class MatchStats(BaseModel):
+    """Aggregate match statistics for one team."""
+    possession: float = 50.0
+    shots: int = 0
+    shots_on_target: int = 0
+    corners: int = 0
+    fouls: int = 0
+    yellow_cards: int = 0
+    red_cards: int = 0
+    passes: int = 0
+    pass_accuracy: float = 0.0
+    saves: int = 0
+
+
+class MatchResult(BaseModel):
+    """Complete result of a simulated match."""
+    match_id: int = 0
+    home_club_id: int
+    away_club_id: int
+    home_club_name: str = ""
+    away_club_name: str = ""
+    home_goals: int = 0
+    away_goals: int = 0
+    events: list[MatchEvent] = Field(default_factory=list)
+    home_stats: MatchStats = Field(default_factory=MatchStats)
+    away_stats: MatchStats = Field(default_factory=MatchStats)
+    competition: str = ""
+    matchday: int = 0
+    date: Optional[_dt.date] = None
+
+    @property
+    def score_display(self) -> str:
+        return f"{self.home_club_name} {self.home_goals} - {self.away_goals} {self.away_club_name}"
+
+
+# ── League Models ────────────────────────────────────────────────────────────
+
+class LeagueStanding(BaseModel):
+    """A single row in the league table."""
+    club_id: int
+    club_name: str
+    played: int = 0
+    won: int = 0
+    drawn: int = 0
+    lost: int = 0
+    goals_for: int = 0
+    goals_against: int = 0
+
+    @property
+    def goal_difference(self) -> int:
+        return self.goals_for - self.goals_against
+
+    @property
+    def points(self) -> int:
+        return (self.won * 3) + self.drawn
+
+
+class Fixture(BaseModel):
+    """A scheduled match."""
+    fixture_id: int = 0
+    matchday: int
+    home_club_id: int
+    away_club_id: int
+    home_club_name: str = ""
+    away_club_name: str = ""
+    date: Optional[_dt.date] = None
+    played: bool = False
+    result: Optional[MatchResult] = None
+    competition: str = "Egyptian Premier League"
+
+
+class LeagueSeason(BaseModel):
+    """Complete state of a league season."""
+    season_year: int           # e.g., 2025 for 2025/26 season
+    competition_name: str = "Egyptian Premier League"
+    competition_type: CompetitionType = CompetitionType.LEAGUE
+    standings: list[LeagueStanding] = Field(default_factory=list)
+    fixtures: list[Fixture] = Field(default_factory=list)
+    current_matchday: int = 1
+    is_complete: bool = False
+
+
+# ── Tactics Models ───────────────────────────────────────────────────────────
+
+class TacticalPreset(BaseModel):
+    """A named tactical preset for casual players."""
+    name: str
+    formation: str
+    mentality: Mentality
+    pressing_intensity: int = Field(default=5, ge=1, le=10)
+    tempo: int = Field(default=5, ge=1, le=10)
+    width: int = Field(default=5, ge=1, le=10)
+    defensive_line: int = Field(default=5, ge=1, le=10)
+    description: str = ""
+
+
+class TeamTactics(BaseModel):
+    """Active tactics for a match."""
+    formation: str = "4-2-3-1"
+    mentality: Mentality = Mentality.BALANCED
+    pressing_intensity: int = Field(default=5, ge=1, le=10)
+    tempo: int = Field(default=5, ge=1, le=10)
+    width: int = Field(default=5, ge=1, le=10)
+    defensive_line: int = Field(default=5, ge=1, le=10)
+    starting_xi: list[int] = Field(default_factory=list)   # player IDs
+    bench: list[int] = Field(default_factory=list)          # player IDs
+
+
+# ── Game State ───────────────────────────────────────────────────────────────
+
+class GameState(BaseModel):
+    """Top-level game state model."""
+    save_name: str = ""
+    season_year: int = 2025
+    current_date: _dt.date = Field(default_factory=lambda: _dt.date(2025, 8, 15))
+    user_club_id: int = 0
+    user_club_name: str = ""
+    rng_seed: int = 42
+    day_count: int = 0
+
+
+# ── Inbox / Messages ────────────────────────────────────────────────────────
+
+class InboxMessage(BaseModel):
+    """An in-game message for the user."""
+    id: int = 0
+    date: _dt.date
+    subject: str
+    body: str
+    category: str = "general"     # general, match, transfer, board, media
+    is_read: bool = False
+
+

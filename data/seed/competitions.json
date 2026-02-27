@@ -1,0 +1,33 @@
+{
+  "competitions": [
+    {
+      "name": "Egyptian Premier League",
+      "short_name": "EPL",
+      "type": "league",
+      "teams": 18,
+      "format": "double_round_robin",
+      "matchdays": 34,
+      "promotion_spots": 0,
+      "relegation_spots": 3,
+      "continental_spots": {
+        "caf_champions_league": 2,
+        "caf_confederation_cup": 1
+      }
+    },
+    {
+      "name": "Egypt Cup",
+      "short_name": "EC",
+      "type": "cup",
+      "format": "knockout",
+      "rounds": ["Round of 32", "Round of 16", "Quarter-finals", "Semi-finals", "Final"]
+    },
+    {
+      "name": "Egyptian Super Cup",
+      "short_name": "ESC",
+      "type": "super_cup",
+      "format": "single_match",
+      "participants": ["league_winner", "cup_winner"]
+    }
+  ]
+}
+

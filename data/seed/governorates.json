@@ -1,0 +1,124 @@
+{
+  "governorates": {
+    "Cairo": {
+      "talent_pool": "very_high",
+      "style_bias": "technical",
+      "description": "The capital produces the most technically gifted players. Strong academies and high competition.",
+      "attribute_bonuses": {"dribbling": 2, "first_touch": 2, "vision": 1},
+      "player_volume": 1.5
+    },
+    "Alexandria": {
+      "talent_pool": "high",
+      "style_bias": "physical",
+      "description": "Mediterranean port city. Players tend to be strong, aggressive, and hard-working.",
+      "attribute_bonuses": {"strength": 2, "aggression": 1, "stamina": 1},
+      "player_volume": 1.2
+    },
+    "Giza": {
+      "talent_pool": "high",
+      "style_bias": "balanced",
+      "description": "Proximity to Cairo means strong development. Balanced player profiles.",
+      "attribute_bonuses": {"passing": 1, "composure": 1, "pace": 1},
+      "player_volume": 1.3
+    },
+    "Port Said": {
+      "talent_pool": "medium",
+      "style_bias": "defensive",
+      "description": "Known for passionate fans and tough defensive players.",
+      "attribute_bonuses": {"tackling": 2, "marking": 1, "aggression": 1},
+      "player_volume": 0.8
+    },
+    "Dakahlia": {
+      "talent_pool": "medium",
+      "style_bias": "creative",
+      "description": "Delta region with a tradition of creative midfielders.",
+      "attribute_bonuses": {"passing": 2, "vision": 1, "first_touch": 1},
+      "player_volume": 1.0
+    },
+    "Sharqia": {
+      "talent_pool": "medium",
+      "style_bias": "pacy",
+      "description": "Produces quick, dynamic wide players and strikers.",
+      "attribute_bonuses": {"pace": 2, "agility": 1, "dribbling": 1},
+      "player_volume": 1.0
+    },
+    "Gharbia": {
+      "talent_pool": "medium",
+      "style_bias": "work_rate",
+      "description": "Hard-working players with good stamina.",
+      "attribute_bonuses": {"work_rate": 2, "stamina": 1},
+      "player_volume": 0.8
+    },
+    "Ismailia": {
+      "talent_pool": "medium",
+      "style_bias": "balanced",
+      "description": "Canal zone city with solid all-around development.",
+      "attribute_bonuses": {"composure": 1, "decisions": 1, "positioning": 1},
+      "player_volume": 0.7
+    },
+    "Suez": {
+      "talent_pool": "low",
+      "style_bias": "physical",
+      "description": "Industrial city producing strong, physical players.",
+      "attribute_bonuses": {"strength": 2, "heading": 1},
+      "player_volume": 0.6
+    },
+    "Fayoum": {
+      "talent_pool": "low",
+      "style_bias": "raw_talent",
+      "description": "Fewer resources but occasional gems with high potential.",
+      "attribute_bonuses": {"pace": 1, "agility": 1},
+      "player_volume": 0.5
+    },
+    "Asyut": {
+      "talent_pool": "low",
+      "style_bias": "physical",
+      "description": "Upper Egypt stronghold. Physical, determined players.",
+      "attribute_bonuses": {"strength": 1, "aggression": 1, "work_rate": 1},
+      "player_volume": 0.6
+    },
+    "Luxor": {
+      "talent_pool": "low",
+      "style_bias": "raw_talent",
+      "description": "Small talent pool but occasional surprises.",
+      "attribute_bonuses": {"composure": 1, "finishing": 1},
+      "player_volume": 0.4
+    },
+    "Aswan": {
+      "talent_pool": "low",
+      "style_bias": "pacy",
+      "description": "Southernmost region. Quick, athletic players.",
+      "attribute_bonuses": {"pace": 2, "stamina": 1},
+      "player_volume": 0.4
+    },
+    "Minya": {
+      "talent_pool": "low",
+      "style_bias": "defensive",
+      "description": "Produces tough defenders with good marking ability.",
+      "attribute_bonuses": {"tackling": 1, "marking": 1, "heading": 1},
+      "player_volume": 0.5
+    },
+    "Beheira": {
+      "talent_pool": "low",
+      "style_bias": "balanced",
+      "description": "Agricultural region with modest football infrastructure.",
+      "attribute_bonuses": {"stamina": 1, "work_rate": 1},
+      "player_volume": 0.5
+    },
+    "Damietta": {
+      "talent_pool": "low",
+      "style_bias": "technical",
+      "description": "Small coastal city with a few technical players.",
+      "attribute_bonuses": {"crossing": 1, "first_touch": 1},
+      "player_volume": 0.4
+    },
+    "Red Sea": {
+      "talent_pool": "very_low",
+      "style_bias": "physical",
+      "description": "Tourism-focused region with minimal football infrastructure.",
+      "attribute_bonuses": {"stamina": 1},
+      "player_volume": 0.2
+    }
+  }
+}
+

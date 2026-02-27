@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "pharaoh-engine"
+version = "0.1.0"
+description = "Mobile-first Egyptian football management simulation game"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+    {name = "Pharaoh Engine Team"}
+]
+
+dependencies = [
+    "kivy>=2.3.0",
+    "kivymd>=1.2.0",
+    "pydantic>=2.5.0",
+    "peewee>=3.17.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "buildozer>=1.5.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
