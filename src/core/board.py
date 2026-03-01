@@ -1,12 +1,19 @@
 """
 Board politics — objectives, confidence, and pressure system.
 
-Phase 2 module — stub with core mechanics.
+Each club has a `season_expectation` derived from its reputation at the start
+of each season.  The board judges performance against that expectation.
 """
 from __future__ import annotations
 
 from src.data.models import Club, BoardObjective
-from src.utils.config import BoardConfidence
+from src.utils.config import (
+    BoardConfidence,
+    SEASON_EXPECTATIONS,
+    expectation_display,
+    expectation_description,
+    expectation_target_position,
+)
 from src.utils.rng import clamp
 
 
@@ -33,45 +40,43 @@ def update_confidence_after_match(club: Club, result_type: str) -> None:
     """
     change = {"win": 2, "draw": 0, "loss": -3}.get(result_type, 0)
 
-    # Bigger clubs have less patience with losses
-    if club.reputation >= 170 and result_type == "loss":
+    # Higher-expectation clubs have less patience with losses
+    if club.season_expectation in ("win_league", "title_challenge") and result_type == "loss":
         change -= 2
+    elif club.season_expectation == "avoid_relegation" and result_type == "win":
+        change += 1   # extra boost for underdogs winning
 
     club.board_confidence = int(clamp(club.board_confidence + change, 0, 100))
 
 
 def generate_season_objectives(club: Club) -> list[BoardObjective]:
-    """Generate board objectives based on club reputation."""
-    objectives = []
+    """
+    Generate board objectives from the club's season_expectation.
 
-    if club.reputation >= 170:
-        objectives.append(BoardObjective(
-            description="Win the Egyptian Premier League",
-            target="win_league",
-            priority="critical",
-        ))
+    The primary objective always matches the expectation.  Bigger clubs
+    get an additional secondary objective.
+    """
+    exp = club.season_expectation
+    objectives = [
+        BoardObjective(
+            description=expectation_display(exp),
+            target=exp,
+            priority="critical" if exp in ("win_league", "avoid_relegation") else "high",
+        )
+    ]
+
+    # Secondary objectives for ambitious clubs
+    if exp in ("win_league", "title_challenge"):
         objectives.append(BoardObjective(
             description="Reach the Egypt Cup Semi-Finals",
             target="cup_semis",
             priority="medium",
         ))
-    elif club.reputation >= 140:
+    elif exp in ("top_4", "top_half"):
         objectives.append(BoardObjective(
-            description="Finish in the top 4",
-            target="finish_top_4",
-            priority="high",
-        ))
-    elif club.reputation >= 110:
-        objectives.append(BoardObjective(
-            description="Finish in the top half",
-            target="finish_top_half",
-            priority="high",
-        ))
-    else:
-        objectives.append(BoardObjective(
-            description="Avoid relegation",
-            target="avoid_relegation",
-            priority="critical",
+            description="Develop at least one youth player",
+            target="develop_youth",
+            priority="low",
         ))
 
     return objectives
@@ -79,33 +84,52 @@ def generate_season_objectives(club: Club) -> list[BoardObjective]:
 
 def evaluate_objectives(club: Club, position: int,
                          total_teams: int = 18) -> list[str]:
-    """Evaluate board objectives at season end. Returns feedback messages."""
+    """
+    Evaluate board objectives at season end.
+
+    Uses each objective's *target* key to look up the required finishing
+    position from the SEASON_EXPECTATIONS table, so every club is judged
+    against its own expectation.
+
+    Returns feedback messages.
+    """
     messages = []
 
     for obj in club.board_objectives:
         achieved = False
-        if obj.target == "win_league" and position == 1:
-            achieved = True
-            club.board_confidence = min(100, club.board_confidence + 20)
-        elif obj.target == "finish_top_4" and position <= 4:
-            achieved = True
-            club.board_confidence = min(100, club.board_confidence + 10)
-        elif obj.target == "finish_top_half" and position <= total_teams // 2:
-            achieved = True
-            club.board_confidence = min(100, club.board_confidence + 5)
-        elif obj.target == "avoid_relegation" and position <= total_teams - 3:
-            achieved = True
-            club.board_confidence = min(100, club.board_confidence + 5)
+
+        # Primary league-position objectives
+        required_pos = expectation_target_position(obj.target)
+        if obj.target in SEASON_EXPECTATIONS:
+            achieved = position <= required_pos
+            if achieved:
+                # Scale reward by how hard the objective was
+                bonus = {
+                    "win_league": 20,
+                    "title_challenge": 15,
+                    "top_4": 10,
+                    "top_half": 5,
+                    "mid_table": 5,
+                    "avoid_relegation": 5,
+                }.get(obj.target, 5)
+                club.board_confidence = min(100, club.board_confidence + bonus)
+            else:
+                # Scale penalty by how badly we missed
+                overshoot = position - required_pos
+                penalty = min(25, 5 + overshoot * 2)
+                club.board_confidence = max(0, club.board_confidence - penalty)
         elif obj.target == "cup_semis":
             # Cup not implemented yet — auto-pass
             achieved = True
+        elif obj.target == "develop_youth":
+            # Youth development not tracked yet — auto-pass
+            achieved = True
 
+        obj.achieved = achieved
         if achieved:
-            obj.achieved = True
             messages.append(f"✅ {obj.description}")
         else:
             messages.append(f"❌ {obj.description}")
-            club.board_confidence = max(0, club.board_confidence - 10)
 
     return messages
 

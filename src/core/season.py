@@ -10,6 +10,7 @@ from src.data.models import GameState, InboxMessage
 from src.data import queries
 from src.core.league import create_league_season, get_current_standings
 from src.core.board import generate_season_objectives, evaluate_objectives
+from src.utils.config import derive_season_expectation, expectation_display
 
 
 def get_season_awards(conn: sqlite3.Connection,
@@ -122,15 +123,24 @@ def start_new_season(conn: sqlite3.Connection,
     create_league_season(conn, clubs, game_state.season_year)
     messages.append(f"Season {game_state.season_year}/{game_state.season_year + 1} fixtures generated.")
 
+    # Re-derive season expectations for ALL clubs based on current reputation
+    for c in clubs:
+        c.season_expectation = derive_season_expectation(c.reputation)
+        queries.update_club(conn, c)
+
     # Generate board objectives for user
     user_club = queries.get_club(conn, game_state.user_club_id)
     if user_club:
         objectives = generate_season_objectives(user_club)
+        exp_name = expectation_display(user_club.season_expectation)
         obj_text = "\n".join(f"• {o.description} ({o.priority})" for o in objectives)
         queries.insert_message(conn, InboxMessage(
             date=game_state.current_date,
             subject="📋 Board Objectives",
-            body=f"The board has set the following objectives for the new season:\n\n{obj_text}",
+            body=(
+                f"The board has set the following objectives for the new season:\n\n"
+                f"🎯 Season Target: {exp_name}\n\n{obj_text}"
+            ),
             category="board",
         ))
         messages.append("Board objectives set for new season.")

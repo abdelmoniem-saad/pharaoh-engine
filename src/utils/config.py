@@ -208,6 +208,52 @@ INJURY_TYPES = [
     "Thigh", "Shoulder", "Back", "Concussion",
 ]
 
+# ── Season Expectations ──────────────────────────────────────────────────────
+# Maps expectation key → (display name, description, min_position to satisfy)
+# min_position: board considers it "met" if the club finishes at or above this
+SEASON_EXPECTATIONS: dict[str, tuple[str, str, int]] = {
+    "win_league":       ("Win the League",        "The board demands the title.",              1),
+    "title_challenge":  ("Title Challenge",       "A serious push for the championship.",      2),
+    "top_4":            ("Top 4 Finish",          "Qualify for continental competition.",       4),
+    "top_half":         ("Top Half Finish",       "Consolidate in the upper half.",            9),
+    "mid_table":        ("Mid-Table Finish",      "Steady progress — stay competitive.",      12),
+    "avoid_relegation": ("Avoid Relegation",      "Survival is the priority this season.",    15),
+}
+
+
+def derive_season_expectation(reputation: int) -> str:
+    """Determine a club's season expectation based on its reputation."""
+    if reputation >= 175:
+        return "win_league"
+    elif reputation >= 160:
+        return "title_challenge"
+    elif reputation >= 140:
+        return "top_4"
+    elif reputation >= 115:
+        return "top_half"
+    elif reputation >= 100:
+        return "mid_table"
+    else:
+        return "avoid_relegation"
+
+
+def expectation_display(key: str) -> str:
+    """Human-readable name for an expectation key."""
+    entry = SEASON_EXPECTATIONS.get(key)
+    return entry[0] if entry else key.replace("_", " ").title()
+
+
+def expectation_description(key: str) -> str:
+    """Short description for an expectation."""
+    entry = SEASON_EXPECTATIONS.get(key)
+    return entry[1] if entry else ""
+
+
+def expectation_target_position(key: str) -> int:
+    """Maximum finishing position to satisfy the expectation."""
+    entry = SEASON_EXPECTATIONS.get(key)
+    return entry[2] if entry else 18
+
 # ── UI / Display ─────────────────────────────────────────────────────────────
 SUPPORTED_LANGUAGES = ["en", "ar"]
 DEFAULT_LANGUAGE = "en"

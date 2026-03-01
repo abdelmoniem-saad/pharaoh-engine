@@ -9,7 +9,7 @@ from src.data import queries
 from src.core.calendar import simulate_user_match, advance_to_next_match, advance_day
 from src.core.league import is_season_complete, get_champion
 from src.ui.widgets.nav_bar import build_nav_bar
-from src.utils.config import MatchEventType
+from src.utils.config import MatchEventType, expectation_display
 
 
 def build_match_day_screen(page: ft.Page) -> ft.Column:
@@ -206,6 +206,9 @@ def _build_match_preview(page, conn, gs, fixture):
         info_items.append(_info_chip("Board",
                                       get_confidence_level(user_club.board_confidence).value,
                                       ft.Icons.ACCOUNT_BALANCE))
+        info_items.append(_info_chip("Target",
+                                      expectation_display(user_club.season_expectation),
+                                      ft.Icons.FLAG))
     if injured_count > 0:
         info_items.append(_info_chip("Injured", str(injured_count), ft.Icons.LOCAL_HOSPITAL))
     if suspended_count > 0:

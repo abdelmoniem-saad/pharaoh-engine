@@ -159,6 +159,9 @@ class Club(BaseModel):
 
     is_user_controlled: bool = False
 
+    # Season expectation — set per-club at season start based on reputation
+    season_expectation: str = "mid_table"   # win_league, top_4, top_half, mid_table, avoid_relegation
+
 
 # ── Match Models ─────────────────────────────────────────────────────────────
 

@@ -60,8 +60,9 @@ def insert_club(conn: sqlite3.Connection, club: Club) -> int:
             primary_color, secondary_color, balance, transfer_budget,
             wage_budget_weekly, wage_bill_weekly, matchday_income,
             sponsorship_income_yearly, tv_revenue_yearly,
-            board_confidence, fan_happiness, formation, mentality, is_user_controlled)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            board_confidence, fan_happiness, formation, mentality,
+            is_user_controlled, season_expectation)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (club.name, club.short_name, club.city, club.governorate, club.reputation,
           club.facilities_level, club.youth_rating, club.stadium_name, club.stadium_capacity,
           club.primary_color, club.secondary_color,
@@ -70,7 +71,8 @@ def insert_club(conn: sqlite3.Connection, club: Club) -> int:
           club.finances.matchday_income, club.finances.sponsorship_income_yearly,
           club.finances.tv_revenue_yearly,
           club.board_confidence, club.fan_happiness, club.formation,
-          int(club.mentality), int(club.is_user_controlled)))
+          int(club.mentality), int(club.is_user_controlled),
+          club.season_expectation))
     conn.commit()
     return cursor.lastrowid
 
@@ -94,18 +96,26 @@ def update_club(conn: sqlite3.Connection, club: Club) -> None:
     conn.execute("""
         UPDATE clubs SET name=?, short_name=?, formation=?, mentality=?,
             board_confidence=?, fan_happiness=?, is_user_controlled=?,
-            balance=?, transfer_budget=?, wage_budget_weekly=?, wage_bill_weekly=?
+            balance=?, transfer_budget=?, wage_budget_weekly=?, wage_bill_weekly=?,
+            season_expectation=?
         WHERE id=?
     """, (club.name, club.short_name, club.formation, int(club.mentality),
           club.board_confidence, club.fan_happiness, int(club.is_user_controlled),
           club.finances.balance, club.finances.transfer_budget,
           club.finances.wage_budget_weekly, club.finances.wage_bill_weekly,
+          club.season_expectation,
           club.id))
     conn.commit()
 
 
 def _row_to_club(row: sqlite3.Row) -> Club:
     """Convert a DB row to a Club model."""
+    # Handle older saves that may lack the column
+    try:
+        expectation = row["season_expectation"]
+    except (IndexError, KeyError):
+        expectation = "mid_table"
+
     return Club(
         id=row["id"],
         name=row["name"],
@@ -133,6 +143,7 @@ def _row_to_club(row: sqlite3.Row) -> Club:
         formation=row["formation"],
         mentality=Mentality(row["mentality"]),
         is_user_controlled=bool(row["is_user_controlled"]),
+        season_expectation=expectation,
     )
 
 

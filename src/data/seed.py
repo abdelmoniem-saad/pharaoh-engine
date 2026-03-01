@@ -17,7 +17,7 @@ from src.data.models import (
     Player, PlayerAttributes, PlayerContract, Club, ClubFinances,
     GameState,
 )
-from src.utils.config import Position, Foot, ATTR_MIN, ATTR_MAX
+from src.utils.config import Position, Foot, ATTR_MIN, ATTR_MAX, derive_season_expectation
 from src.utils import rng
 
 DATA_DIR = Path(__file__).parent.parent.parent / "data" / "seed"
@@ -331,6 +331,7 @@ def seed_database(conn: sqlite3.Connection, game_seed: int = 42) -> GameState:
                 sponsorship_income_yearly=cd["sponsorship_income_yearly"],
                 tv_revenue_yearly=cd["tv_revenue_yearly"],
             ),
+            season_expectation=derive_season_expectation(cd["reputation"]),
         )
         club_id = queries.insert_club(conn, club)
         club.id = club_id

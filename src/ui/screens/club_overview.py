@@ -11,6 +11,7 @@ from src.core.board import get_confidence_level
 from src.core.fans import get_fan_happiness_level, get_atmosphere_description
 from src.core.club import get_squad_average_age, get_squad_average_ability, calculate_wage_bill
 from src.ui.widgets.nav_bar import build_nav_bar
+from src.utils.config import expectation_display, expectation_description
 
 
 def build_club_overview_screen(page: ft.Page) -> ft.Column:
@@ -82,6 +83,26 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         _card_row("Board Confidence", f"{confidence.value} ({club.board_confidence}%)", conf_color),
         _card_row("Fan Happiness", f"{fan_level} ({club.fan_happiness}%)", fan_color),
         ft.Text(f"🎤 {atmosphere}", size=11, color=ft.Colors.GREY_400, italic=True),
+        ft.Divider(height=1),
+
+        # ── Season Expectation ───────────────────
+        ft.Text("🎯 Season Expectation", size=16, weight=ft.FontWeight.W_500),
+        ft.Container(
+            content=ft.Column(spacing=4, controls=[
+                ft.Text(
+                    expectation_display(club.season_expectation),
+                    size=15, weight=ft.FontWeight.BOLD,
+                    color=ft.Colors.AMBER_300,
+                ),
+                ft.Text(
+                    expectation_description(club.season_expectation),
+                    size=12, color=ft.Colors.GREY_400, italic=True,
+                ),
+            ]),
+            padding=ft.padding.symmetric(horizontal=10, vertical=8),
+            border_radius=8,
+            bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.AMBER),
+        ),
         ft.Divider(height=1),
 
         # ── Finances ─────────────────────────────

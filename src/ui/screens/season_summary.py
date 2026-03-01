@@ -9,6 +9,7 @@ from src.data import queries
 from src.core.season import get_season_awards, start_new_season
 from src.core.board import get_confidence_level, generate_season_objectives, evaluate_objectives
 from src.core.fans import get_fan_happiness_level
+from src.utils.config import expectation_display, expectation_description
 
 
 def build_season_summary_screen(page: ft.Page) -> ft.Column:
@@ -54,11 +55,13 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
     confidence_text = ""
     fan_text = ""
     board_eval_rows = []
+    expectation_text = ""
     if club:
         conf = get_confidence_level(club.board_confidence)
         fan_lvl = get_fan_happiness_level(club.fan_happiness)
         confidence_text = f"Board Confidence: {conf.value} ({club.board_confidence}%)"
         fan_text = f"Fan Happiness: {fan_lvl} ({club.fan_happiness}%)"
+        expectation_text = f"🎯 Expectation: {expectation_display(club.season_expectation)}"
 
         # Evaluate objectives for display
         objectives = generate_season_objectives(club)
@@ -154,6 +157,17 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
                                 ft.Text(fan_text, size=12, color=ft.Colors.GREY_400),
                             ],
                         ),
+
+                        # Season expectation callout
+                        ft.Container(
+                            content=ft.Text(
+                                expectation_text, size=14, weight=ft.FontWeight.W_500,
+                                color=ft.Colors.AMBER_300, text_align=ft.TextAlign.CENTER,
+                            ),
+                            padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                            border_radius=6,
+                            bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.AMBER),
+                        ) if expectation_text else ft.Container(),
 
                         # Board Objectives Evaluation
                         *(

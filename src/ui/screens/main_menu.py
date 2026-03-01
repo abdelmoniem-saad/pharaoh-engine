@@ -10,7 +10,7 @@ from src.data.seed import seed_database
 from src.data import queries
 from src.core.league import create_league_season
 from src.utils import rng
-from src.utils.config import APP_VERSION
+from src.utils.config import APP_VERSION, expectation_display
 
 
 def build_main_menu(page: ft.Page) -> ft.Column:
@@ -157,7 +157,7 @@ def _show_club_selection(page: ft.Page, manager_name: str):
                 ),
                 title=ft.Text(club.name, weight=ft.FontWeight.W_500),
                 subtitle=ft.Text(
-                    f"{club.city} — ⭐ {club.reputation}",
+                    f"{club.city} — ⭐ {club.reputation} — 🎯 {expectation_display(club.season_expectation)}",
                     size=12, color=ft.Colors.GREY_400,
                 ),
                 on_click=make_handler(),
@@ -195,6 +195,25 @@ def _select_club(page: ft.Page, conn, game_state, club_id: int,
     if club:
         club.is_user_controlled = True
         queries.update_club(conn, club)
+
+        # Send initial board objectives message
+        from src.core.board import generate_season_objectives
+        from src.data.models import InboxMessage
+        from datetime import date
+        objectives = generate_season_objectives(club)
+        exp_name = expectation_display(club.season_expectation)
+        obj_text = "\n".join(f"• {o.description} ({o.priority})" for o in objectives)
+        queries.insert_message(conn, InboxMessage(
+            date=date(2025, 8, 15),
+            subject="📋 Board Objectives",
+            body=(
+                f"Welcome, {game_state.manager_name}!\n\n"
+                f"The board expects you to achieve the following this season:\n\n"
+                f"🎯 Season Target: {exp_name}\n\n{obj_text}\n\n"
+                f"Good luck!"
+            ),
+            category="board",
+        ))
 
     # Store in shared state
     app_state.db_conn = conn
