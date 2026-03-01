@@ -146,8 +146,16 @@ def auto_select_xi(players: list[Player], formation: str) -> tuple[list[int], li
 def calculate_team_strength(players: list[Player], tactics: TeamTactics) -> dict[str, float]:
     """
     Calculate composite team strength ratings for match simulation.
-    Returns attack, midfield, defense, and overall ratings.
+
+    **Formation matters:**  Each player in the starting XI is mapped to the
+    formation slot they occupy.  A position-suitability multiplier (0.2 – 1.0)
+    is applied so that out-of-position players contribute far less.
+    A CB forced to play ST loses ~60-80% of their attacking effectiveness.
+
+    Returns dict with attack, midfield, defense, goalkeeper ratings.
     """
+    from src.core.player import position_suitability
+
     positions = get_formation_positions(tactics.formation)
 
     attack_attrs = []
@@ -168,25 +176,32 @@ def calculate_team_strength(players: list[Player], tactics: TeamTactics) -> dict
         a = player.attributes
         pos = positions[i]
         readiness = get_match_readiness(player)
-        suit = 1.0  # simplified for team strength
+
+        # ── Position suitability — THE critical multiplier ───────
+        # 1.0 = natural position, 0.85 = secondary, 0.65 = same group,
+        # 0.4 = adjacent group, 0.2 = completely wrong (GK as ST etc.)
+        suit = position_suitability(player, pos)
+
+        # Combined multiplier: readiness (fitness/morale/form) × suitability
+        mult = readiness * suit
 
         if pos == Position.GK:
             gk_rating = (a.gk_reflexes + a.gk_handling + a.gk_positioning +
-                         a.gk_one_on_ones) / 4.0 * readiness
+                         a.gk_one_on_ones) / 4.0 * mult
         elif pos in (Position.CB, Position.LB, Position.RB):
             defense_attrs.append(
                 (a.tackling + a.marking + a.positioning + a.heading +
-                 a.strength) / 5.0 * readiness
+                 a.strength) / 5.0 * mult
             )
         elif pos in (Position.CDM, Position.CM, Position.CAM, Position.LM, Position.RM):
             midfield_attrs.append(
                 (a.passing + a.vision + a.dribbling + a.first_touch +
-                 a.work_rate + a.stamina) / 6.0 * readiness
+                 a.work_rate + a.stamina) / 6.0 * mult
             )
         elif pos in (Position.LW, Position.RW, Position.ST):
             attack_attrs.append(
                 (a.finishing + a.dribbling + a.pace + a.composure +
-                 a.positioning) / 5.0 * readiness
+                 a.positioning) / 5.0 * mult
             )
 
     attack = sum(attack_attrs) / max(len(attack_attrs), 1)

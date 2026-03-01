@@ -306,9 +306,11 @@ def simulate_match(
     # ── Generate individual player ratings ──────────────────────────────
     player_ratings: dict[int, float] = {}
     _rate_players(player_ratings, home_tactics.starting_xi, home_players,
-                  events, home_club.id, home_goals, away_goals, is_home_team=True)
+                  events, home_club.id, home_goals, away_goals,
+                  is_home_team=True, formation=home_tactics.formation)
     _rate_players(player_ratings, away_tactics.starting_xi, away_players,
-                  events, away_club.id, away_goals, home_goals, is_home_team=False)
+                  events, away_club.id, away_goals, home_goals,
+                  is_home_team=False, formation=away_tactics.formation)
 
     # Build result
     return MatchResult(
@@ -391,10 +393,19 @@ def _simulate_attack(
     if not shooter:
         return None
 
-    # Shot quality based on shooter's finishing + composure
+    # Determine shooter's position suitability for their formation slot
+    from src.core.player import position_suitability
+    _positions = get_formation_positions(attacking_formation)
+    shooter_suit = 1.0
+    for idx, pid in enumerate(attacking_xi):
+        if pid == shooter.id and idx < len(_positions):
+            shooter_suit = position_suitability(shooter, _positions[idx])
+            break
+
+    # Shot quality based on shooter's finishing + composure, penalized if out of position
     shot_quality = (shooter.attributes.finishing * 0.6 +
                     shooter.attributes.composure * 0.3 +
-                    shooter.attributes.positioning * 0.1)
+                    shooter.attributes.positioning * 0.1) * shooter_suit
 
     # On target?
     on_target_chance = rng.clamp(shot_quality / 25.0, 0.2, 0.8)
@@ -424,7 +435,7 @@ def _simulate_attack(
 
     # GOAL!
     # Try to find an assist provider
-    assister = _pick_assister(attacking_players, attacking_xi, shooter.id)
+    assister = _pick_assister(attacking_players, attacking_xi, shooter.id, attacking_formation)
 
     event = MatchEvent(
         minute=minute, event_type=MatchEventType.GOAL,
@@ -442,9 +453,12 @@ def _simulate_attack(
 
 def _pick_scorer(players: dict[int, Player], xi: list[int],
                   formation: str) -> Player | None:
-    """Pick a goalscorer from the starting XI, weighted by position and finishing."""
+    """Pick a goalscorer from the starting XI, weighted by position, finishing,
+    and position suitability — a CB playing ST rarely scores."""
     if not xi:
         return None
+
+    from src.core.player import position_suitability
 
     positions = get_formation_positions(formation)
     candidates = []
@@ -457,7 +471,7 @@ def _pick_scorer(players: dict[int, Player], xi: list[int],
 
         pos = positions[i] if i < len(positions) else Position.CM
 
-        # Weight by position (attackers score more)
+        # Weight by formation slot (attackers score more)
         pos_weight = {
             Position.ST: 5.0, Position.CAM: 2.5,
             Position.LW: 2.0, Position.RW: 2.0,
@@ -468,10 +482,15 @@ def _pick_scorer(players: dict[int, Player], xi: list[int],
 
         # Also weight by finishing attribute
         attr_weight = player.attributes.finishing / 10.0
-        total_weight = pos_weight * attr_weight
+
+        # Position suitability: a CB in a ST slot has suit ~0.2, so their
+        # effective finishing contribution drops massively
+        suit = position_suitability(player, pos)
+
+        total_weight = pos_weight * attr_weight * suit
 
         candidates.append(player)
-        weights.append(total_weight)
+        weights.append(max(total_weight, 0.01))  # ensure never zero
 
     if not candidates:
         return None
@@ -480,26 +499,33 @@ def _pick_scorer(players: dict[int, Player], xi: list[int],
 
 
 def _pick_assister(players: dict[int, Player], xi: list[int],
-                    scorer_id: int) -> Player | None:
+                    scorer_id: int, formation: str = "4-3-3") -> Player | None:
     """Pick an assist provider (60% chance of having an assist)."""
     if not rng.chance(0.6):
         return None
 
+    from src.core.player import position_suitability
+    positions = get_formation_positions(formation)
+
     candidates = []
     weights = []
 
-    for pid in xi:
+    for i, pid in enumerate(xi):
         if pid == scorer_id:
             continue
         player = players.get(pid)
         if not player:
             continue
 
-        # Weight by vision, passing, crossing
-        weight = (player.attributes.vision + player.attributes.passing +
-                  player.attributes.crossing) / 30.0
+        # Position suitability multiplier
+        pos = positions[i] if i < len(positions) else Position.CM
+        suit = position_suitability(player, pos)
+
+        # Weight by vision, passing, crossing — scaled by suitability
+        weight = ((player.attributes.vision + player.attributes.passing +
+                   player.attributes.crossing) / 30.0) * suit
         candidates.append(player)
-        weights.append(weight)
+        weights.append(max(weight, 0.01))
 
     if not candidates:
         return None
@@ -519,8 +545,13 @@ def _pick_random_player(players: dict[int, Player],
 def _rate_players(ratings: dict[int, float], xi: list[int],
                    players: dict[int, Player], events: list[MatchEvent],
                    club_id: int, own_goals: int, opp_goals: int,
-                   is_home_team: bool) -> None:
-    """Generate 1-10 ratings for every starter on a team."""
+                   is_home_team: bool, formation: str = "4-3-3") -> None:
+    """Generate 1-10 ratings for every starter on a team.
+    Players out of position get a rating penalty."""
+    from src.core.player import position_suitability
+
+    positions = get_formation_positions(formation)
+
     # Base rating depends on team result
     if own_goals > opp_goals:
         base = rng.gaussian_clamped(7.2, 0.6, 6.0, 9.0)
@@ -543,11 +574,19 @@ def _rate_players(ratings: dict[int, float], xi: list[int],
         if ev.event_type == MatchEventType.YELLOW_CARD and ev.player_id:
             yellow_count[ev.player_id] = yellow_count.get(ev.player_id, 0) + 1
 
-    for pid in xi:
+    for idx, pid in enumerate(xi):
         p = players.get(pid)
         if not p:
             continue
         r = base + rng.uniform(-0.4, 0.4)
+
+        # Position suitability penalty on rating
+        if idx < len(positions):
+            suit = position_suitability(p, positions[idx])
+            if suit < 1.0:
+                # Out of position → lower rating (up to -1.5 for completely wrong)
+                r -= (1.0 - suit) * 1.5
+
         # Goal bonus
         r += goal_count.get(pid, 0) * 0.8
         # Assist bonus
