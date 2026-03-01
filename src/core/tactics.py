@@ -104,11 +104,17 @@ def preset_to_tactics(preset: TacticalPreset) -> TeamTactics:
 def auto_select_xi(players: list[Player], formation: str) -> tuple[list[int], list[int]]:
     """
     Automatically select the best starting XI and bench for a formation.
+    Excludes injured and suspended players.
 
     Returns (starting_xi_ids, bench_ids).
     """
     positions_needed = get_formation_positions(formation)
-    available = list(players)
+
+    # Filter out injured and suspended players
+    available = [p for p in players
+                 if p.injury_days_remaining <= 0 and p.suspension_matches <= 0]
+    unavailable_ids = {p.id for p in players if p.id not in {a.id for a in available}}
+
     starting_xi: list[int] = []
     used_ids: set[int] = set()
 

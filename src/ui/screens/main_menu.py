@@ -23,13 +23,8 @@ def build_main_menu(page: ft.Page) -> ft.Column:
         _continue_game(page)
 
     def settings_click(e):
-        page.show_dialog(
-            ft.AlertDialog(
-                title=ft.Text("⚙️ Settings"),
-                content=ft.Text("Settings coming in Phase 2!"),
-                actions=[ft.TextButton("OK", on_click=lambda e: page.pop_dialog())],
-            )
-        )
+        from src.ui.app import navigate
+        navigate(page, "/settings")
 
     # No navigation bar on main menu
     page.navigation_bar = None

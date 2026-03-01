@@ -102,6 +102,14 @@ class Player(BaseModel):
     shirt_number: Optional[int] = None
     transfer_listed: bool = False
 
+    # Injury & suspension
+    injury_days_remaining: int = 0
+    injury_type: str = ""              # e.g., "Hamstring", "Ankle", "Knee"
+    suspension_matches: int = 0        # matches left on ban
+
+    # Training
+    training_focus: str = ""           # e.g., "Shooting", "Defending", "Physical", "Playmaking"
+
 
 # ── Club Models ──────────────────────────────────────────────────────────────
 

@@ -459,8 +459,10 @@ def _show_result_dialog(page, outcome):
                 MatchEventType.SHOT_ON_TARGET: "🎯",
                 MatchEventType.SHOT_OFF_TARGET: "💨",
                 MatchEventType.YELLOW_CARD: "🟡",
+                MatchEventType.RED_CARD: "🟥",
                 MatchEventType.CORNER: "📐",
                 MatchEventType.HALF_TIME: "⏸️",
+                MatchEventType.INJURY: "🏥",
             }.get(ev.event_type, "📌")
             event_rows.append(
                 ft.Text(f"{ev.minute}' {icon} {ev.description}", size=11)

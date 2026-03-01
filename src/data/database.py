@@ -57,6 +57,7 @@ def init_schema(conn: sqlite3.Connection) -> None:
     """Create all database tables if they don't exist."""
     conn.executescript(SCHEMA_SQL)
     conn.commit()
+    _migrate_schema(conn)
 
 
 # ── Schema Definition ────────────────────────────────────────────────────────
@@ -169,7 +170,15 @@ CREATE TABLE IF NOT EXISTS players (
     red_cards INTEGER NOT NULL DEFAULT 0,
     minutes_played INTEGER NOT NULL DEFAULT 0,
     average_rating REAL NOT NULL DEFAULT 0.0,
-    man_of_the_match INTEGER NOT NULL DEFAULT 0
+    man_of_the_match INTEGER NOT NULL DEFAULT 0,
+
+    -- Injury & suspension
+    injury_days_remaining INTEGER NOT NULL DEFAULT 0,
+    injury_type TEXT NOT NULL DEFAULT '',
+    suspension_matches INTEGER NOT NULL DEFAULT 0,
+
+    -- Training
+    training_focus TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS fixtures (
@@ -214,5 +223,30 @@ CREATE TABLE IF NOT EXISTS inbox (
 CREATE INDEX IF NOT EXISTS idx_players_club ON players(club_id);
 CREATE INDEX IF NOT EXISTS idx_fixtures_matchday ON fixtures(matchday);
 CREATE INDEX IF NOT EXISTS idx_fixtures_played ON fixtures(played);
+
+CREATE TABLE IF NOT EXISTS game_settings (
+    id INTEGER PRIMARY KEY DEFAULT 1,
+    match_speed INTEGER NOT NULL DEFAULT 3,
+    auto_save INTEGER NOT NULL DEFAULT 1,
+    auto_save_interval INTEGER NOT NULL DEFAULT 7,
+    difficulty TEXT NOT NULL DEFAULT 'normal'
+);
 """
+
+
+def _migrate_schema(conn: sqlite3.Connection) -> None:
+    """Add columns that may not exist in older saves."""
+    migrations = [
+        ("players", "injury_days_remaining", "INTEGER NOT NULL DEFAULT 0"),
+        ("players", "injury_type", "TEXT NOT NULL DEFAULT ''"),
+        ("players", "suspension_matches", "INTEGER NOT NULL DEFAULT 0"),
+        ("players", "training_focus", "TEXT NOT NULL DEFAULT ''"),
+    ]
+    for table, col, col_def in migrations:
+        try:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_def}")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+    conn.commit()
+
 

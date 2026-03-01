@@ -194,6 +194,20 @@ EGYPTIAN_GOVERNORATES = [
     "Matrouh", "North Sinai", "South Sinai",
 ]
 
+# ── Training Focus Categories ────────────────────────────────────────────────
+TRAINING_FOCUSES: dict[str, list[str]] = {
+    "Shooting": ["finishing", "long_shots", "composure"],
+    "Defending": ["tackling", "marking", "positioning"],
+    "Physical": ["pace", "stamina", "strength", "agility"],
+    "Playmaking": ["passing", "vision", "first_touch", "crossing"],
+    "Mental": ["decisions", "composure", "work_rate", "leadership"],
+}
+
+INJURY_TYPES = [
+    "Hamstring", "Ankle", "Knee", "Groin", "Calf",
+    "Thigh", "Shoulder", "Back", "Concussion",
+]
+
 # ── UI / Display ─────────────────────────────────────────────────────────────
 SUPPORTED_LANGUAGES = ["en", "ar"]
 DEFAULT_LANGUAGE = "en"

@@ -59,6 +59,7 @@ def navigate(page: ft.Page, route: str):
     from src.ui.screens.transfers import build_transfers_screen
     from src.ui.screens.pre_match import build_pre_match_screen
     from src.ui.screens.season_summary import build_season_summary_screen
+    from src.ui.screens.settings import build_settings_screen
 
     builders = {
         "/": build_main_menu,
@@ -73,6 +74,7 @@ def navigate(page: ft.Page, route: str):
         "/transfers": build_transfers_screen,
         "/pre_match": build_pre_match_screen,
         "/season_summary": build_season_summary_screen,
+        "/settings": build_settings_screen,
     }
 
     builder = builders.get(route, build_main_menu)

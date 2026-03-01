@@ -58,6 +58,10 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                 name_parts.append("©")
             if player.transfer_listed:
                 name_parts.append("🔴")
+            if player.injury_days_remaining > 0:
+                name_parts.append("🏥")
+            if player.suspension_matches > 0:
+                name_parts.append("🚫")
             display_name = " ".join(name_parts)
 
             def make_click_handler(p=player, o=ovr):
@@ -130,6 +134,11 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                                 ),
                                 ft.Row(spacing=4, controls=[
                                     ft.IconButton(
+                                        icon=ft.Icons.COMPARE_ARROWS, tooltip="Compare Players",
+                                        icon_size=20,
+                                        on_click=lambda e: _start_compare(page, players),
+                                    ),
+                                    ft.IconButton(
                                         icon=ft.Icons.SAVE, tooltip="Save Game",
                                         icon_size=20,
                                         on_click=lambda e: _save_game(page, conn, gs),
@@ -164,6 +173,8 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                                 _summary_chip("Avg Age", f"{avg_age:.1f}", ft.Icons.CAKE),
                             ],
                         ),
+                        # News ticker
+                        _build_news_ticker(conn, gs),
                         ft.Divider(height=1),
                         ft.Row(
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -185,6 +196,50 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                 ),
             ),
         ],
+    )
+
+
+def _build_news_ticker(conn, gs) -> ft.Container:
+    """Build a compact league news ticker showing recent results and upcoming match."""
+    items = []
+
+    # Upcoming fixture
+    next_fix = queries.get_user_next_fixture(conn, gs.user_club_id)
+    if next_fix:
+        is_home = next_fix.home_club_id == gs.user_club_id
+        opp = next_fix.away_club_name if is_home else next_fix.home_club_name
+        venue = "H" if is_home else "A"
+        days = (next_fix.date - gs.current_date).days if next_fix.date else 0
+        when = "TODAY" if days <= 0 else f"in {days}d"
+        items.append(
+            ft.Text(f"📅 Next: vs {opp} ({venue}) {when}", size=11,
+                     color=ft.Colors.AMBER_300, weight=ft.FontWeight.W_500)
+        )
+
+    # Last matchday results (up to 4)
+    played_mds = queries.get_all_matchdays_played(conn)
+    if played_mds:
+        last_md = played_mds[0]
+        results = queries.get_matchday_results(conn, last_md)
+        for fix in results[:4]:
+            r = fix.result
+            if not r:
+                continue
+            is_user = (fix.home_club_id == gs.user_club_id or fix.away_club_id == gs.user_club_id)
+            color = ft.Colors.GREEN_300 if is_user else ft.Colors.GREY_500
+            items.append(
+                ft.Text(f"  {fix.home_club_name[:10]} {r.home_goals}-{r.away_goals} {fix.away_club_name[:10]}",
+                         size=10, color=color)
+            )
+
+    if not items:
+        return ft.Container()
+
+    return ft.Container(
+        content=ft.Column(controls=items, spacing=2),
+        padding=ft.padding.symmetric(horizontal=4, vertical=4),
+        border_radius=6,
+        bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
     )
 
 
@@ -220,6 +275,29 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
         else "😐 Content" if player.morale >= 40
         else "😞 Unhappy"
     )
+
+    # Injury/suspension status
+    status_badges = []
+    if player.injury_days_remaining > 0:
+        status_badges.append(
+            ft.Container(
+                content=ft.Text(f"🏥 Injured: {player.injury_type} ({player.injury_days_remaining}d)",
+                                size=11, color=ft.Colors.WHITE),
+                bgcolor=ft.Colors.RED_800,
+                padding=ft.padding.symmetric(horizontal=8, vertical=3),
+                border_radius=6,
+            )
+        )
+    if player.suspension_matches > 0:
+        status_badges.append(
+            ft.Container(
+                content=ft.Text(f"🚫 Suspended: {player.suspension_matches} match(es)",
+                                size=11, color=ft.Colors.WHITE),
+                bgcolor=ft.Colors.ORANGE_800,
+                padding=ft.padding.symmetric(horizontal=8, vertical=3),
+                border_radius=6,
+            )
+        )
 
     # Technical stats
     tech_stats = [
@@ -289,6 +367,28 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
     expiry_str = player.contract.contract_expiry.strftime("%b %Y") if player.contract.contract_expiry else "N/A"
     wage_str = f"{player.contract.wage_weekly:,} EGP/wk"
 
+    # Training focus dropdown
+    from src.utils.config import TRAINING_FOCUSES
+    training_options = [ft.dropdown.Option("", text="None")] + [
+        ft.dropdown.Option(k) for k in TRAINING_FOCUSES
+    ]
+
+    def on_training_change(e):
+        from src.ui.app import app_state, show_snackbar
+        new_focus = e.control.value or ""
+        player.training_focus = new_focus
+        queries.update_player_stats(app_state.db_conn, player)
+        label = new_focus if new_focus else "None"
+        show_snackbar(page, f"Training focus set to {label}")
+
+    training_dd = ft.Dropdown(
+        label="Training Focus",
+        value=player.training_focus or "",
+        options=training_options,
+        on_select=on_training_change,
+        width=200, text_size=12,
+    )
+
     dlg = ft.AlertDialog(
         title=ft.Row(
             controls=[
@@ -327,6 +427,7 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
                             ft.Text(morale_text, size=12),
                         ],
                     ),
+                    *(status_badges if status_badges else []),
                     ft.Divider(height=1),
                     # Season stats
                     ft.Text("📈 Season Stats", size=13, weight=ft.FontWeight.W_500,
@@ -365,6 +466,11 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
                             ft.Text(f"📅 Expires: {expiry_str}", size=12),
                         ],
                     ),
+                    ft.Divider(height=1),
+                    # Training
+                    ft.Text("🏋️ Training", size=13, weight=ft.FontWeight.W_500,
+                             color=ft.Colors.AMBER_300),
+                    training_dd,
                 ],
             ),
             width=340,
@@ -429,5 +535,133 @@ def _save_game(page, conn, gs):
     from src.ui.app import show_snackbar
     queries.save_game_state(conn, gs)
     show_snackbar(page, "💾 Game saved!")
+
+
+def _start_compare(page, players):
+    """Let the user pick two players to compare."""
+    from src.ui.app import show_snackbar
+
+    selected = [None, None]
+
+    def make_pick_handler(p, idx):
+        def handler(e):
+            selected[idx] = p
+            if selected[0] and selected[1]:
+                page.pop_dialog()
+                _show_compare_dialog(page, selected[0], selected[1])
+        return handler
+
+    player_list_1 = []
+    for p in players:
+        ovr = calculate_overall_rating(p)
+        player_list_1.append(
+            ft.ListTile(
+                title=ft.Text(f"{p.name} ({p.position.value})", size=12),
+                subtitle=ft.Text(f"OVR {ovr} | Age {p.age}", size=10, color=ft.Colors.GREY_400),
+                on_click=make_pick_handler(p, 0),
+            )
+        )
+
+    step_text = ft.Text("Pick Player 1", size=14, weight=ft.FontWeight.BOLD,
+                         color=ft.Colors.AMBER_300)
+
+    def rebuild_for_p2():
+        """After picking player 1, rebuild list for player 2."""
+        step_text.value = f"✅ {selected[0].name} — Now pick Player 2"
+        list_view.controls.clear()
+        for p in players:
+            if p.id == selected[0].id:
+                continue
+            ovr = calculate_overall_rating(p)
+            list_view.controls.append(
+                ft.ListTile(
+                    title=ft.Text(f"{p.name} ({p.position.value})", size=12),
+                    subtitle=ft.Text(f"OVR {ovr} | Age {p.age}", size=10, color=ft.Colors.GREY_400),
+                    on_click=make_pick_handler(p, 1),
+                )
+            )
+        page.update()
+
+    # Override pick handler for step 1
+    def make_step1_handler(p):
+        def handler(e):
+            selected[0] = p
+            rebuild_for_p2()
+        return handler
+
+    list_view = ft.ListView(spacing=2, controls=[])
+    for p in players:
+        ovr = calculate_overall_rating(p)
+        list_view.controls.append(
+            ft.ListTile(
+                title=ft.Text(f"{p.name} ({p.position.value})", size=12),
+                subtitle=ft.Text(f"OVR {ovr} | Age {p.age}", size=10, color=ft.Colors.GREY_400),
+                on_click=make_step1_handler(p),
+            )
+        )
+
+    dlg = ft.AlertDialog(
+        title=ft.Text("⚖️ Compare Players"),
+        content=ft.Container(
+            content=ft.Column(controls=[step_text, list_view], spacing=6),
+            width=330, height=400,
+        ),
+        actions=[ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog())],
+    )
+    page.show_dialog(dlg)
+
+
+def _show_compare_dialog(page, p1, p2):
+    """Show side-by-side player comparison."""
+    ovr1 = calculate_overall_rating(p1)
+    ovr2 = calculate_overall_rating(p2)
+
+    attrs_to_compare = [
+        ("Finishing", "finishing"), ("Passing", "passing"), ("Dribbling", "dribbling"),
+        ("First Touch", "first_touch"), ("Crossing", "crossing"), ("Heading", "heading"),
+        ("Pace", "pace"), ("Stamina", "stamina"), ("Strength", "strength"),
+        ("Agility", "agility"), ("Composure", "composure"), ("Vision", "vision"),
+        ("Tackling", "tackling"), ("Marking", "marking"), ("Work Rate", "work_rate"),
+        ("Positioning", "positioning"),
+    ]
+
+    rows = []
+    for label, attr in attrs_to_compare:
+        v1 = getattr(p1.attributes, attr, 10)
+        v2 = getattr(p2.attributes, attr, 10)
+        c1 = ft.Colors.GREEN_400 if v1 > v2 else (ft.Colors.RED_400 if v1 < v2 else ft.Colors.WHITE)
+        c2 = ft.Colors.GREEN_400 if v2 > v1 else (ft.Colors.RED_400 if v2 < v1 else ft.Colors.WHITE)
+        rows.append(ft.Row(
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            controls=[
+                ft.Text(str(v1), size=12, weight=ft.FontWeight.BOLD, color=c1, width=30),
+                ft.Text(label, size=10, color=ft.Colors.GREY_400, text_align=ft.TextAlign.CENTER, expand=True),
+                ft.Text(str(v2), size=12, weight=ft.FontWeight.BOLD, color=c2, width=30,
+                         text_align=ft.TextAlign.RIGHT),
+            ],
+        ))
+
+    dlg = ft.AlertDialog(
+        title=ft.Row(
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            controls=[
+                ft.Column(spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
+                    ft.Text(p1.name, size=13, weight=ft.FontWeight.BOLD),
+                    ft.Text(f"{p1.position.value} | OVR {ovr1}", size=10, color=ft.Colors.AMBER_300),
+                ]),
+                ft.Text("VS", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_500),
+                ft.Column(spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
+                    ft.Text(p2.name, size=13, weight=ft.FontWeight.BOLD),
+                    ft.Text(f"{p2.position.value} | OVR {ovr2}", size=10, color=ft.Colors.AMBER_300),
+                ]),
+            ],
+        ),
+        content=ft.Container(
+            content=ft.Column(controls=rows, spacing=4, scroll=ft.ScrollMode.AUTO),
+            width=330, height=380,
+        ),
+        actions=[ft.TextButton("Close", on_click=lambda e: page.pop_dialog())],
+    )
+    page.show_dialog(dlg)
 
 

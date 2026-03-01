@@ -16,6 +16,7 @@ from src.utils.config import (
 from src.utils import rng
 from src.core.tactics import calculate_team_strength, get_formation_positions
 from src.core.player import get_match_readiness
+from src.core import commentary
 
 
 def simulate_match(
@@ -185,6 +186,45 @@ def simulate_match(
                         club_id=home_club.id if is_home_foul else away_club.id,
                         description=f"Yellow card for {foul_player.name}",
                     ))
+
+            # Rare red card (~1% of fouls)
+            elif rng.chance(0.01):
+                if is_home_foul:
+                    home_reds += 1
+                else:
+                    away_reds += 1
+                if foul_player:
+                    events.append(MatchEvent(
+                        minute=min(minute, 90 + second_half_added),
+                        event_type=MatchEventType.RED_CARD,
+                        player_id=foul_player.id,
+                        player_name=foul_player.name,
+                        club_id=home_club.id if is_home_foul else away_club.id,
+                        description=commentary.generate(MatchEventType.RED_CARD,
+                                                         player=foul_player.name,
+                                                         club=(home_club.name if is_home_foul else away_club.name)),
+                    ))
+
+        # ── Injuries (~1.5% chance per team per match, so ~0.017% per minute) ──
+        if rng.chance(0.0017):
+            inj_home = rng.chance(0.5)
+            if inj_home:
+                inj_player = _pick_random_player(home_players, home_tactics.starting_xi)
+                inj_club = home_club
+            else:
+                inj_player = _pick_random_player(away_players, away_tactics.starting_xi)
+                inj_club = away_club
+            if inj_player:
+                from src.utils.config import INJURY_TYPES
+                inj_type = rng.choice(INJURY_TYPES)
+                events.append(MatchEvent(
+                    minute=min(minute, 90 + second_half_added),
+                    event_type=MatchEventType.INJURY,
+                    player_id=inj_player.id,
+                    player_name=inj_player.name,
+                    club_id=inj_club.id,
+                    description=f"{inj_player.name} goes down with a {inj_type.lower()} injury!",
+                ))
 
     # Full time
     events.append(MatchEvent(

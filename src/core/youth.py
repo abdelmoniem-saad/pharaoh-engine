@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from src.data.models import Player, Club
 from src.utils import rng
-from src.utils.config import ATTR_MIN, ATTR_MAX
+from src.utils.config import ATTR_MIN, ATTR_MAX, TRAINING_FOCUSES
 
 
 def develop_player(player: Player, club: Club) -> list[str]:
@@ -38,13 +38,18 @@ def _grow_young_player(player: Player, club: Club) -> list[str]:
     growth_chance = min(0.3, ca_gap / 200.0 + club.facilities_level / 50.0)
 
     if rng.chance(growth_chance):
-        # Pick a random attribute to improve
-        attr_names = [
+        # Pick a random attribute to improve — biased by training focus
+        all_attr_names = [
             "finishing", "passing", "dribbling", "first_touch", "crossing",
             "heading", "pace", "stamina", "strength", "agility",
             "composure", "vision", "work_rate", "positioning", "decisions",
         ]
-        attr_to_grow = rng.choice(attr_names)
+        focus_attrs = TRAINING_FOCUSES.get(player.training_focus, [])
+        if focus_attrs and rng.chance(0.70):
+            # 70% chance to improve a focus attribute
+            attr_to_grow = rng.choice(focus_attrs)
+        else:
+            attr_to_grow = rng.choice(all_attr_names)
         current_val = getattr(player.attributes, attr_to_grow)
 
         if current_val < ATTR_MAX:

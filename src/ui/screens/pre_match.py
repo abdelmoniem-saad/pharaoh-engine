@@ -184,6 +184,13 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                         page.update()
                 return handler
 
+            bench_label_parts = [p.name]
+            if p.injury_days_remaining > 0:
+                bench_label_parts.append("🏥")
+            if p.suspension_matches > 0:
+                bench_label_parts.append("🚫")
+            bench_display = " ".join(bench_label_parts)
+
             bench_col.controls.append(
                 ft.Container(
                     content=ft.Row(
@@ -197,7 +204,7 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                                 bgcolor=ft.Colors.GREY_700,
                                 alignment=ft.Alignment(0, 0),
                             ),
-                            ft.Text(p.name, size=11, width=100),
+                            ft.Text(bench_display, size=11, width=110),
                             ft.Text(p.position.value, size=10, color=ft.Colors.AMBER_300),
                             ft.Text(f"{p.fitness}%", size=10,
                                      color=ft.Colors.GREEN_400 if p.fitness >= 70 else ft.Colors.RED_400),

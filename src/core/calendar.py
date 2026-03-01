@@ -22,7 +22,8 @@ from src.core.fans import update_fan_happiness
 from src.core.youth import develop_player
 from src.core.finance import process_monthly_finances
 from src.core.transfers import generate_ai_bids, check_expiring_contracts
-from src.utils.config import MatchEventType
+from src.utils.config import MatchEventType, INJURY_TYPES
+from src.utils import rng
 
 
 def advance_day(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
@@ -76,6 +77,15 @@ def advance_day(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
             ))
 
     queries.save_game_state(conn, game_state)
+
+    # Autosave check
+    try:
+        row = conn.execute("SELECT auto_save, auto_save_interval FROM game_settings WHERE id = 1").fetchone()
+        if row and row["auto_save"] and game_state.day_count % row["auto_save_interval"] == 0:
+            queries.save_game_state(conn, game_state)
+    except Exception:
+        pass
+
     return messages
 
 
@@ -236,6 +246,20 @@ def simulate_user_match(conn: sqlite3.Connection,
     # Save updated club
     queries.update_club(conn, user_club)
 
+    # Decrement suspensions for user squad after matchday
+    full_squad = queries.get_players_by_club(conn, game_state.user_club_id)
+    for p in full_squad:
+        if p.suspension_matches > 0:
+            p.suspension_matches -= 1
+            queries.update_player_stats(conn, p)
+            if p.suspension_matches == 0:
+                queries.insert_message(conn, InboxMessage(
+                    date=game_state.current_date,
+                    subject=f"🔓 {p.name} Available",
+                    body=f"{p.name} has served their suspension and is available for selection.",
+                    category="general",
+                ))
+
     # Generate media headline
     media_msg = create_match_report_message(
         user_result, game_state.user_club_id, game_state.current_date
@@ -377,14 +401,59 @@ def _update_player_stats_after_match(
             update_morale(player, away_result, played=False)
             queries.update_player_stats(conn, player)
 
+    # ── Process injuries from match events ──────────────────────────────
+    for event in result.events:
+        if event.event_type == MatchEventType.INJURY and event.player_id:
+            player = all_players.get(event.player_id)
+            if player:
+                inj_days = rng.randint(7, 42)
+                inj_type = ""
+                # Extract injury type from description
+                for it in INJURY_TYPES:
+                    if it.lower() in event.description.lower():
+                        inj_type = it
+                        break
+                player.injury_days_remaining = inj_days
+                player.injury_type = inj_type or "Unknown"
+                player.fitness = max(0, player.fitness - 30)
+                queries.update_player_stats(conn, player)
+
+    # ── Suspension: 5 yellows = 1 match ban, red = 1-3 match ban ────────
+    for event in result.events:
+        if event.event_type == MatchEventType.YELLOW_CARD and event.player_id:
+            player = all_players.get(event.player_id)
+            if player and player.season_stats.yellow_cards > 0 and player.season_stats.yellow_cards % 5 == 0:
+                player.suspension_matches = 1
+                queries.update_player_stats(conn, player)
+        elif event.event_type == MatchEventType.RED_CARD and event.player_id:
+            player = all_players.get(event.player_id)
+            if player:
+                player.season_stats.red_cards += 1
+                player.suspension_matches = rng.randint(1, 3)
+                queries.update_player_stats(conn, player)
+
 
 def _daily_recovery(conn: sqlite3.Connection, game_state: GameState) -> None:
-    """Apply daily fitness recovery to user club players only (AI recovers before matches)."""
+    """Apply daily fitness recovery and injury recovery to user club players."""
     squad = queries.get_players_by_club(conn, game_state.user_club_id)
     for player in squad:
         old_fitness = player.fitness
         rest_recovery(player, days=1)
-        if player.fitness != old_fitness:
+
+        # Injury recovery countdown
+        if player.injury_days_remaining > 0:
+            player.injury_days_remaining -= 1
+            if player.injury_days_remaining == 0:
+                player.injury_type = ""
+                player.fitness = max(player.fitness, 60)  # minimum fitness on return
+                queries.insert_message(conn, InboxMessage(
+                    date=game_state.current_date,
+                    subject=f"🏥 {player.name} Recovered!",
+                    body=f"{player.name} has recovered from injury and is available for selection.",
+                    category="general",
+                ))
+
+        if player.fitness != old_fitness or player.injury_days_remaining >= 0:
             queries.update_player_stats(conn, player)
 
 
