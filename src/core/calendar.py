@@ -561,36 +561,46 @@ def _daily_recovery(conn: sqlite3.Connection, game_state: GameState) -> None:
 
 def _weekly_development(conn: sqlite3.Connection,
                          game_state: GameState) -> list[str]:
-    """Weekly player development using the training system."""
+    """Weekly player development using the training system.
+    Applies to ALL clubs — AI clubs train at Normal intensity with position-based focus."""
     messages: list[str] = []
-    club = queries.get_club(conn, game_state.user_club_id)
-    if not club:
-        return messages
 
-    from src.core.training import process_weekly_training, TrainingIntensity
+    from src.core.training import process_weekly_training, TrainingIntensity, get_recommended_focus
 
-    squad = queries.get_players_by_club(conn, club.id)
-    dev_lines = []
-    for player in squad:
-        if player.injury_days_remaining > 0:
-            continue
-        dev_msgs = process_weekly_training(player, club, TrainingIntensity.NORMAL)
-        if dev_msgs:
-            dev_lines.extend(dev_msgs)
-            messages.extend(dev_msgs)
-            queries.update_player_stats(conn, player)
+    all_clubs = queries.get_all_clubs(conn)
+    user_dev_lines = []
 
-        # Check milestones
-        milestone_msgs = queries.check_player_milestones(conn, player, game_state.current_date)
-        for m in milestone_msgs:
-            queries.insert_message(conn, m)
+    for club in all_clubs:
+        squad = queries.get_players_by_club(conn, club.id)
+        is_user = club.id == game_state.user_club_id
 
-    # Send a consolidated training report if anything changed
-    if dev_lines:
+        for player in squad:
+            if player.injury_days_remaining > 0:
+                continue
+
+            # AI players get auto-assigned training focus if they don't have one
+            if not is_user and not player.training_focus:
+                player.training_focus = get_recommended_focus(player)
+
+            dev_msgs = process_weekly_training(player, club, TrainingIntensity.NORMAL)
+            if dev_msgs:
+                if is_user:
+                    user_dev_lines.extend(dev_msgs)
+                    messages.extend(dev_msgs)
+                queries.update_player_stats(conn, player)
+
+            # Check milestones (user only to avoid inbox spam)
+            if is_user:
+                milestone_msgs = queries.check_player_milestones(conn, player, game_state.current_date)
+                for m in milestone_msgs:
+                    queries.insert_message(conn, m)
+
+    # Send a consolidated training report if anything changed (user only)
+    if user_dev_lines:
         queries.insert_message(conn, InboxMessage(
             date=game_state.current_date,
             subject="📈 Weekly Training Report",
-            body="\n".join(dev_lines),
+            body="\n".join(user_dev_lines),
             category="general",
         ))
     return messages

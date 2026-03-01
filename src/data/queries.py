@@ -212,14 +212,23 @@ def get_player(conn: sqlite3.Connection, player_id: int) -> Player | None:
 
 
 def update_player_stats(conn: sqlite3.Connection, player: Player) -> None:
-    """Update a player's season stats, form, fitness, morale, injury, suspension, training."""
+    """Update a player's season stats, form, fitness, morale, injury, suspension,
+    training, current_ability, and all individual attributes."""
     s = player.season_stats
+    a = player.attributes
     conn.execute("""
         UPDATE players SET appearances=?, goals=?, assists=?, clean_sheets=?,
             yellow_cards=?, red_cards=?, minutes_played=?, average_rating=?,
             man_of_the_match=?, form=?, fitness=?, morale=?,
             injury_days_remaining=?, injury_type=?, suspension_matches=?,
-            training_focus=?, matches_benched_streak=?
+            training_focus=?, matches_benched_streak=?,
+            current_ability=?,
+            finishing=?, passing=?, dribbling=?, first_touch=?, crossing=?,
+            heading=?, long_shots=?, tackling=?, marking=?, free_kicks=?,
+            pace=?, stamina=?, strength=?, agility=?, jumping=?,
+            composure=?, vision=?, work_rate=?, leadership=?, aggression=?,
+            positioning=?, decisions=?,
+            gk_reflexes=?, gk_handling=?, gk_positioning=?, gk_one_on_ones=?, gk_kicking=?
         WHERE id=?
     """, (s.appearances, s.goals, s.assists, s.clean_sheets,
           s.yellow_cards, s.red_cards, s.minutes_played, s.average_rating,
@@ -227,6 +236,13 @@ def update_player_stats(conn: sqlite3.Connection, player: Player) -> None:
           player.injury_days_remaining, player.injury_type,
           player.suspension_matches, player.training_focus,
           player.matches_benched_streak,
+          player.current_ability,
+          a.finishing, a.passing, a.dribbling, a.first_touch, a.crossing,
+          a.heading, a.long_shots, a.tackling, a.marking, a.free_kicks,
+          a.pace, a.stamina, a.strength, a.agility, a.jumping,
+          a.composure, a.vision, a.work_rate, a.leadership, a.aggression,
+          a.positioning, a.decisions,
+          a.gk_reflexes, a.gk_handling, a.gk_positioning, a.gk_one_on_ones, a.gk_kicking,
           player.id))
     conn.commit()
 

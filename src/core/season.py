@@ -133,23 +133,32 @@ def start_new_season(conn: sqlite3.Connection,
             messages.extend(eval_msgs)
         queries.update_club(conn, user_club)
 
-    # Handle expired contracts — release players with expired contracts
-    all_players = queries.get_players_by_club(conn, game_state.user_club_id)
-    released = []
-    for p in all_players:
-        if p.contract.contract_expiry and p.contract.contract_expiry <= game_state.current_date:
-            released.append(p.name)
-            # Remove from club (set club_id to NULL would break things; just extend minimally)
-            # For MVP: auto-extend by 1 year with a message
-    if released:
+    # Handle expired contracts — ALL clubs, not just user's
+    from datetime import timedelta
+    all_clubs = queries.get_all_clubs(conn)
+    user_released = []
+    for club in all_clubs:
+        club_players = queries.get_players_by_club(conn, club.id)
+        for p in club_players:
+            if p.contract.contract_expiry and p.contract.contract_expiry <= game_state.current_date:
+                # Actually renew the contract (1 year extension, same wage)
+                new_expiry = game_state.current_date + timedelta(days=365)
+                conn.execute("""
+                    UPDATE players SET contract_expiry = ? WHERE id = ?
+                """, (new_expiry.isoformat(), p.id))
+                if club.id == game_state.user_club_id:
+                    user_released.append(p.name)
+    conn.commit()
+
+    if user_released:
         queries.insert_message(conn, InboxMessage(
             date=game_state.current_date,
-            subject=f"📋 {len(released)} Contract(s) Auto-Renewed",
+            subject=f"📋 {len(user_released)} Contract(s) Auto-Renewed",
             body="The following players had expiring contracts and were auto-renewed for 1 year:\n\n" +
-                 "\n".join(f"• {name}" for name in released),
+                 "\n".join(f"• {name}" for name in user_released),
             category="board",
         ))
-        messages.append(f"{len(released)} contracts auto-renewed.")
+        messages.append(f"{len(user_released)} contracts auto-renewed.")
 
     # Age players
     queries.age_all_players(conn)

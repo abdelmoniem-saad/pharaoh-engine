@@ -81,12 +81,25 @@ def simulate_match(
     for pid in home_tactics.starting_xi:
         p = home_players.get(pid)
         if p and p.training_focus:
-            if p.training_focus in ("Finishing", "Dribbling", "Crossing"):
+            if p.training_focus in ("Shooting", "Playmaking"):
                 _training_bonus_attack += 0.15
-            elif p.training_focus in ("Tackling", "Marking", "Positioning"):
+            elif p.training_focus in ("Defending",):
                 _training_bonus_defense += 0.15
     home_attack += _training_bonus_attack
     home_defense += _training_bonus_defense
+
+    # Away team training bonuses (mirror of home)
+    _away_training_attack = 0.0
+    _away_training_defense = 0.0
+    for pid in away_tactics.starting_xi:
+        p = away_players.get(pid)
+        if p and p.training_focus:
+            if p.training_focus in ("Shooting", "Playmaking"):
+                _away_training_attack += 0.15
+            elif p.training_focus in ("Defending",):
+                _away_training_defense += 0.15
+    away_attack += _away_training_attack
+    away_defense += _away_training_defense
 
     # Initialize
     home_goals = 0
