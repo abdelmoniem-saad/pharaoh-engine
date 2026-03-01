@@ -35,7 +35,8 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     shortlist: set = app_state._shortlist
 
     # ── Search controls ──────────────────────────────────────────────
-    name_field = ft.TextField(label="Name", expand=True, text_size=13)
+    name_field = ft.TextField(label="Name", expand=True, text_size=13,
+                               hint_text="Search by name…")
     pos_dd = ft.Dropdown(
         label="Position", width=90,
         options=[ft.dropdown.Option("Any")] + [ft.dropdown.Option(p.value) for p in Position],
@@ -111,6 +112,29 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
             on_click=make_handler(),
             ink=True,
         )
+
+    # ── Auto-load top players on first visit ─────────────────────────
+    def _auto_load_results():
+        """Pre-populate results with top available players."""
+        players = queries.search_players(
+            conn, exclude_club_id=gs.user_club_id, limit=20,
+        )
+        results_list.controls.clear()
+        if not players:
+            results_list.controls.append(
+                ft.Text("No players available.", size=13, color=ft.Colors.GREY_500))
+        else:
+            results_list.controls.append(
+                ft.Text(f"Top {len(players)} available players", size=11,
+                         color=ft.Colors.GREY_500))
+            for p in players:
+                value = estimate_player_value(p)
+                p_club = queries.get_club(conn, p.club_id) if p.club_id else None
+                club_name = p_club.short_name if p_club else "Free Agent"
+                results_list.controls.append(
+                    _player_row(p, value, club_name, p.id in shortlist))
+
+    _auto_load_results()
 
     def do_search(e):
         pos = pos_dd.value if pos_dd.value != "Any" else ""
@@ -429,10 +453,16 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     search_content = ft.Column(
         spacing=8, visible=True,
         controls=[
-            ft.Row(spacing=6, wrap=True, controls=[
-                name_field, pos_dd, max_age_field, min_ovr_field,
+            # Row 1: Name + Position (expand fills remaining space)
+            ft.Row(spacing=6, controls=[
+                name_field, pos_dd,
             ]),
-            ft.ElevatedButton("🔍 Search", on_click=do_search, width=130),
+            # Row 2: Age + OVR + Search button
+            ft.Row(spacing=6, controls=[
+                max_age_field, min_ovr_field,
+                ft.ElevatedButton("🔍 Search", on_click=do_search,
+                                   expand=True, height=44),
+            ]),
             ft.Divider(height=1),
             results_list,
         ],
