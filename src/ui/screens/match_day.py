@@ -479,36 +479,90 @@ def _show_result_dialog(page, outcome):
         page.show_dialog(commentary_dlg)
 
     def show_ratings(e):
-        """Show individual player ratings."""
-        rating_rows = []
-        all_ratings = sorted(result.player_ratings.items(), key=lambda x: -x[1])
-        for pid, rating in all_ratings:
-            # Try to find player name from events
-            name = str(pid)
-            for ev in result.events:
-                if ev.player_id == pid and ev.player_name:
-                    name = ev.player_name
-                    break
-                if ev.second_player_id == pid and ev.second_player_name:
-                    name = ev.second_player_name
-                    break
-            r_color = (ft.Colors.GREEN_400 if rating >= 7.5
-                       else ft.Colors.YELLOW_400 if rating >= 6.0
-                       else ft.Colors.RED_400)
-            rating_rows.append(
-                ft.Row(spacing=6, controls=[
-                    ft.Text(name, size=11, width=150),
-                    ft.Text(f"{rating:.1f}", size=12, weight=ft.FontWeight.BOLD, color=r_color),
-                ])
+        """Show individual player ratings grouped by team."""
+        from src.ui.app import app_state
+
+        conn = app_state.db_conn
+        all_ratings = result.player_ratings
+
+        # Build a name lookup: load both squads from DB
+        home_players = queries.get_players_by_club(conn, result.home_club_id) if conn else []
+        away_players = queries.get_players_by_club(conn, result.away_club_id) if conn else []
+        name_map = {p.id: p.name for p in home_players + away_players}
+        home_ids = {p.id for p in home_players}
+
+        # Split ratings by team
+        home_ratings = [(pid, r) for pid, r in all_ratings.items() if pid in home_ids]
+        away_ratings = [(pid, r) for pid, r in all_ratings.items() if pid not in home_ids]
+
+        # Sort each team by rating descending
+        home_ratings.sort(key=lambda x: -x[1])
+        away_ratings.sort(key=lambda x: -x[1])
+
+        def _rating_color(rating: float) -> str:
+            if rating >= 7.5:
+                return ft.Colors.GREEN_400
+            elif rating >= 6.5:
+                return ft.Colors.YELLOW_400
+            else:
+                return ft.Colors.RED_400
+
+        def _build_rating_row(pid: int, rating: float) -> ft.Container:
+            name = name_map.get(pid, f"Player #{pid}")
+            return ft.Container(
+                content=ft.Row(
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    controls=[
+                        ft.Text(name, size=12, expand=True),
+                        ft.Container(
+                            content=ft.Text(
+                                f"{rating:.1f}",
+                                size=13, weight=ft.FontWeight.BOLD,
+                                color=_rating_color(rating),
+                            ),
+                            width=40,
+                            alignment=ft.Alignment(1, 0),
+                        ),
+                    ],
+                ),
+                padding=ft.padding.symmetric(horizontal=4, vertical=2),
             )
-        if not rating_rows:
-            rating_rows.append(ft.Text("No ratings available.", size=12))
+
+        rating_controls = []
+
+        # Home team section
+        rating_controls.append(
+            ft.Text(f"🏠 {result.home_club_name}", size=13,
+                     weight=ft.FontWeight.BOLD, color=ft.Colors.AMBER_300)
+        )
+        if home_ratings:
+            for pid, r in home_ratings:
+                rating_controls.append(_build_rating_row(pid, r))
+        else:
+            rating_controls.append(ft.Text("No ratings", size=11, color=ft.Colors.GREY_500))
+
+        rating_controls.append(ft.Divider(height=1))
+
+        # Away team section
+        rating_controls.append(
+            ft.Text(f"✈️ {result.away_club_name}", size=13,
+                     weight=ft.FontWeight.BOLD, color=ft.Colors.AMBER_300)
+        )
+        if away_ratings:
+            for pid, r in away_ratings:
+                rating_controls.append(_build_rating_row(pid, r))
+        else:
+            rating_controls.append(ft.Text("No ratings", size=11, color=ft.Colors.GREY_500))
 
         ratings_dlg = ft.AlertDialog(
             title=ft.Text("📊 Player Ratings", size=16, weight=ft.FontWeight.BOLD),
             content=ft.Container(
-                content=ft.Column(controls=rating_rows, spacing=3, scroll=ft.ScrollMode.AUTO),
-                width=330, height=400,
+                content=ft.Column(
+                    controls=rating_controls,
+                    spacing=2,
+                    scroll=ft.ScrollMode.AUTO,
+                ),
+                width=330, height=420,
             ),
             actions=[ft.TextButton("Close", on_click=lambda e: page.pop_dialog())],
         )

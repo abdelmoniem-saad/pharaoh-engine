@@ -28,8 +28,8 @@ _POSITION_COORDS: dict[Position, tuple[float, float]] = {
     Position.ST:  (50, 18),
 }
 
-# Offsets for duplicate positions (e.g., 2 CBs, 2 STs)
-_SPREAD_OFFSETS = [0, -15, 15, -30, 30]
+# Horizontal gap between duplicate positions (in % of pitch width)
+_SPREAD_GAP = 17
 
 
 def build_tactics_screen(page: ft.Page) -> ft.Column:
@@ -192,12 +192,13 @@ def _build_formation_pitch(formation: str) -> ft.Container:
     """Build a visual pitch showing player positions for the given formation."""
     positions = FORMATION_TEMPLATES.get(formation, FORMATION_TEMPLATES["4-2-3-1"])
 
-    # Count occurrences of each position to spread duplicates
+    # Count occurrences of each position to spread duplicates symmetrically
     pos_count: dict[Position, int] = {}
-    pos_index: dict[Position, int] = {}
-
     for pos in positions:
         pos_count[pos] = pos_count.get(pos, 0) + 1
+
+    # Track which index we're at for each position
+    pos_index: dict[Position, int] = {}
 
     # Create position markers
     markers = []
@@ -208,19 +209,21 @@ def _build_formation_pitch(formation: str) -> ft.Container:
 
         base_x, base_y = _POSITION_COORDS.get(pos, (50, 50))
 
-        # Spread duplicates horizontally
+        # Symmetric spreading: distribute N markers evenly around base_x
+        # For count=1: offset=0  For count=2: offsets=[-gap/2, +gap/2]
+        # For count=3: offsets=[-gap, 0, +gap]  etc.
         if count > 1:
-            spread = _SPREAD_OFFSETS[idx] if idx < len(_SPREAD_OFFSETS) else 0
-            x = base_x + spread
+            offset = (idx - (count - 1) / 2) * _SPREAD_GAP
+            x = base_x + offset
         else:
             x = base_x
         y = base_y
 
-        # Clamp
+        # Clamp to pitch bounds
         x = max(8, min(92, x))
         y = max(5, min(95, y))
 
-        # Marker
+        # Marker style
         is_gk = pos == Position.GK
         marker_color = ft.Colors.AMBER_400 if is_gk else ft.Colors.WHITE
         marker_bg = ft.Colors.with_opacity(0.9, ft.Colors.AMBER_800 if is_gk else ft.Colors.BLUE_GREY_700)

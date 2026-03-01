@@ -472,6 +472,13 @@ def mark_message_read(conn: sqlite3.Connection, msg_id: int) -> None:
     conn.commit()
 
 
+def mark_all_messages_read(conn: sqlite3.Connection) -> int:
+    """Mark all unread messages as read. Returns the number of messages marked."""
+    cursor = conn.execute("UPDATE inbox SET is_read = 1 WHERE is_read = 0")
+    conn.commit()
+    return cursor.rowcount
+
+
 def get_unread_count(conn: sqlite3.Connection) -> int:
     """Get the number of unread inbox messages."""
     row = conn.execute("SELECT COUNT(*) as cnt FROM inbox WHERE is_read = 0").fetchone()

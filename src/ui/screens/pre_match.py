@@ -28,7 +28,7 @@ _POS_COORDS: dict[Position, tuple[float, float]] = {
     Position.RW:  (82, 25),
     Position.ST:  (50, 15),
 }
-_SPREAD = [0, -15, 15, -30, 30]
+_SPREAD_GAP = 17
 
 
 def build_pre_match_screen(page: ft.Page) -> ft.Column:
@@ -86,7 +86,12 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
 
         # Place player markers
         positions = get_formation_positions(club.formation)
-        pos_count: dict[Position, int] = {}
+
+        # Pre-count positions for symmetric spreading
+        total_pos_count: dict[Position, int] = {}
+        for pos in positions:
+            total_pos_count[pos] = total_pos_count.get(pos, 0) + 1
+        pos_index: dict[Position, int] = {}
 
         for i, pid in enumerate(current_xi):
             if i >= len(positions):
@@ -96,11 +101,17 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
             if not p:
                 continue
 
-            count = pos_count.get(pos, 0)
-            pos_count[pos] = count + 1
+            idx = pos_index.get(pos, 0)
+            pos_index[pos] = idx + 1
+            count = total_pos_count[pos]
+
             base_x, base_y = _POS_COORDS.get(pos, (50, 50))
-            offset = _SPREAD[count] if count < len(_SPREAD) else 0
-            x = base_x + offset
+            # Symmetric spreading
+            if count > 1:
+                offset = (idx - (count - 1) / 2) * _SPREAD_GAP
+                x = max(8, min(92, base_x + offset))
+            else:
+                x = base_x
 
             ovr = calculate_overall_rating(p)
             fit_ok = p.fitness >= 70

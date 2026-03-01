@@ -105,6 +105,19 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
         ft.Text("📥 Inbox", size=22, weight=ft.FontWeight.BOLD, expand=True),
     ]
     if unread > 0:
+        def mark_all_read(e):
+            from src.ui.app import show_snackbar
+            count = queries.mark_all_messages_read(conn)
+            show_snackbar(page, f"✅ {count} message(s) marked as read")
+            navigate(page, "/inbox")
+
+        header_controls.append(
+            ft.TextButton(
+                "Mark all read",
+                icon=ft.Icons.DONE_ALL,
+                on_click=mark_all_read,
+            )
+        )
         header_controls.append(
             ft.Container(
                 content=ft.Text(f"{unread} unread", size=11,
