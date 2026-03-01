@@ -256,6 +256,17 @@ def simulate_user_match(conn: sqlite3.Connection,
                                       club_module.prepare_team_for_match(home_club, home_squad),
                                       club_module.prepare_team_for_match(away_club, away_squad))
 
+    # Track youth promoted count (U21 players with ≥5 appearances)
+    user_club_refreshed = queries.get_club(conn, game_state.user_club_id)
+    if user_club_refreshed:
+        user_squad_refreshed = queries.get_players_by_club(conn, game_state.user_club_id)
+        youth_count = sum(1 for p in user_squad_refreshed
+                          if p.age <= 21 and p.season_stats.appearances >= 5)
+        user_club_refreshed.youth_promoted_count = youth_count
+        queries.update_club(conn, user_club_refreshed)
+        # Re-read the user_club for rest of function
+        user_club = user_club_refreshed
+
     # ── 2. Determine result type for board/fans/media ────────────────────
     if user_is_home:
         user_goals = user_result.home_goals
@@ -450,11 +461,14 @@ def _update_player_stats_after_match(
     # Non-starters morale drop (bench + unused)
     for player in home_squad:
         if player.id not in home_starters:
-            update_morale(player, home_result, played=False)
+            # Check if player was a starter last game (was_dropped)
+            was_dropped = player.season_stats.appearances > 0 and player.matches_benched_streak == 0
+            update_morale(player, home_result, played=False, was_dropped=was_dropped)
             queries.update_player_stats(conn, player)
     for player in away_squad:
         if player.id not in away_starters:
-            update_morale(player, away_result, played=False)
+            was_dropped = player.season_stats.appearances > 0 and player.matches_benched_streak == 0
+            update_morale(player, away_result, played=False, was_dropped=was_dropped)
             queries.update_player_stats(conn, player)
 
     # ── Process injuries from match events ──────────────────────────────

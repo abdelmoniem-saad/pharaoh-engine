@@ -108,14 +108,20 @@ def start_new_season(conn: sqlite3.Connection,
     if user_club:
         standings = get_current_standings(conn)
         user_pos = 0
+        user_gf = 0
+        user_gd = 0
         for i, s in enumerate(standings, 1):
             if s.club_id == game_state.user_club_id:
                 user_pos = i
+                user_gf = s.goals_for
+                user_gd = s.goal_difference
                 break
         # Generate objectives so we can evaluate them
         objectives = generate_season_objectives(user_club)
         user_club.board_objectives = objectives
-        eval_msgs = evaluate_objectives(user_club, user_pos)
+        eval_msgs = evaluate_objectives(user_club, user_pos,
+                                         goals_for=user_gf,
+                                         goal_difference=user_gd)
         if eval_msgs:
             eval_body = "Season Board Review:\n\n" + "\n".join(eval_msgs)
             queries.insert_message(conn, InboxMessage(
@@ -149,8 +155,17 @@ def start_new_season(conn: sqlite3.Connection,
     queries.age_all_players(conn)
     messages.append("All players aged by 1 year.")
 
-    # Retire old players (remove players age 38+)
-    # For now we keep them; a Phase 2 feature
+    # Retire old players (age 38+)
+    retired_msgs = _retire_old_players(conn, game_state)
+    messages.extend(retired_msgs)
+
+    # AI inter-club transfers (simulate offseason activity)
+    ai_msgs = _simulate_ai_transfers(conn, game_state)
+    messages.extend(ai_msgs)
+
+    # Youth academy intake — generate a youth player for each club
+    youth_msgs = _annual_youth_intake(conn, game_state)
+    messages.extend(youth_msgs)
 
     # Reset stats
     queries.reset_all_season_stats(conn)
@@ -208,4 +223,139 @@ def start_new_season(conn: sqlite3.Connection,
     return messages
 
 
+def _retire_old_players(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
+    """Retire players aged 38+ (release from clubs)."""
+    from src.utils import rng
 
+    messages = []
+    all_clubs = queries.get_all_clubs(conn)
+    for club in all_clubs:
+        squad = queries.get_players_by_club(conn, club.id)
+        for p in squad:
+            if p.age >= 38:
+                # Higher chance of retirement the older they are
+                retire_chance = 0.5 + (p.age - 38) * 0.15
+                if rng.chance(retire_chance):
+                    conn.execute("UPDATE players SET club_id = NULL WHERE id = ?", (p.id,))
+                    if club.id == game_state.user_club_id:
+                        queries.insert_message(conn, InboxMessage(
+                            date=game_state.current_date,
+                            subject=f"👋 {p.name} Retires",
+                            body=f"{p.name} has announced their retirement from professional football at age {p.age}. "
+                                 f"We thank them for their service.",
+                            category="general",
+                        ))
+                    messages.append(f"{p.name} retired from {club.short_name}")
+    conn.commit()
+    return messages
+
+
+def _simulate_ai_transfers(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
+    """Simulate AI inter-club transfers during the offseason."""
+    from src.core.transfers import estimate_player_value
+    from src.utils import rng
+
+    messages = []
+    all_clubs = queries.get_all_clubs(conn)
+    ai_clubs = [c for c in all_clubs if c.id != game_state.user_club_id]
+
+    # Each AI club may make 0-3 transfers
+    transfers_made = []
+    for club in ai_clubs:
+        n_transfers = rng.randint(0, 3)
+        if n_transfers == 0:
+            continue
+
+        squad = queries.get_players_by_club(conn, club.id)
+        squad_size = len(squad)
+
+        for _ in range(n_transfers):
+            # Decide buy or sell
+            if squad_size > 28 and rng.chance(0.7):
+                # Too many players — sell a lower ability one
+                sellable = [p for p in squad if p.current_ability < club.reputation * 0.7]
+                if not sellable:
+                    continue
+                sell_player = rng.choice(sellable)
+                buyer_clubs = [c for c in ai_clubs if c.id != club.id and c.id != game_state.user_club_id]
+                if not buyer_clubs:
+                    continue
+                buyer = rng.choice(buyer_clubs)
+                fee = estimate_player_value(sell_player)
+                conn.execute("UPDATE players SET club_id = ? WHERE id = ?", (buyer.id, sell_player.id))
+                transfers_made.append(f"{sell_player.name}: {club.short_name} → {buyer.short_name} ({fee:,} EGP)")
+                squad = [p for p in squad if p.id != sell_player.id]
+                squad_size -= 1
+            elif squad_size < 22 and rng.chance(0.6):
+                # Need more players — buy from another club
+                seller_clubs = [c for c in ai_clubs if c.id != club.id]
+                if not seller_clubs:
+                    continue
+                seller = rng.choice(seller_clubs)
+                seller_squad = queries.get_players_by_club(conn, seller.id)
+                if len(seller_squad) <= 18:
+                    continue
+                buyable = [p for p in seller_squad if not p.is_captain]
+                if not buyable:
+                    continue
+                buy_player = rng.choice(buyable)
+                fee = estimate_player_value(buy_player)
+                if club.finances.transfer_budget >= fee:
+                    conn.execute("UPDATE players SET club_id = ? WHERE id = ?", (club.id, buy_player.id))
+                    transfers_made.append(f"{buy_player.name}: {seller.short_name} → {club.short_name} ({fee:,} EGP)")
+                    squad_size += 1
+
+    conn.commit()
+
+    if transfers_made:
+        # Send a summary inbox message
+        body = "Off-season transfer activity around the league:\n\n"
+        body += "\n".join(f"• {t}" for t in transfers_made[:15])
+        if len(transfers_made) > 15:
+            body += f"\n\n...and {len(transfers_made) - 15} more transfers."
+
+        queries.insert_message(conn, InboxMessage(
+            date=game_state.current_date,
+            subject=f"📰 {len(transfers_made)} Off-Season Transfers",
+            body=body,
+            category="transfer",
+        ))
+        messages.append(f"{len(transfers_made)} AI transfers completed.")
+
+    return messages
+
+
+def _annual_youth_intake(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
+    """Generate youth academy players for each club at the start of a new season."""
+    from src.core.youth import generate_youth_player
+    from src.utils import rng
+
+    messages = []
+    all_clubs = queries.get_all_clubs(conn)
+
+    for club in all_clubs:
+        # Number of youth players depends on youth_rating (1-10)
+        num_youth = max(1, club.youth_rating // 3)  # 1-3 youths per club
+        generated = []
+
+        for _ in range(num_youth):
+            youth = generate_youth_player(club)
+            player_id = queries.insert_player(conn, youth)
+            youth.id = player_id
+            conn.execute("UPDATE players SET club_id = ? WHERE id = ?", (club.id, player_id))
+            generated.append(youth)
+
+        if club.id == game_state.user_club_id and generated:
+            names = "\n".join(f"• {y.name} ({y.position.value}, Age {y.age}, PA: {y.potential_ability})"
+                              for y in generated)
+            queries.insert_message(conn, InboxMessage(
+                date=game_state.current_date,
+                subject=f"🌟 Youth Academy: {len(generated)} New Prospects!",
+                body=f"The youth academy has produced {len(generated)} new players:\n\n{names}\n\n"
+                     f"They have been added to your squad. Consider assigning training focuses.",
+                category="general",
+            ))
+            messages.append(f"{len(generated)} youth players promoted to first team.")
+
+    conn.commit()
+    return messages

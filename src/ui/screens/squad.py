@@ -245,6 +245,7 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
 
 def _show_player_detail(page: ft.Page, player, ovr: int):
     """Show a detailed player profile dialog with all stats."""
+    from src.core.player import get_morale_description
     a = player.attributes
     s = player.season_stats
 
@@ -253,10 +254,11 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
         else ft.Colors.YELLOW_400 if player.fitness >= 50
         else ft.Colors.RED_400
     )
-    morale_text = (
-        "😊 Happy" if player.morale >= 70
-        else "😐 Content" if player.morale >= 40
-        else "😞 Unhappy"
+    morale_desc = get_morale_description(player)
+    morale_color = (
+        ft.Colors.GREEN_400 if player.morale >= 70
+        else ft.Colors.AMBER_300 if player.morale >= 40
+        else ft.Colors.RED_400
     )
 
     # Injury/suspension status
@@ -444,7 +446,8 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
                         controls=[
                             ft.Text(f"💪 {player.fitness}%", size=12, color=fit_color),
                             ft.Text(f"📊 Form {player.form:.1f}", size=12),
-                            ft.Text(morale_text, size=12),
+                            ft.Text(f"😊 {morale_desc}", size=11, color=morale_color,
+                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                             ft.Text(form_trend, size=11, color=form_trend_color),
                         ],
                     ),
@@ -511,7 +514,11 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
                 on_click=lambda e, pid=player.id: _set_captain(page, pid),
             ),
             ft.TextButton(
-                "🔴 Unlist" if player.transfer_listed else "📤 List",
+                "🗣️ Talk",
+                on_click=lambda e, pid=player.id, pname=player.name: _talk_to_player(page, pid, pname),
+            ),
+            ft.TextButton(
+                "📤 List" if not player.transfer_listed else "🔴 Unlist",
                 on_click=lambda e, pid=player.id, listed=player.transfer_listed: _toggle_transfer(page, pid, listed),
             ),
             ft.TextButton(
@@ -546,7 +553,130 @@ def _toggle_transfer(page, player_id, currently_listed):
     navigate(page, "/squad")
 
 
-def _renew_contract(page, player_id):
+def _talk_to_player(page, player_id, player_name):
+    """Show a player interaction dialog — praise, encourage, criticize, or discuss playing time."""
+    from src.ui.app import app_state, navigate, show_snackbar
+    from src.core.player import get_morale_description
+    from src.data.models import InboxMessage
+    from src.utils import rng
+
+    conn = app_state.db_conn
+    gs = app_state.game_state
+    player = queries.get_player(conn, player_id)
+    if not player:
+        return
+
+    morale_desc = get_morale_description(player)
+    result_text = ft.Text("", size=12)
+
+    talks = [
+        ("💪 Praise Performance", "praise",
+         "Great work out there! Keep it up.",
+         "The player appreciates the recognition."),
+        ("🔥 Demand More Effort", "criticize",
+         "I expect much more from you!",
+         "The player reacts to the criticism."),
+        ("🤝 Encourage", "encourage",
+         "I believe in you. Show me what you can do.",
+         "The player feels encouraged."),
+        ("⏱️ Promise Playing Time", "promise_time",
+         "Your chance will come, be patient.",
+         "The player acknowledges the promise."),
+    ]
+
+    def make_handler(talk_type, response_text):
+        def handler(e):
+            morale_change = 0
+            feedback = ""
+
+            if talk_type == "praise":
+                if player.form >= 7.0:
+                    morale_change = rng.randint(3, 8)
+                    feedback = f"😊 {player_name} is delighted by the praise! Morale +{morale_change}"
+                else:
+                    morale_change = rng.randint(0, 3)
+                    feedback = f"😐 {player_name} appreciates the words but knows they can do better."
+
+            elif talk_type == "criticize":
+                if player.morale >= 60 and player.attributes.composure >= 12:
+                    morale_change = rng.randint(-2, 2)
+                    feedback = f"💪 {player_name} takes the criticism on board and is determined to improve."
+                elif player.morale < 40:
+                    morale_change = rng.randint(-8, -3)
+                    feedback = f"😤 {player_name} doesn't take it well. The player storms out of the office!"
+                else:
+                    morale_change = rng.randint(-5, 0)
+                    feedback = f"😕 {player_name} is unhappy with the criticism but will try harder."
+
+            elif talk_type == "encourage":
+                morale_change = rng.randint(2, 6)
+                feedback = f"😊 {player_name} feels motivated by your words! Morale +{morale_change}"
+                if player.age <= 21:
+                    morale_change += 2
+                    feedback += "\n📈 The young player especially benefits from the encouragement."
+
+            elif talk_type == "promise_time":
+                if player.matches_benched_streak >= 3:
+                    morale_change = rng.randint(3, 7)
+                    feedback = f"😊 {player_name} is relieved to hear they'll get a chance. Morale +{morale_change}"
+                else:
+                    morale_change = rng.randint(-1, 2)
+                    feedback = f"😐 {player_name}: \"I'm already getting games, boss.\""
+
+            # Apply morale change
+            from src.utils.rng import clamp
+            player.morale = int(clamp(player.morale + morale_change, 0, 100))
+            queries.update_player_stats(conn, player)
+
+            # Send inbox message
+            queries.insert_message(conn, InboxMessage(
+                date=gs.current_date,
+                subject=f"🗣️ Talk: {player_name}",
+                body=feedback,
+                category="general",
+            ))
+
+            result_text.value = feedback
+            result_text.color = (ft.Colors.GREEN_400 if morale_change > 0
+                                  else ft.Colors.RED_400 if morale_change < 0
+                                  else ft.Colors.GREY_400)
+            page.update()
+        return handler
+
+    talk_buttons = []
+    for label, talk_type, msg, resp in talks:
+        talk_buttons.append(
+            ft.Container(
+                content=ft.Column(spacing=1, controls=[
+                    ft.Text(label, size=13, weight=ft.FontWeight.W_500),
+                    ft.Text(msg, size=10, color=ft.Colors.GREY_500, italic=True),
+                ]),
+                padding=ft.padding.symmetric(horizontal=10, vertical=10),
+                border_radius=8,
+                bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
+                on_click=make_handler(talk_type, resp),
+                ink=True,
+            )
+        )
+
+    dlg = ft.AlertDialog(
+        title=ft.Text(f"🗣️ Talk to {player_name}", size=15, weight=ft.FontWeight.BOLD),
+        content=ft.Container(
+            content=ft.Column(spacing=6, controls=[
+                ft.Text(f"Current mood: {morale_desc}", size=12, color=ft.Colors.GREY_400),
+                ft.Text(f"Morale: {player.morale}/100", size=12),
+                ft.Divider(height=1),
+                *talk_buttons,
+                ft.Divider(height=1),
+                result_text,
+            ]),
+            width=290, height=320,
+        ),
+        actions=[
+            ft.TextButton("Done", on_click=lambda e: (page.pop_dialog(), navigate(page, "/squad"))),
+        ],
+    )
+    page.show_dialog(dlg)def _renew_contract(page, player_id):
     """Show a contract renewal negotiation dialog."""
     from src.ui.app import app_state, navigate, show_snackbar
     conn = app_state.db_conn
@@ -608,25 +738,23 @@ def _renew_contract(page, player_id):
                 page.update()
                 return
 
-        # Accept renewal
-        from datetime import timedelta, date as dt_date
-        base = player.contract.contract_expiry or dt_date.today()
-        new_expiry = base + timedelta(days=365 * years)
-        conn.execute(
-            "UPDATE players SET contract_expiry = ?, wage_weekly = ? WHERE id = ?",
-            (new_expiry.isoformat(), offered_wage, player_id)
-        )
-        conn.commit()
+        # Use AI-driven contract renewal acceptance logic
+        from src.core.transfers import offer_contract_renewal
+        gs = app_state.game_state
+        accepted, msg = offer_contract_renewal(conn, gs, player_id, offered_wage, years)
 
-        page.pop_dialog()
-        show_snackbar(page, f"📝 {player.name} renewed! {years}yr @ {offered_wage:,} EGP/wk")
-
-        # Close the underlying player dialog too
-        try:
+        if accepted:
             page.pop_dialog()
-        except Exception:
-            pass
-        navigate(page, "/squad")
+            show_snackbar(page, f"✅ {msg}")
+            try:
+                page.pop_dialog()
+            except Exception:
+                pass
+            navigate(page, "/squad")
+        else:
+            result_text.value = f"❌ {msg}"
+            result_text.color = ft.Colors.RED_400
+            page.update()
 
     renewal_dlg = ft.AlertDialog(
         title=ft.Text(f"📝 Renew: {player.name}", size=16, weight=ft.FontWeight.BOLD),

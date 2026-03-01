@@ -100,7 +100,8 @@ CREATE TABLE IF NOT EXISTS clubs (
     formation TEXT NOT NULL DEFAULT '4-2-3-1',
     mentality INTEGER NOT NULL DEFAULT 4,
     is_user_controlled INTEGER NOT NULL DEFAULT 0,
-    season_expectation TEXT NOT NULL DEFAULT 'mid_table'
+    season_expectation TEXT NOT NULL DEFAULT 'mid_table',
+    youth_promoted_count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS players (
@@ -179,7 +180,10 @@ CREATE TABLE IF NOT EXISTS players (
     suspension_matches INTEGER NOT NULL DEFAULT 0,
 
     -- Training
-    training_focus TEXT NOT NULL DEFAULT ''
+    training_focus TEXT NOT NULL DEFAULT '',
+
+    -- Morale tracking
+    matches_benched_streak INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS fixtures (
@@ -306,6 +310,8 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
         ("players", "suspension_matches", "INTEGER NOT NULL DEFAULT 0"),
         ("players", "training_focus", "TEXT NOT NULL DEFAULT ''"),
         ("clubs", "season_expectation", "TEXT NOT NULL DEFAULT 'mid_table'"),
+        ("players", "matches_benched_streak", "INTEGER NOT NULL DEFAULT 0"),
+        ("clubs", "youth_promoted_count", "INTEGER NOT NULL DEFAULT 0"),
     ]
     for table, col, col_def in migrations:
         try:

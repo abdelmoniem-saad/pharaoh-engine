@@ -110,6 +110,9 @@ class Player(BaseModel):
     # Training
     training_focus: str = ""           # e.g., "Shooting", "Defending", "Physical", "Playmaking"
 
+    # Morale tracking
+    matches_benched_streak: int = 0    # consecutive matches benched (not in XI)
+
 
 # ── Club Models ──────────────────────────────────────────────────────────────
 
@@ -161,6 +164,9 @@ class Club(BaseModel):
 
     # Season expectation — set per-club at season start based on reputation
     season_expectation: str = "mid_table"   # win_league, top_4, top_half, mid_table, avoid_relegation
+
+    # Youth tracking
+    youth_promoted_count: int = 0    # number of U21 players with ≥5 appearances this season
 
 
 # ── Match Models ─────────────────────────────────────────────────────────────

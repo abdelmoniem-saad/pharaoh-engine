@@ -14,6 +14,7 @@ import asyncio
 import flet as ft
 
 from src.utils.config import MatchEventType
+from src.data import queries
 
 
 # Event icons
@@ -72,6 +73,9 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
     skip_flag = [False]
     halftime_done = [False]
     halftime_choice = [None]  # Will store the team talk choice
+    subs_remaining = [3]      # 3 substitutions allowed per match
+    subs_made = []            # Track (off_name, on_name, minute) for display
+    sub_pending = [False]     # True while sub dialog is open
 
     # ── UI Controls ──────────────────────────────────────────────────
     score_text = ft.Text(
@@ -93,10 +97,17 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
     event_list = ft.ListView(spacing=4, height=300, auto_scroll=True)
 
     skip_btn = ft.ElevatedButton(
-        "⏩ Skip to End", width=200, height=42,
+        "⏩ Skip to End", width=140, height=42,
         style=ft.ButtonStyle(
             bgcolor=ft.Colors.GREY_800, color=ft.Colors.WHITE,
-            text_style=ft.TextStyle(size=14),
+            text_style=ft.TextStyle(size=13),
+        ),
+    )
+    subs_btn = ft.ElevatedButton(
+        f"🔄 Subs ({subs_remaining[0]})", width=120, height=42, visible=False,
+        style=ft.ButtonStyle(
+            bgcolor=ft.Colors.BLUE_800, color=ft.Colors.WHITE,
+            text_style=ft.TextStyle(size=13),
         ),
     )
     continue_btn = ft.ElevatedButton(
@@ -113,8 +124,15 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
     def on_continue(e):
         navigate(page, "/post_match")
 
+    def on_subs(e):
+        if subs_remaining[0] <= 0 or sub_pending[0]:
+            return
+        sub_pending[0] = True
+        _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made, sub_pending, subs_btn)
+
     skip_btn.on_click = on_skip
     continue_btn.on_click = on_continue
+    subs_btn.on_click = on_subs
 
     comp_text = result.competition or "Egyptian Premier League"
     matchday_label = f"Matchday {result.matchday}" if result.matchday else ""
@@ -190,9 +208,15 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
             elif minute <= 90:
                 status_text.value = f"2nd Half — {minute}'"
                 status_text.color = ft.Colors.GREY_500
+                # Show subs button in second half
+                if subs_remaining[0] > 0 and minute >= 46 and minute <= 85:
+                    subs_btn.visible = True
+                else:
+                    subs_btn.visible = False
             else:
                 status_text.value = f"Added Time — {minute}'"
                 status_text.color = ft.Colors.AMBER_400
+                subs_btn.visible = False
 
             page.update()
 
@@ -255,6 +279,9 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
             # ── Yield to event loop with asyncio.sleep ───────────
             if not skip_flag[0]:
                 await asyncio.sleep(extra_pause if extra_pause > 0 else SECONDS_PER_MINUTE)
+                # Pause while substitution dialog is open
+                while sub_pending[0] and not skip_flag[0]:
+                    await asyncio.sleep(0.1)
 
         # ── Finish ───────────────────────────────────────────────
         home_goals[0] = result.home_goals
@@ -336,8 +363,8 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                         # Buttons
                         ft.Row(
                             alignment=ft.MainAxisAlignment.CENTER,
-                            spacing=12,
-                            controls=[skip_btn, continue_btn],
+                            spacing=8,
+                            controls=[subs_btn, skip_btn, continue_btn],
                         ),
                     ],
                 ),
@@ -393,5 +420,158 @@ def _show_halftime_talk(page: ft.Page, event_list, halftime_choice):
     talk_controls.insert(0, header)
 
     event_list.controls.extend(talk_controls)
+
+
+def _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made,
+                      sub_pending, subs_btn):
+    """Show a substitution selection dialog — pick a starter to take OFF, then a bench player ON."""
+    from src.ui.app import app_state
+    from src.core.player import calculate_overall_rating
+
+    result = outcome.user_result
+    gs = app_state.game_state
+    conn = app_state.db_conn
+    if not conn or not gs:
+        sub_pending[0] = False
+        return
+
+    user_club_id = gs.user_club_id
+    squad = queries.get_players_by_club(conn, user_club_id)
+    player_map = {p.id: p for p in squad}
+
+    # Get current starting XI and bench from the user's club
+    from src.core import club as club_module
+    club = queries.get_club(conn, user_club_id)
+    if not club:
+        sub_pending[0] = False
+        return
+
+    tactics = club_module.prepare_team_for_match(club, squad)
+    starters = [player_map[pid] for pid in tactics.starting_xi if pid in player_map]
+    bench = [player_map[pid] for pid in tactics.bench if pid in player_map]
+
+    # Remove already-subbed players
+    already_off = {s[0] for s in subs_made}  # names of players subbed off
+    already_on = {s[1] for s in subs_made}   # names of players subbed on
+    starters = [p for p in starters if p.name not in already_on and p.name not in already_off]
+    bench = [p for p in bench if p.name not in already_on and p.name not in already_off]
+
+    if not bench:
+        sub_pending[0] = False
+        return
+
+    selected_off = [None]
+    selected_on = [None]
+
+    off_label = ft.Text("1. Select player to take OFF:", size=12,
+                         color=ft.Colors.RED_300, weight=ft.FontWeight.W_500)
+    on_label = ft.Text("2. Select player to bring ON:", size=12,
+                        color=ft.Colors.GREEN_300, weight=ft.FontWeight.W_500)
+
+    off_list = ft.Column(spacing=2)
+    on_list = ft.Column(spacing=2)
+    confirm_btn = ft.ElevatedButton(
+        "✅ Confirm Sub", disabled=True, width=200, height=40,
+        style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_800, color=ft.Colors.WHITE),
+    )
+    summary = ft.Text("", size=11, color=ft.Colors.GREY_400)
+
+    def _player_btn(player, is_off=True):
+        ovr = calculate_overall_rating(player)
+        color = ft.Colors.RED_400 if is_off else ft.Colors.GREEN_400
+
+        def handler(e):
+            if is_off:
+                selected_off[0] = player
+                off_label.value = f"1. OFF: {player.name} ({player.position.value} {ovr})"
+            else:
+                selected_on[0] = player
+                on_label.value = f"2. ON: {player.name} ({player.position.value} {ovr})"
+            if selected_off[0] and selected_on[0]:
+                confirm_btn.disabled = False
+                summary.value = (f"🔄 {selected_off[0].name} ➡️ {selected_on[0].name}")
+            page.update()
+
+        return ft.Container(
+            content=ft.Row(spacing=6, controls=[
+                ft.Text(player.position.value, size=10, color=ft.Colors.AMBER_300, width=30),
+                ft.Text(player.name, size=12, expand=True, max_lines=1,
+                         overflow=ft.TextOverflow.ELLIPSIS),
+                ft.Text(str(ovr), size=11, weight=ft.FontWeight.BOLD, color=color),
+                ft.Text(f"{'🟢' if player.fitness >= 70 else '🟡' if player.fitness >= 40 else '🔴'}",
+                         size=10),
+            ]),
+            padding=ft.padding.symmetric(horizontal=8, vertical=8),
+            border_radius=6,
+            bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+            on_click=handler,
+            ink=True,
+        )
+
+    for p in starters:
+        off_list.controls.append(_player_btn(p, is_off=True))
+    for p in bench:
+        on_list.controls.append(_player_btn(p, is_off=False))
+
+    def do_sub(e):
+        if not selected_off[0] or not selected_on[0]:
+            return
+        off_p = selected_off[0]
+        on_p = selected_on[0]
+        subs_remaining[0] -= 1
+        subs_made.append((off_p.name, on_p.name, ""))
+
+        # Add substitution event to the event feed
+        event_list.controls.append(ft.Container(
+            content=ft.Row(spacing=6, controls=[
+                ft.Text("🔄", size=14),
+                ft.Text(f"{off_p.name} ⬇️  {on_p.name} ⬆️",
+                         size=12, color=ft.Colors.CYAN_300, weight=ft.FontWeight.W_500,
+                         expand=True),
+            ]),
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            border_radius=6,
+            bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.CYAN),
+        ))
+
+        subs_btn.text = f"🔄 Subs ({subs_remaining[0]})"
+        if subs_remaining[0] <= 0:
+            subs_btn.visible = False
+
+        sub_pending[0] = False
+        page.pop_dialog()
+        page.update()
+
+    def cancel_sub(e):
+        sub_pending[0] = False
+        page.pop_dialog()
+        page.update()
+
+    confirm_btn.on_click = do_sub
+
+    dlg = ft.AlertDialog(
+        title=ft.Text(f"🔄 Substitution ({subs_remaining[0]} remaining)",
+                       size=15, weight=ft.FontWeight.BOLD),
+        content=ft.Container(
+            content=ft.Column(
+                scroll=ft.ScrollMode.AUTO, spacing=6,
+                controls=[
+                    off_label,
+                    off_list,
+                    ft.Divider(height=1),
+                    on_label,
+                    on_list,
+                    ft.Divider(height=1),
+                    summary,
+                ],
+            ),
+            width=290, height=380,
+        ),
+        actions=[
+            ft.TextButton("Cancel", on_click=cancel_sub),
+            confirm_btn,
+        ],
+    )
+    page.show_dialog(dlg)
 
 

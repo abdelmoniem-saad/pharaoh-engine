@@ -100,8 +100,11 @@ def simulate_match(
         is_second_half = minute > 45 + first_half_added
 
         # ── Chance creation ──────────────────────────────────────────
-        # Base chance of something happening each minute
-        action_chance = 0.12  # ~11 total chances per match per team
+        # Base chance scaled by both teams' tempo settings
+        home_tempo = getattr(home_tactics, "tempo", 5)
+        away_tempo = getattr(away_tactics, "tempo", 5)
+        avg_tempo = (home_tempo + away_tempo) / 2.0
+        action_chance = 0.08 + avg_tempo * 0.008  # 0.088 at tempo=1, 0.16 at tempo=10
 
         # Home attack
         if rng.chance(action_chance * (home_possession / 50.0)):
@@ -115,6 +118,8 @@ def simulate_match(
                 attacking_xi=home_tactics.starting_xi,
                 attacking_formation=home_tactics.formation,
                 is_home=True,
+                attacking_tactics=home_tactics,
+                defending_tactics=away_tactics,
             )
             if event:
                 events.append(event)
@@ -143,6 +148,8 @@ def simulate_match(
                 attacking_xi=away_tactics.starting_xi,
                 attacking_formation=away_tactics.formation,
                 is_home=False,
+                attacking_tactics=away_tactics,
+                defending_tactics=home_tactics,
             )
             if event:
                 events.append(event)
@@ -160,7 +167,12 @@ def simulate_match(
                     away_corners += 1
 
         # ── Fouls & Cards ────────────────────────────────────────────
-        if rng.chance(0.04):  # ~3-4 fouls per team per match
+        # Pressing intensity increases foul likelihood
+        home_press = getattr(home_tactics, "pressing_intensity", 5)
+        away_press = getattr(away_tactics, "pressing_intensity", 5)
+        avg_press = (home_press + away_press) / 2.0
+        foul_chance = 0.02 + avg_press * 0.004  # 0.024 at press=1, 0.06 at press=10
+        if rng.chance(foul_chance):
             is_home_foul = rng.chance(0.5)
             if is_home_foul:
                 home_fouls += 1
@@ -341,6 +353,8 @@ def _simulate_attack(
     attacking_xi: list[int],
     attacking_formation: str,
     is_home: bool,
+    attacking_tactics: TeamTactics | None = None,
+    defending_tactics: TeamTactics | None = None,
 ) -> MatchEvent | None:
     """
     Simulate a single attacking action. Returns a MatchEvent or None.
@@ -354,7 +368,12 @@ def _simulate_attack(
     else:
         attack_ratio = 2.0
 
-    # Chance of getting a shot off (higher attack ratio = more shots)
+    # High defensive line = more vulnerable to counters (boosts attacker's ratio)
+    if defending_tactics:
+        def_line = getattr(defending_tactics, "defensive_line", 5)
+        attack_ratio *= 0.95 + def_line * 0.01  # high line = slightly easier to beat
+
+    # Chance of getting a shot off
     shot_chance = rng.clamp(0.25 + (attack_ratio - 1.0) * 0.2, 0.1, 0.7)
 
     if not rng.chance(shot_chance):

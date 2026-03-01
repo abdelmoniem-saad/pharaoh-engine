@@ -219,13 +219,14 @@ def update_player_stats(conn: sqlite3.Connection, player: Player) -> None:
             yellow_cards=?, red_cards=?, minutes_played=?, average_rating=?,
             man_of_the_match=?, form=?, fitness=?, morale=?,
             injury_days_remaining=?, injury_type=?, suspension_matches=?,
-            training_focus=?
+            training_focus=?, matches_benched_streak=?
         WHERE id=?
     """, (s.appearances, s.goals, s.assists, s.clean_sheets,
           s.yellow_cards, s.red_cards, s.minutes_played, s.average_rating,
           s.man_of_the_match, player.form, player.fitness, player.morale,
           player.injury_days_remaining, player.injury_type,
           player.suspension_matches, player.training_focus,
+          player.matches_benched_streak,
           player.id))
     conn.commit()
 
@@ -261,6 +262,7 @@ def _row_to_player(row: sqlite3.Row) -> Player:
         injury_type=row["injury_type"] if "injury_type" in row.keys() else "",
         suspension_matches=row["suspension_matches"] if "suspension_matches" in row.keys() else 0,
         training_focus=row["training_focus"] if "training_focus" in row.keys() else "",
+        matches_benched_streak=row["matches_benched_streak"] if "matches_benched_streak" in row.keys() else 0,
         attributes=PlayerAttributes(
             finishing=row["finishing"], passing=row["passing"],
             dribbling=row["dribbling"], first_touch=row["first_touch"],

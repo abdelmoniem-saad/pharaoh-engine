@@ -119,14 +119,17 @@ def get_match_readiness(player: Player) -> float:
 
 
 def update_morale(player: Player, result_type: str, rating: float = 6.5,
-                   played: bool = True) -> None:
+                   played: bool = True, was_dropped: bool = False) -> None:
     """
     Update player morale after a match.
+
     result_type: 'win', 'draw', 'loss'
     rating: individual match rating (1-10)
     played: whether the player was in the starting XI
+    was_dropped: True if player started last game but is benched this game
     """
     change = 0
+
     # Team result
     if result_type == "win":
         change += 3
@@ -143,10 +146,55 @@ def update_morale(player: Player, result_type: str, rating: float = 6.5,
             change += 1
         elif rating < 5.5:
             change -= 2
+        # Reset bench streak
+        player.matches_benched_streak = 0
+        # Captain gets extra morale lift from wins
+        if player.is_captain and result_type == "win":
+            change += 1
     else:
-        # Not selected — slight morale drop
+        # Not selected
         change -= 1
+        player.matches_benched_streak += 1
+        # Dropped from last game's XI is extra painful
+        if was_dropped:
+            change -= 2
+        # Prolonged benchwarming makes players unhappy
+        if player.matches_benched_streak >= 3:
+            change -= 1
+        if player.matches_benched_streak >= 5:
+            change -= 1
 
     player.morale = int(clamp(player.morale + change, 0, 100))
+
+
+def get_morale_description(player: Player) -> str:
+    """Get a human-readable morale description with reason."""
+    m = player.morale
+    if m >= 85:
+        desc = "Ecstatic"
+    elif m >= 70:
+        desc = "Happy"
+    elif m >= 55:
+        desc = "Content"
+    elif m >= 40:
+        desc = "Unsettled"
+    elif m >= 25:
+        desc = "Unhappy"
+    else:
+        desc = "Furious"
+
+    reasons = []
+    if player.matches_benched_streak >= 5:
+        reasons.append("wants to leave — no playing time")
+    elif player.matches_benched_streak >= 3:
+        reasons.append("wants more playing time")
+    if player.injury_days_remaining > 0:
+        reasons.append(f"injured ({player.injury_type})")
+    if player.suspension_matches > 0:
+        reasons.append("suspended")
+
+    if reasons:
+        return f"{desc} — {', '.join(reasons)}"
+    return desc
 
 

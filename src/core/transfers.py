@@ -658,3 +658,126 @@ def check_expiring_contracts(conn: sqlite3.Connection,
 
     return messages
 
+
+# ── Contract Renewal ─────────────────────────────────────────────────────────
+
+def offer_contract_renewal(
+    conn: sqlite3.Connection,
+    gs: GameState,
+    player_id: int,
+    new_wage: int,
+    contract_years: int,
+) -> tuple[bool, str]:
+    """
+    Offer a contract renewal to a player.
+
+    Returns (accepted: bool, message: str).
+    Acceptance depends on: morale, ability, age, wage_offer vs current wage.
+    """
+    from src.core.player import calculate_overall_rating
+
+    row = conn.execute("SELECT * FROM players WHERE id=?", (player_id,)).fetchone()
+    if not row:
+        return False, "Player not found."
+
+    from src.data.queries import _row_to_player
+    player = _row_to_player(row)
+
+    club = queries.get_club(conn, player.club_id) if player.club_id else None
+    if not club:
+        return False, "Club not found."
+
+    current_wage = player.contract.wage_weekly
+    ovr = calculate_overall_rating(player)
+
+    # ── Acceptance formula ────────────────────────────────────────────
+    # Base acceptance: 50%
+    accept_score = 50.0
+
+    # Wage comparison: offering more than current = positive
+    if current_wage > 0:
+        wage_ratio = new_wage / current_wage
+        accept_score += (wage_ratio - 1.0) * 40   # +40 per 100% raise, -40 per 100% cut
+    elif new_wage > 0:
+        accept_score += 20  # First real wage offer is positive
+
+    # Morale factor: happy players accept more easily
+    accept_score += (player.morale - 50) * 0.3   # ±15 range
+
+    # Age factor: older players more willing to stay; young talent demands more
+    if player.age >= 30:
+        accept_score += 10
+    elif player.age <= 22:
+        accept_score -= 10
+        # Young high-potential players want more
+        if player.potential_ability > player.current_ability + 30:
+            accept_score -= 10
+
+    # Contract length: players prefer 2-4 year deals
+    if contract_years < 2:
+        accept_score -= 10
+    elif contract_years > 4:
+        accept_score -= 5
+
+    # Playing time: benched players less likely to renew
+    if player.matches_benched_streak >= 5:
+        accept_score -= 20
+    elif player.matches_benched_streak >= 3:
+        accept_score -= 10
+
+    # Club reputation bonus: big clubs are attractive
+    accept_score += (club.reputation - 100) * 0.1
+
+    # Clamp and convert to probability
+    accept_prob = max(0.05, min(0.95, accept_score / 100.0))
+    accepted = rng.chance(accept_prob)
+
+    if accepted:
+        # Apply renewal
+        from datetime import timedelta
+        new_expiry = gs.current_date + timedelta(days=365 * contract_years)
+        conn.execute("""
+            UPDATE players SET wage_weekly=?, contract_expiry=?
+            WHERE id=?
+        """, (new_wage, new_expiry.isoformat(), player_id))
+        conn.commit()
+
+        queries.insert_message(conn, InboxMessage(
+            date=gs.current_date,
+            subject=f"✅ {player.name} Renews Contract!",
+            body=(f"{player.name} has agreed a new {contract_years}-year deal "
+                  f"worth {new_wage:,} EGP/week. The player is delighted."),
+            category="transfer",
+        ))
+        # Morale boost
+        player.morale = min(100, player.morale + 10)
+        queries.update_player_stats(conn, player)
+        return True, f"{player.name} accepted the renewal!"
+    else:
+        # Rejected
+        reason = "wants higher wages" if new_wage <= current_wage * 1.1 else "wants to leave for a new challenge"
+        if player.matches_benched_streak >= 3:
+            reason = "unhappy with playing time"
+        queries.insert_message(conn, InboxMessage(
+            date=gs.current_date,
+            subject=f"❌ {player.name} Rejects Renewal",
+            body=f"{player.name} has rejected your contract offer. The player {reason}.",
+            category="transfer",
+        ))
+        return False, f"{player.name} rejected — {reason}."
+
+
+def get_expiring_contracts(conn: sqlite3.Connection, club_id: int,
+                            current_date: date, months_ahead: int = 12) -> list:
+    """Get players with contracts expiring within N months."""
+    from datetime import timedelta
+    cutoff = current_date + timedelta(days=30 * months_ahead)
+    squad = queries.get_players_by_club(conn, club_id)
+    expiring = []
+    for p in squad:
+        if p.contract.contract_expiry and p.contract.contract_expiry <= cutoff:
+            days_left = (p.contract.contract_expiry - current_date).days
+            expiring.append((p, max(0, days_left)))
+    expiring.sort(key=lambda x: x[1])
+    return expiring
+

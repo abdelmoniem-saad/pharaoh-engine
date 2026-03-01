@@ -89,7 +89,9 @@ def generate_season_objectives(club: Club) -> list[BoardObjective]:
 
 
 def evaluate_objectives(club: Club, position: int,
-                         total_teams: int = 18) -> list[str]:
+                         total_teams: int = 18,
+                         goals_for: int = 0,
+                         goal_difference: int = 0) -> list[str]:
     """
     Evaluate board objectives at season end.
 
@@ -109,31 +111,22 @@ def evaluate_objectives(club: Club, position: int,
         if obj.target in SEASON_EXPECTATIONS:
             achieved = position <= required_pos
             if achieved:
-                # Scale reward by how hard the objective was
                 bonus = {
-                    "win_league": 20,
-                    "title_challenge": 15,
-                    "top_4": 10,
-                    "top_half": 5,
-                    "mid_table": 5,
-                    "avoid_relegation": 5,
+                    "win_league": 20, "title_challenge": 15,
+                    "top_4": 10, "top_half": 5,
+                    "mid_table": 5, "avoid_relegation": 5,
                 }.get(obj.target, 5)
                 club.board_confidence = min(100, club.board_confidence + bonus)
             else:
-                # Scale penalty by how badly we missed
                 overshoot = position - required_pos
                 penalty = min(25, 5 + overshoot * 2)
                 club.board_confidence = max(0, club.board_confidence - penalty)
         elif obj.target == "score_50_goals":
-            # Check from standings goals_for (passed externally isn't available,
-            # so we accept auto-pass for now — Phase 2 will track properly)
-            achieved = True
+            achieved = goals_for >= 50
         elif obj.target == "positive_gd":
-            # Auto-pass for now — Phase 2 will read from standings
-            achieved = True
+            achieved = goal_difference > 0
         elif obj.target == "develop_youth":
-            # Youth development not tracked yet — auto-pass
-            achieved = True
+            achieved = getattr(club, "youth_promoted_count", 0) >= 1
 
         obj.achieved = achieved
         if achieved:

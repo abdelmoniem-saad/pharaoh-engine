@@ -70,7 +70,11 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
         # Evaluate objectives for display
         objectives = generate_season_objectives(club)
         club.board_objectives = objectives
-        eval_msgs = evaluate_objectives(club, user_pos)
+        user_gf = user_standing.goals_for if user_standing else 0
+        user_gd = user_standing.goal_difference if user_standing else 0
+        eval_msgs = evaluate_objectives(club, user_pos,
+                                         goals_for=user_gf,
+                                         goal_difference=user_gd)
         for msg in eval_msgs:
             is_achieved = msg.startswith("✅")
             board_eval_rows.append(

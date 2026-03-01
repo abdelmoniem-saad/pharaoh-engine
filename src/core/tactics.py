@@ -211,6 +211,26 @@ def calculate_team_strength(players: list[Player], tactics: TeamTactics) -> dict
     attack *= mentality_attack_mod.get(tactics.mentality, 1.0)
     defense *= mentality_defense_mod.get(tactics.mentality, 1.0)
 
+    # ── Tactical slider modifiers ────────────────────────────────────
+    # pressing_intensity (1-10): high pressing boosts midfield but costs stamina
+    press = getattr(tactics, "pressing_intensity", 5)
+    midfield *= 0.9 + press * 0.02          # 0.92 .. 1.10
+    defense *= 1.05 - press * 0.01          # 1.04 .. 0.95 (high press = riskier)
+
+    # tempo (1-10): high tempo = more chances but less accuracy
+    # (applied in match_engine's action_chance; here we nudge midfield control)
+    tempo = getattr(tactics, "tempo", 5)
+    midfield *= 1.05 - abs(tempo - 5) * 0.01  # optimal at 5, slight penalty at extremes
+
+    # width (1-10): wide play boosts attack via crossing; narrow boosts central play
+    width = getattr(tactics, "width", 5)
+    attack *= 0.95 + width * 0.01            # 0.96 .. 1.05
+
+    # defensive_line (1-10): high line compresses midfield; low line protects defense
+    def_line = getattr(tactics, "defensive_line", 5)
+    defense *= 1.05 - def_line * 0.01       # 1.04 .. 0.95
+    midfield *= 0.95 + def_line * 0.01      # 0.96 .. 1.05
+
     return {
         "attack": round(attack, 2),
         "midfield": round(midfield, 2),
