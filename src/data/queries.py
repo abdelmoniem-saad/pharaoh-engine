@@ -8,7 +8,6 @@ from __future__ import annotations
 import json
 import sqlite3
 from datetime import date
-from typing import Any
 
 from src.data.models import (
     Player, PlayerAttributes, PlayerContract, PlayerSeasonStats,
@@ -24,10 +23,11 @@ def save_game_state(conn: sqlite3.Connection, state: GameState) -> None:
     """Insert or update the game state."""
     conn.execute("""
         INSERT OR REPLACE INTO game_state (id, save_name, season_year, current_date,
-            user_club_id, user_club_name, rng_seed, day_count)
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?)
+            user_club_id, user_club_name, manager_name, rng_seed, day_count)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (state.save_name, state.season_year, state.current_date.isoformat(),
-          state.user_club_id, state.user_club_name, state.rng_seed, state.day_count))
+          state.user_club_id, state.user_club_name, state.manager_name,
+          state.rng_seed, state.day_count))
     conn.commit()
 
 
@@ -36,12 +36,15 @@ def load_game_state(conn: sqlite3.Connection) -> GameState | None:
     row = conn.execute("SELECT * FROM game_state WHERE id = 1").fetchone()
     if row is None:
         return None
+    # Backward compat: manager_name may not exist in old saves
+    manager_name = row["manager_name"] if "manager_name" in row.keys() else "Manager"
     return GameState(
         save_name=row["save_name"],
         season_year=row["season_year"],
         current_date=date.fromisoformat(row["current_date"]),
         user_club_id=row["user_club_id"],
         user_club_name=row["user_club_name"],
+        manager_name=manager_name,
         rng_seed=row["rng_seed"],
         day_count=row["day_count"],
     )
@@ -466,4 +469,34 @@ def mark_message_read(conn: sqlite3.Connection, msg_id: int) -> None:
     """Mark a message as read."""
     conn.execute("UPDATE inbox SET is_read = 1 WHERE id = ?", (msg_id,))
     conn.commit()
+
+
+def get_unread_count(conn: sqlite3.Connection) -> int:
+    """Get the number of unread inbox messages."""
+    row = conn.execute("SELECT COUNT(*) as cnt FROM inbox WHERE is_read = 0").fetchone()
+    return row["cnt"] if row else 0
+
+
+def get_user_recent_fixtures(conn: sqlite3.Connection, user_club_id: int,
+                              limit: int = 5) -> list[Fixture]:
+    """Get the most recent played fixtures for the user's club."""
+    rows = conn.execute("""
+        SELECT * FROM fixtures
+        WHERE played = 1 AND (home_club_id = ? OR away_club_id = ?)
+        ORDER BY matchday DESC LIMIT ?
+    """, (user_club_id, user_club_id, limit)).fetchall()
+    return [_row_to_fixture(row) for row in reversed(rows)]
+
+
+def get_current_matchday(conn: sqlite3.Connection) -> int:
+    """Get the current (next unplayed) matchday number."""
+    row = conn.execute(
+        "SELECT MIN(matchday) as md FROM fixtures WHERE played = 0"
+    ).fetchone()
+    if row and row["md"] is not None:
+        return row["md"]
+    # All played — return last matchday
+    row2 = conn.execute("SELECT MAX(matchday) as md FROM fixtures").fetchone()
+    return row2["md"] if row2 and row2["md"] else 1
+
 

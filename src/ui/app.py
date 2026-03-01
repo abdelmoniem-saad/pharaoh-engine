@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 import flet as ft
 
 from src.data.models import GameState
+from src.utils.config import APP_NAME, APP_VERSION
 
 
 class AppState:
@@ -25,6 +26,20 @@ class AppState:
 
 # Global state instance
 app_state = AppState()
+
+
+def show_snackbar(page: ft.Page, message: str,
+                  color: str = ft.Colors.WHITE,
+                  bgcolor: str = ft.Colors.GREY_800) -> None:
+    """Show a brief snackbar notification at the bottom of the screen."""
+    sb = ft.SnackBar(
+        content=ft.Text(message, color=color, size=14),
+        bgcolor=bgcolor,
+        duration=2500,
+    )
+    page.overlay.append(sb)
+    sb.open = True
+    page.update()
 
 
 def navigate(page: ft.Page, route: str):
@@ -60,7 +75,7 @@ def navigate(page: ft.Page, route: str):
 
 def main(page: ft.Page):
     """Flet app entry point — configures the page and sets up routing."""
-    page.title = "Pharaoh Engine"
+    page.title = APP_NAME
     page.window.width = 420
     page.window.height = 780
     page.theme_mode = ft.ThemeMode.DARK

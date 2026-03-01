@@ -6,6 +6,18 @@ from __future__ import annotations
 import flet as ft
 
 
+def _get_unread() -> int:
+    """Get the unread inbox count from app state, returns 0 if unavailable."""
+    try:
+        from src.ui.app import app_state
+        from src.data.queries import get_unread_count
+        if app_state.db_conn:
+            return get_unread_count(app_state.db_conn)
+    except Exception:
+        pass
+    return 0
+
+
 def build_nav_bar(page: ft.Page, selected_index: int = 0) -> ft.NavigationBar:
     """
     Build the shared bottom navigation bar.
@@ -14,6 +26,7 @@ def build_nav_bar(page: ft.Page, selected_index: int = 0) -> ft.NavigationBar:
         page: Flet page reference for navigation.
         selected_index: Index of the currently active tab (0-4).
     """
+    unread_count = _get_unread()
     route_map = {
         0: "/squad",
         1: "/tactics",
@@ -28,6 +41,18 @@ def build_nav_bar(page: ft.Page, selected_index: int = 0) -> ft.NavigationBar:
         target = route_map.get(e.control.selected_index, "/squad")
         navigate(page, target)
 
+    # Inbox destination — add badge if unread messages
+    if unread_count > 0:
+        inbox_dest = ft.NavigationBarDestination(
+            icon=ft.Icons.MAIL,
+            label="Inbox",
+            badge=ft.Badge(label=str(unread_count)),
+        )
+    else:
+        inbox_dest = ft.NavigationBarDestination(
+            icon=ft.Icons.MAIL, label="Inbox",
+        )
+
     return ft.NavigationBar(
         selected_index=selected_index,
         on_change=on_nav,
@@ -36,6 +61,6 @@ def build_nav_bar(page: ft.Page, selected_index: int = 0) -> ft.NavigationBar:
             ft.NavigationBarDestination(icon=ft.Icons.SETTINGS, label="Tactics"),
             ft.NavigationBarDestination(icon=ft.Icons.SPORTS_SOCCER, label="Match"),
             ft.NavigationBarDestination(icon=ft.Icons.TABLE_CHART, label="Table"),
-            ft.NavigationBarDestination(icon=ft.Icons.MAIL, label="Inbox"),
+            inbox_dest,
         ],
     )

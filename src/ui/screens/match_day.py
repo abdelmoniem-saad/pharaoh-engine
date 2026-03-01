@@ -115,6 +115,7 @@ def _build_match_preview(page, conn, gs, fixture):
     days_until = (match_date - gs.current_date).days if match_date else 0
 
     def simulate_click(e):
+        from src.ui.app import show_snackbar
         result = simulate_user_match(conn, gs)
         if result:
             _show_result_dialog(page, result)
@@ -220,6 +221,9 @@ def _build_match_preview(page, conn, gs, fixture):
     if opp_club:
         info_items.append(_info_chip("Opp. Rep", str(opp_club.reputation), ft.Icons.STAR))
 
+    # Recent form (last 5 results)
+    recent_form = _build_recent_form(conn, gs.user_club_id)
+
     # Action buttons
     action_controls = []
     if days_until <= 0:
@@ -290,6 +294,7 @@ def _build_match_preview(page, conn, gs, fixture):
                             spacing=8, wrap=True,
                             controls=info_items,
                         ) if info_items else ft.Container(),
+                        recent_form,
                         ft.Container(height=5),
                         *action_controls,
                     ],
@@ -375,6 +380,55 @@ def _info_chip(label: str, value: str, icon) -> ft.Container:
         padding=ft.padding.symmetric(horizontal=10, vertical=6),
         border_radius=8,
         bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
+    )
+
+
+def _build_recent_form(conn, user_club_id) -> ft.Container:
+    """Build a recent form display showing last 5 results as W/D/L chips."""
+    recent = queries.get_user_recent_fixtures(conn, user_club_id, limit=5)
+    if not recent:
+        return ft.Container()
+
+    chips = []
+    for fixture in recent:
+        if not fixture.result:
+            continue
+        r = fixture.result
+        is_home = fixture.home_club_id == user_club_id
+        user_goals = r.home_goals if is_home else r.away_goals
+        opp_goals = r.away_goals if is_home else r.home_goals
+
+        if user_goals > opp_goals:
+            label, color = "W", ft.Colors.GREEN_400
+        elif user_goals < opp_goals:
+            label, color = "L", ft.Colors.RED_400
+        else:
+            label, color = "D", ft.Colors.YELLOW_400
+
+        chips.append(
+            ft.Container(
+                content=ft.Text(label, size=11, weight=ft.FontWeight.BOLD,
+                                color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER),
+                width=26, height=26,
+                border_radius=13,
+                bgcolor=color,
+                alignment=ft.Alignment(0, 0),
+            )
+        )
+
+    if not chips:
+        return ft.Container()
+
+    return ft.Container(
+        content=ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=6,
+            controls=[
+                ft.Text("Form:", size=11, color=ft.Colors.GREY_500),
+                *chips,
+            ],
+        ),
+        padding=ft.padding.symmetric(vertical=4),
     )
 
 

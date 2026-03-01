@@ -282,6 +282,7 @@ class GameState(BaseModel):
     current_date: _dt.date = Field(default_factory=lambda: _dt.date(2025, 8, 15))
     user_club_id: int = 0
     user_club_name: str = ""
+    manager_name: str = "Manager"
     rng_seed: int = 42
     day_count: int = 0
 

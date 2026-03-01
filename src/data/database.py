@@ -7,10 +7,8 @@ Uses raw sqlite3 for maximum portability on mobile.
 from __future__ import annotations
 
 import sqlite3
-import json
 import os
 from pathlib import Path
-from typing import Any
 
 
 # Default DB path — will be set to app storage dir on mobile
@@ -71,6 +69,7 @@ CREATE TABLE IF NOT EXISTS game_state (
     current_date TEXT NOT NULL DEFAULT '2025-08-15',
     user_club_id INTEGER NOT NULL DEFAULT 0,
     user_club_name TEXT NOT NULL DEFAULT '',
+    manager_name TEXT NOT NULL DEFAULT 'Manager',
     rng_seed INTEGER NOT NULL DEFAULT 42,
     day_count INTEGER NOT NULL DEFAULT 0
 );
