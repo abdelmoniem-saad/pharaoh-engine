@@ -214,6 +214,16 @@ def _build_match_preview(page, conn, gs, fixture):
     if suspended_count > 0:
         info_items.append(_info_chip("Suspended", str(suspended_count), ft.Icons.BLOCK))
 
+    # Attendance preview
+    from src.core.fans import calculate_attendance, get_atmosphere_description
+    is_home_match = fixture.home_club_id == gs.user_club_id
+    opp_rep_val = opp_club.reputation if opp_club else 100
+    expected_attendance = calculate_attendance(user_club, is_home_match, opp_rep_val) if user_club else 0
+    atmosphere_text = get_atmosphere_description(user_club.fan_happiness) if user_club else ""
+
+    # Form streak
+    form_streak_widget = _build_form_streak(conn, gs.user_club_id)
+
     # Recent form
     user_form = _build_club_form(conn, gs.user_club_id)
 
@@ -276,6 +286,17 @@ def _build_match_preview(page, conn, gs, fixture):
                         ft.Row(alignment=ft.MainAxisAlignment.CENTER,
                                spacing=8, wrap=True, controls=info_items
                         ) if info_items else ft.Container(),
+                        # Attendance + atmosphere
+                        ft.Row(
+                            alignment=ft.MainAxisAlignment.CENTER, spacing=12,
+                            controls=[
+                                ft.Text(f"🏟️ {expected_attendance:,} expected", size=11,
+                                         color=ft.Colors.GREY_400) if expected_attendance > 0 else ft.Container(),
+                                form_streak_widget if form_streak_widget else ft.Container(),
+                            ],
+                        ),
+                        ft.Text(f"🎤 {atmosphere_text}", size=11, color=ft.Colors.GREY_500,
+                                 italic=True, text_align=ft.TextAlign.CENTER) if atmosphere_text else ft.Container(),
                         # Form rows
                         ft.Row(
                             alignment=ft.MainAxisAlignment.CENTER, spacing=15,
@@ -393,6 +414,61 @@ def _build_club_form(conn, club_id) -> ft.Row:
     return ft.Row(spacing=4, controls=chips)
 
 
+def _pos_suffix(pos: int) -> str:
+    """Ordinal suffix for a league position."""
+    return {1: "st", 2: "nd", 3: "rd"}.get(pos if pos < 20 else pos % 10, "th")
+
+
+def _build_form_streak(conn, user_club_id) -> ft.Text | None:
+    """Build a form streak text widget (e.g. '3-match win streak 🔥')."""
+    try:
+        recent = queries.get_user_recent_fixtures(conn, user_club_id, limit=10)
+        if not recent:
+            return None
+
+        # Determine streak
+        streak_type = None
+        streak_count = 0
+        for fix in recent:
+            if not fix.result:
+                continue
+            if fix.home_club_id == user_club_id:
+                ug, og = fix.result.home_goals, fix.result.away_goals
+            else:
+                ug, og = fix.result.away_goals, fix.result.home_goals
+
+            if ug > og:
+                res = "W"
+            elif ug < og:
+                res = "L"
+            else:
+                res = "D"
+
+            if streak_type is None:
+                streak_type = res
+                streak_count = 1
+            elif res == streak_type:
+                streak_count += 1
+            else:
+                break
+
+        if streak_count < 2:
+            return None
+
+        if streak_type == "W":
+            return ft.Text(f"🔥 {streak_count}-match win streak!", size=11,
+                            color=ft.Colors.GREEN_400, weight=ft.FontWeight.W_500)
+        elif streak_type == "L":
+            return ft.Text(f"⚠️ Winless in {streak_count}", size=11,
+                            color=ft.Colors.RED_400, weight=ft.FontWeight.W_500)
+        elif streak_type == "D":
+            return ft.Text(f"😐 {streak_count} draws in a row", size=11,
+                            color=ft.Colors.YELLOW_400, weight=ft.FontWeight.W_500)
+    except Exception:
+        pass
+    return None
+
+
 def _save_and_notify(page, conn, gs):
     """Quick save game from match day screen."""
     from src.ui.app import show_snackbar
@@ -405,6 +481,27 @@ def _show_result_dialog(page, outcome):
     from src.ui.app import navigate
 
     result = outcome.user_result
+
+    # ── Position change ──────────────────────────────────────────────
+    pos_widgets = []
+    if outcome.position_before > 0 and outcome.position_after > 0:
+        delta = outcome.position_before - outcome.position_after  # positive = moved up
+        if delta > 0:
+            pos_text = f"▲ {outcome.position_after}{_pos_suffix(outcome.position_after)} (up {delta})"
+            pos_color = ft.Colors.GREEN_400
+        elif delta < 0:
+            pos_text = f"▼ {outcome.position_after}{_pos_suffix(outcome.position_after)} (down {abs(delta)})"
+            pos_color = ft.Colors.RED_400
+        else:
+            pos_text = f"— {outcome.position_after}{_pos_suffix(outcome.position_after)} (unchanged)"
+            pos_color = ft.Colors.GREY_400
+        pos_widgets.append(ft.Text(pos_text, size=13, color=pos_color, weight=ft.FontWeight.W_500,
+                                    text_align=ft.TextAlign.CENTER))
+
+    # ── Attendance ───────────────────────────────────────────────────
+    attendance_text = ""
+    if outcome.attendance > 0:
+        attendance_text = f"🏟️ Attendance: {outcome.attendance:,}"
 
     # Goal widgets
     goal_widgets = []
@@ -620,6 +717,11 @@ def _show_result_dialog(page, outcome):
                 ft.Text("Full Time", size=12, color=ft.Colors.GREY_500),
                 ft.Text(result.score_display, size=20, weight=ft.FontWeight.BOLD,
                          text_align=ft.TextAlign.CENTER, color=ft.Colors.AMBER_300),
+                *pos_widgets,
+                *(
+                    [ft.Text(attendance_text, size=11, color=ft.Colors.GREY_500)]
+                    if attendance_text else []
+                ),
             ],
         ),
         content=ft.Container(

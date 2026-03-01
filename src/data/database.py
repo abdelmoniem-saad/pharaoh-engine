@@ -232,6 +232,28 @@ CREATE TABLE IF NOT EXISTS game_settings (
     auto_save_interval INTEGER NOT NULL DEFAULT 7,
     difficulty TEXT NOT NULL DEFAULT 'normal'
 );
+
+CREATE TABLE IF NOT EXISTS transfer_negotiations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER NOT NULL,
+    player_name TEXT NOT NULL DEFAULT '',
+    from_club_id INTEGER NOT NULL,
+    from_club_name TEXT NOT NULL DEFAULT '',
+    to_club_id INTEGER NOT NULL,
+    to_club_name TEXT NOT NULL DEFAULT '',
+    phase TEXT NOT NULL DEFAULT 'fee',
+    status TEXT NOT NULL DEFAULT 'pending',
+    current_offer INTEGER NOT NULL DEFAULT 0,
+    asking_price INTEGER NOT NULL DEFAULT 0,
+    counter_price INTEGER NOT NULL DEFAULT 0,
+    wage_offer INTEGER NOT NULL DEFAULT 0,
+    current_wage INTEGER NOT NULL DEFAULT 0,
+    attempt INTEGER NOT NULL DEFAULT 0,
+    max_attempts INTEGER NOT NULL DEFAULT 3,
+    submitted_date TEXT NOT NULL DEFAULT '',
+    respond_date TEXT NOT NULL DEFAULT '',
+    direction TEXT NOT NULL DEFAULT 'user_buying'
+);
 """
 
 

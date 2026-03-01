@@ -229,12 +229,15 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
 
     # Play match button
     def play_match(e):
-        # The simulate_user_match will auto-select XI, but we've set the preference
-        # For now, simulate normally (TODO: pass custom XI)
+        # Simulate the full match
         outcome = simulate_user_match(conn, gs)
         if outcome:
-            from src.ui.screens.match_day import _show_result_dialog
-            _show_result_dialog(page, outcome)
+            # Navigate to live match screen for FIFA-style replay
+            from src.ui.screens.live_match import build_live_match_screen
+            page.navigation_bar = None
+            page.controls.clear()
+            page.controls.append(build_live_match_screen(page, outcome))
+            page.update()
         else:
             show_snackbar(page, "Could not simulate match!", bgcolor=ft.Colors.RED_800)
 

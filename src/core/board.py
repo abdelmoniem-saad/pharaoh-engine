@@ -68,14 +68,20 @@ def generate_season_objectives(club: Club) -> list[BoardObjective]:
     # Secondary objectives for ambitious clubs
     if exp in ("win_league", "title_challenge"):
         objectives.append(BoardObjective(
-            description="Reach the Egypt Cup Semi-Finals",
-            target="cup_semis",
+            description="Score 50+ league goals",
+            target="score_50_goals",
             priority="medium",
         ))
     elif exp in ("top_4", "top_half"):
         objectives.append(BoardObjective(
             description="Develop at least one youth player",
             target="develop_youth",
+            priority="low",
+        ))
+    elif exp in ("mid_table", "avoid_relegation"):
+        objectives.append(BoardObjective(
+            description="Keep a positive goal difference",
+            target="positive_gd",
             priority="low",
         ))
 
@@ -118,8 +124,12 @@ def evaluate_objectives(club: Club, position: int,
                 overshoot = position - required_pos
                 penalty = min(25, 5 + overshoot * 2)
                 club.board_confidence = max(0, club.board_confidence - penalty)
-        elif obj.target == "cup_semis":
-            # Cup not implemented yet — auto-pass
+        elif obj.target == "score_50_goals":
+            # Check from standings goals_for (passed externally isn't available,
+            # so we accept auto-pass for now — Phase 2 will track properly)
+            achieved = True
+        elif obj.target == "positive_gd":
+            # Auto-pass for now — Phase 2 will read from standings
             achieved = True
         elif obj.target == "develop_youth":
             # Youth development not tracked yet — auto-pass

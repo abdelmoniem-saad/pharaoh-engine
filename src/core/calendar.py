@@ -16,12 +16,12 @@ from src.core.player import (
     update_form, update_fitness_after_match, rest_recovery,
     update_morale,
 )
-from src.core.media import create_match_report_message
+from src.core.media import create_match_report_message, generate_random_event
 from src.core.board import update_confidence_after_match
-from src.core.fans import update_fan_happiness
+from src.core.fans import update_fan_happiness, calculate_attendance
 from src.core.youth import develop_player
 from src.core.finance import process_monthly_finances
-from src.core.transfers import generate_ai_bids, check_expiring_contracts
+from src.core.transfers import generate_ai_bids, check_expiring_contracts, process_pending_negotiations
 from src.utils.config import MatchEventType, INJURY_TYPES
 from src.utils import rng
 
@@ -51,6 +51,9 @@ def advance_day(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
     if not messages:
         _daily_recovery(conn, game_state)
 
+    # Process pending transfer negotiations (responses arrive)
+    messages.extend(process_pending_negotiations(conn, game_state))
+
     # AI transfer offers for listed players (daily)
     messages.extend(generate_ai_bids(conn, game_state))
 
@@ -62,6 +65,17 @@ def advance_day(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
     if game_state.day_count % 30 == 0:
         messages.extend(_monthly_finances(conn, game_state))
         messages.extend(check_expiring_contracts(conn, game_state))
+
+    # Random mid-season events (varied inbox messages)
+    squad = queries.get_players_by_club(conn, game_state.user_club_id)
+    if squad:
+        random_player = rng.choice(squad)
+        event_msg = generate_random_event(
+            game_state.user_club_name, random_player.name,
+            game_state.current_date,
+        )
+        if event_msg:
+            queries.insert_message(conn, event_msg)
 
     # Check season completion
     if league.is_season_complete(conn):
@@ -213,6 +227,19 @@ def simulate_user_match(conn: sqlite3.Connection,
     user_result.matchday = fixture.matchday
     user_result.date = fixture.date
 
+    # Snapshot league position BEFORE this result
+    standings_before = queries.get_standings(conn)
+    position_before = 0
+    for i, s in enumerate(standings_before, 1):
+        if s.club_id == game_state.user_club_id:
+            position_before = i
+            break
+
+    # Calculate attendance
+    opp_rep = opp_club.reputation if opp_club else 100
+    is_home_match = fixture.home_club_id == game_state.user_club_id
+    attendance = calculate_attendance(user_club, is_home_match, opp_rep)
+
     # Save user result
     queries.mark_fixture_played(conn, fixture.fixture_id, user_result)
     queries.update_standings_for_result(conn, user_result)
@@ -292,10 +319,21 @@ def simulate_user_match(conn: sqlite3.Connection,
 
     conn.commit()
 
+    # Snapshot league position AFTER all results
+    standings_after = queries.get_standings(conn)
+    position_after = 0
+    for i, s in enumerate(standings_after, 1):
+        if s.club_id == game_state.user_club_id:
+            position_after = i
+            break
+
     return MatchdayOutcome(
         user_result=user_result,
         other_results=other_results,
         matchday=fixture.matchday,
+        position_before=position_before,
+        position_after=position_after,
+        attendance=attendance,
     )
 
 

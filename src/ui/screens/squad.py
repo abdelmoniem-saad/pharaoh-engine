@@ -69,6 +69,13 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                     _show_player_detail(page, p, o)
                 return handler
 
+            # Training focus emoji
+            train_map = {
+                "Shooting": "⚽", "Defending": "🛡️", "Physical": "🏃",
+                "Playmaking": "🎯", "Mental": "🧠",
+            }
+            train_label = train_map.get(player.training_focus, "—")
+
             rows.append(
                 ft.DataRow(
                     cells=[
@@ -84,6 +91,7 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                             "😊" if player.morale >= 70 else "😐" if player.morale >= 40 else "😞",
                             size=13,
                         )),
+                        ft.DataCell(ft.Text(train_label, size=12)),
                     ],
                     on_select_change=make_click_handler(),
                 )
@@ -105,6 +113,7 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
             ft.DataColumn(label=ft.Text("Fit", size=11, weight=ft.FontWeight.BOLD)),
             ft.DataColumn(label=ft.Text("Form", size=11, weight=ft.FontWeight.BOLD), numeric=True),
             ft.DataColumn(label=ft.Text("😊", size=11, weight=ft.FontWeight.BOLD)),
+            ft.DataColumn(label=ft.Text("🏋️", size=11, weight=ft.FontWeight.BOLD)),
         ],
         rows=rows,
         column_spacing=10,
@@ -215,8 +224,22 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
 
 
 def _build_news_ticker(conn, gs) -> ft.Container:
-    """Build a compact league news ticker showing recent results and upcoming match."""
+    """Build a compact league news ticker showing position, upcoming match, and recent results."""
     items = []
+
+    # League position
+    try:
+        standings = queries.get_standings(conn)
+        for i, s in enumerate(standings, 1):
+            if s.club_id == gs.user_club_id:
+                suffix = {1: "st", 2: "nd", 3: "rd"}.get(i if i < 20 else i % 10, "th")
+                items.append(
+                    ft.Text(f"🏆 {i}{suffix} — {s.points}pts (W{s.won} D{s.drawn} L{s.lost})",
+                             size=11, color=ft.Colors.GREY_400)
+                )
+                break
+    except Exception:
+        pass
 
     # Upcoming fixture
     next_fix = queries.get_user_next_fixture(conn, gs.user_club_id)
@@ -385,6 +408,32 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
     expiry_str = player.contract.contract_expiry.strftime("%b %Y") if player.contract.contract_expiry else "N/A"
     wage_str = f"{player.contract.wage_weekly:,} EGP/wk"
 
+    # Secondary positions
+    sec_pos_text = ", ".join(p.value for p in player.secondary_positions) if player.secondary_positions else "None"
+
+    # Performance ratios
+    mins_per_goal = "—"
+    if s.goals > 0 and s.minutes_played > 0:
+        mins_per_goal = str(s.minutes_played // s.goals)
+    mins_per_assist = "—"
+    if s.assists > 0 and s.minutes_played > 0:
+        mins_per_assist = str(s.minutes_played // s.assists)
+
+    # Form trend arrow
+    if s.average_rating > 0 and player.form > 0:
+        if player.form > s.average_rating + 0.3:
+            form_trend = "📈 Rising"
+            form_trend_color = ft.Colors.GREEN_400
+        elif player.form < s.average_rating - 0.3:
+            form_trend = "📉 Declining"
+            form_trend_color = ft.Colors.RED_400
+        else:
+            form_trend = "➡️ Steady"
+            form_trend_color = ft.Colors.GREY_400
+    else:
+        form_trend = "—"
+        form_trend_color = ft.Colors.GREY_500
+
     # Training focus dropdown
     from src.utils.config import TRAINING_FOCUSES
     training_options = [ft.dropdown.Option("", text="None")] + [
@@ -438,11 +487,20 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
                         ],
                     ),
                     ft.Row(
+                        spacing=10, wrap=True,
+                        controls=[
+                            ft.Text(f"🌍 {player.nationality}", size=11, color=ft.Colors.GREY_400),
+                            ft.Text(f"🏠 {player.governorate}", size=11, color=ft.Colors.GREY_400),
+                            ft.Text(f"🔄 Alt: {sec_pos_text}", size=11, color=ft.Colors.GREY_400),
+                        ],
+                    ),
+                    ft.Row(
                         spacing=10,
                         controls=[
                             ft.Text(f"💪 {player.fitness}%", size=12, color=fit_color),
                             ft.Text(f"📊 Form {player.form:.1f}", size=12),
                             ft.Text(morale_text, size=12),
+                            ft.Text(form_trend, size=11, color=form_trend_color),
                         ],
                     ),
                     *(status_badges if status_badges else []),
@@ -451,6 +509,14 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
                     ft.Text("📈 Season Stats", size=13, weight=ft.FontWeight.W_500,
                              color=ft.Colors.AMBER_300),
                     season_info,
+                    ft.Row(
+                        spacing=12, wrap=True,
+                        controls=[
+                            ft.Text(f"⏱️ {s.minutes_played} mins", size=11, color=ft.Colors.GREY_400),
+                            ft.Text(f"Mins/Goal: {mins_per_goal}", size=11, color=ft.Colors.GREY_400),
+                            ft.Text(f"Mins/Assist: {mins_per_assist}", size=11, color=ft.Colors.GREY_400),
+                        ],
+                    ),
                     ft.Divider(height=1),
                     # GK section (if applicable)
                     *gk_section,

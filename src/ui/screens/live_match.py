@@ -1,0 +1,323 @@
+"""
+Live Match screen — FIFA-style minute-by-minute match simulation.
+
+Shows a running clock from 0' → 90'+, with events popping up in real-time,
+a live scoreline, and a "Skip to End" button.
+
+Uses page.run_task() with an async function so that asyncio.sleep() yields
+back to the Flet event loop, allowing page.update() to flush immediately.
+"""
+from __future__ import annotations
+
+import asyncio
+
+import flet as ft
+
+from src.utils.config import MatchEventType
+
+
+# Event icons
+_EVENT_ICONS = {
+    MatchEventType.GOAL: "⚽",
+    MatchEventType.SHOT_ON_TARGET: "🎯",
+    MatchEventType.SHOT_OFF_TARGET: "💨",
+    MatchEventType.YELLOW_CARD: "🟡",
+    MatchEventType.RED_CARD: "🟥",
+    MatchEventType.CORNER: "📐",
+    MatchEventType.HALF_TIME: "⏸️",
+    MatchEventType.FULL_TIME: "🏁",
+    MatchEventType.INJURY: "🏥",
+    MatchEventType.KICKOFF: "🏟️",
+    MatchEventType.PENALTY: "⚽",
+    MatchEventType.PENALTY_MISS: "❌",
+    MatchEventType.SAVE: "🧤",
+}
+
+_MAJOR_EVENTS = {
+    MatchEventType.GOAL,
+    MatchEventType.YELLOW_CARD,
+    MatchEventType.RED_CARD,
+    MatchEventType.INJURY,
+    MatchEventType.HALF_TIME,
+    MatchEventType.FULL_TIME,
+    MatchEventType.KICKOFF,
+    MatchEventType.PENALTY,
+    MatchEventType.PENALTY_MISS,
+}
+
+
+def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
+    """Build the live match simulation view."""
+    from src.ui.screens.match_day import _show_result_dialog
+
+    result = outcome.user_result
+
+    # ── Pre-index events by minute ───────────────────────────────────
+    events_by_minute: dict[int, list] = {}
+    for ev in result.events:
+        events_by_minute.setdefault(ev.minute, []).append(ev)
+
+    max_minute = 90
+    for ev in result.events:
+        if ev.minute > max_minute:
+            max_minute = ev.minute
+    total_minutes = max_minute + 1
+
+    # Mutable state
+    home_goals = [0]
+    away_goals = [0]
+    skip_flag = [False]
+
+    # ── UI Controls ──────────────────────────────────────────────────
+    score_text = ft.Text(
+        "0 - 0", size=32, weight=ft.FontWeight.BOLD,
+        color=ft.Colors.AMBER_300, text_align=ft.TextAlign.CENTER,
+    )
+    minute_text = ft.Text(
+        "0'", size=18, color=ft.Colors.GREY_400,
+        weight=ft.FontWeight.W_500, text_align=ft.TextAlign.CENTER,
+    )
+    progress_bar = ft.ProgressBar(
+        value=0, width=320, color=ft.Colors.AMBER_600,
+        bgcolor=ft.Colors.GREY_800,
+    )
+    status_text = ft.Text(
+        "⏳ Pre-Match", size=13, color=ft.Colors.GREY_500,
+        text_align=ft.TextAlign.CENTER,
+    )
+    event_list = ft.ListView(spacing=4, height=300, auto_scroll=True)
+
+    skip_btn = ft.ElevatedButton(
+        "⏩ Skip to End", width=200, height=42,
+        style=ft.ButtonStyle(
+            bgcolor=ft.Colors.GREY_800, color=ft.Colors.WHITE,
+            text_style=ft.TextStyle(size=14),
+        ),
+    )
+    continue_btn = ft.ElevatedButton(
+        "Continue ➡️", width=200, height=48, visible=False,
+        style=ft.ButtonStyle(
+            bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
+            text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
+        ),
+    )
+
+    def on_skip(e):
+        skip_flag[0] = True
+
+    def on_continue(e):
+        _show_result_dialog(page, outcome)
+
+    skip_btn.on_click = on_skip
+    continue_btn.on_click = on_continue
+
+    comp_text = result.competition or "Egyptian Premier League"
+    matchday_label = f"Matchday {result.matchday}" if result.matchday else ""
+
+    # ── Event row builder ────────────────────────────────────────────
+    def _make_event_row(ev) -> ft.Container:
+        icon = _EVENT_ICONS.get(ev.event_type, "📌")
+        is_goal = ev.event_type == MatchEventType.GOAL
+        is_major = ev.event_type in _MAJOR_EVENTS
+
+        if is_goal:
+            bg = ft.Colors.with_opacity(0.15, ft.Colors.GREEN)
+        elif ev.event_type == MatchEventType.RED_CARD:
+            bg = ft.Colors.with_opacity(0.15, ft.Colors.RED)
+        elif ev.event_type == MatchEventType.INJURY:
+            bg = ft.Colors.with_opacity(0.12, ft.Colors.ORANGE)
+        elif ev.event_type == MatchEventType.HALF_TIME:
+            bg = ft.Colors.with_opacity(0.1, ft.Colors.BLUE)
+        else:
+            bg = ft.Colors.with_opacity(0.05, ft.Colors.WHITE)
+
+        return ft.Container(
+            content=ft.Row(
+                spacing=8,
+                controls=[
+                    ft.Text(f"{ev.minute}'", size=11, color=ft.Colors.GREY_500,
+                             width=30, text_align=ft.TextAlign.RIGHT),
+                    ft.Text(icon, size=14),
+                    ft.Text(
+                        ev.description,
+                        size=13 if is_major else 11,
+                        weight=ft.FontWeight.BOLD if is_goal else ft.FontWeight.NORMAL,
+                        color=ft.Colors.GREEN_300 if is_goal else ft.Colors.WHITE,
+                        expand=True,
+                    ),
+                ],
+            ),
+            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            border_radius=6,
+            bgcolor=bg,
+        )
+
+    # ── Async simulation (runs on the Flet event loop) ───────────────
+    async def _run_simulation():
+        """
+        Tick through EVERY minute from 0 → 90+ at a steady pace.
+        Using asyncio.sleep() yields to the Flet event loop each tick,
+        so page.update() flushes to the client immediately — no focus needed.
+        """
+        SECONDS_PER_MINUTE = 0.12
+        GOAL_PAUSE = 1.5
+        MAJOR_PAUSE = 0.8
+        HALF_TIME_PAUSE = 1.2
+        MINOR_EVENT_EXTRA = 0.15
+
+        for minute in range(total_minutes):
+            if skip_flag[0]:
+                break
+
+            # ── Update clock every single minute ─────────────────
+            minute_text.value = f"{minute}'"
+            progress_bar.value = min(minute / max(total_minutes - 1, 1), 1.0)
+
+            if minute == 0:
+                status_text.value = "🏟️ Kick Off!"
+                status_text.color = ft.Colors.GREEN_400
+            elif minute < 45:
+                status_text.value = f"1st Half — {minute}'"
+                status_text.color = ft.Colors.GREY_500
+            elif minute == 45:
+                status_text.value = "1st Half — 45'"
+                status_text.color = ft.Colors.GREY_500
+            elif minute <= 90:
+                status_text.value = f"2nd Half — {minute}'"
+                status_text.color = ft.Colors.GREY_500
+            else:
+                status_text.value = f"Added Time — {minute}'"
+                status_text.color = ft.Colors.AMBER_400
+
+            page.update()
+
+            # ── Show events that happen at this minute ───────────
+            events_now = events_by_minute.get(minute, [])
+            extra_pause = 0.0
+
+            for ev in events_now:
+                if skip_flag[0]:
+                    break
+
+                if ev.event_type == MatchEventType.GOAL:
+                    if ev.club_id == result.home_club_id:
+                        home_goals[0] += 1
+                    else:
+                        away_goals[0] += 1
+                    score_text.value = f"{home_goals[0]} - {away_goals[0]}"
+
+                if ev.event_type == MatchEventType.HALF_TIME:
+                    status_text.value = "⏸️ Half Time"
+                    status_text.color = ft.Colors.BLUE_400
+                elif ev.event_type == MatchEventType.FULL_TIME:
+                    status_text.value = "🏁 Full Time"
+                    status_text.color = ft.Colors.AMBER_300
+
+                event_list.controls.append(_make_event_row(ev))
+                page.update()
+
+                if ev.event_type == MatchEventType.GOAL:
+                    extra_pause = max(extra_pause, GOAL_PAUSE)
+                elif ev.event_type == MatchEventType.HALF_TIME:
+                    extra_pause = max(extra_pause, HALF_TIME_PAUSE)
+                elif ev.event_type in (MatchEventType.RED_CARD, MatchEventType.INJURY):
+                    extra_pause = max(extra_pause, MAJOR_PAUSE)
+                elif ev.event_type in _MAJOR_EVENTS:
+                    extra_pause = max(extra_pause, MINOR_EVENT_EXTRA)
+
+            # ── Yield to event loop with asyncio.sleep ───────────
+            if not skip_flag[0]:
+                await asyncio.sleep(extra_pause if extra_pause > 0 else SECONDS_PER_MINUTE)
+
+        # ── Finish ───────────────────────────────────────────────
+        home_goals[0] = result.home_goals
+        away_goals[0] = result.away_goals
+        score_text.value = f"{result.home_goals} - {result.away_goals}"
+        minute_text.value = "FT"
+        progress_bar.value = 1.0
+        status_text.value = "🏁 Full Time"
+        status_text.color = ft.Colors.AMBER_300
+        skip_btn.visible = False
+        continue_btn.visible = True
+
+        if skip_flag[0]:
+            event_list.controls.clear()
+            for m in sorted(events_by_minute.keys()):
+                for ev in events_by_minute[m]:
+                    if ev.event_type in _MAJOR_EVENTS:
+                        event_list.controls.append(_make_event_row(ev))
+
+        page.update()
+
+    # ── Layout ───────────────────────────────────────────────────────
+    content = ft.Column(
+        expand=True,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=[
+            ft.Container(
+                padding=ft.padding.only(left=12, right=12, top=10, bottom=10),
+                content=ft.Column(
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=8,
+                    controls=[
+                        # Header
+                        ft.Text(comp_text, size=12, color=ft.Colors.AMBER_400,
+                                 weight=ft.FontWeight.W_500),
+                        ft.Text(matchday_label, size=11, color=ft.Colors.GREY_600),
+
+                        # Scoreboard
+                        ft.Container(
+                            content=ft.Column(
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                spacing=4,
+                                controls=[
+                                    ft.Row(
+                                        alignment=ft.MainAxisAlignment.CENTER,
+                                        spacing=10,
+                                        controls=[
+                                            ft.Text(
+                                                result.home_club_name, size=16,
+                                                weight=ft.FontWeight.BOLD,
+                                                text_align=ft.TextAlign.RIGHT, width=120,
+                                            ),
+                                            score_text,
+                                            ft.Text(
+                                                result.away_club_name, size=16,
+                                                weight=ft.FontWeight.BOLD,
+                                                text_align=ft.TextAlign.LEFT, width=120,
+                                            ),
+                                        ],
+                                    ),
+                                    minute_text,
+                                    progress_bar,
+                                    status_text,
+                                ],
+                            ),
+                            padding=ft.padding.symmetric(horizontal=10, vertical=12),
+                            border_radius=12,
+                            bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
+                        ),
+                        ft.Divider(height=1),
+
+                        # Event feed
+                        ft.Text("📜 Match Events", size=14,
+                                 weight=ft.FontWeight.W_500, color=ft.Colors.GREY_400),
+                        event_list,
+
+                        # Buttons
+                        ft.Row(
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            spacing=12,
+                            controls=[skip_btn, continue_btn],
+                        ),
+                    ],
+                ),
+            ),
+        ],
+    )
+
+    # ── Launch the async simulation on the Flet event loop ───────────
+    page.run_task(_run_simulation)
+
+    return content
+
