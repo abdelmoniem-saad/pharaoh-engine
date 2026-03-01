@@ -437,12 +437,16 @@ def _daily_recovery(conn: sqlite3.Connection, game_state: GameState) -> None:
     """Apply daily fitness recovery and injury recovery to user club players."""
     squad = queries.get_players_by_club(conn, game_state.user_club_id)
     for player in squad:
+        changed = False
         old_fitness = player.fitness
         rest_recovery(player, days=1)
+        if player.fitness != old_fitness:
+            changed = True
 
         # Injury recovery countdown
         if player.injury_days_remaining > 0:
             player.injury_days_remaining -= 1
+            changed = True
             if player.injury_days_remaining == 0:
                 player.injury_type = ""
                 player.fitness = max(player.fitness, 60)  # minimum fitness on return
@@ -453,7 +457,7 @@ def _daily_recovery(conn: sqlite3.Connection, game_state: GameState) -> None:
                     category="general",
                 ))
 
-        if player.fitness != old_fitness or player.injury_days_remaining >= 0:
+        if changed:
             queries.update_player_stats(conn, player)
 
 

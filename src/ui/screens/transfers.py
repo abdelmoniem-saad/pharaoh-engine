@@ -113,6 +113,8 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
         ovr = calculate_overall_rating(p)
         value = estimate_player_value(p)
         status = "🔴 Listed" if p.transfer_listed else ""
+        inj_badge = "🏥" if p.injury_days_remaining > 0 else ""
+        sus_badge = "🚫" if p.suspension_matches > 0 else ""
 
         def make_sell_handler(player=p, val=value):
             def handler(e):
@@ -130,6 +132,8 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                                 ft.Row(spacing=5, controls=[
                                     ft.Text(p.name, size=12, weight=ft.FontWeight.W_500),
                                     ft.Text(status, size=10, color=ft.Colors.RED_400) if status else ft.Container(),
+                                    ft.Text(inj_badge, size=10) if inj_badge else ft.Container(),
+                                    ft.Text(sus_badge, size=10) if sus_badge else ft.Container(),
                                 ]),
                                 ft.Text(
                                     f"{p.position.value} | Age {p.age} | OVR {ovr}",

@@ -80,6 +80,10 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                                             weight=ft.FontWeight.BOLD, color=ovr_color)),
                         ft.DataCell(ft.Text(f"{player.fitness}%", size=11, color=fit_color)),
                         ft.DataCell(ft.Text(f"{player.form:.1f}", size=11)),
+                        ft.DataCell(ft.Text(
+                            "😊" if player.morale >= 70 else "😐" if player.morale >= 40 else "😞",
+                            size=13,
+                        )),
                     ],
                     on_select_change=make_click_handler(),
                 )
@@ -100,6 +104,7 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
             ft.DataColumn(label=ft.Text("OVR", size=11, weight=ft.FontWeight.BOLD), numeric=True),
             ft.DataColumn(label=ft.Text("Fit", size=11, weight=ft.FontWeight.BOLD)),
             ft.DataColumn(label=ft.Text("Form", size=11, weight=ft.FontWeight.BOLD), numeric=True),
+            ft.DataColumn(label=ft.Text("😊", size=11, weight=ft.FontWeight.BOLD)),
         ],
         rows=rows,
         column_spacing=10,
@@ -148,6 +153,11 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                                         icon_size=20,
                                         on_click=lambda e: navigate(page, "/transfers"),
                                     ),
+                                    ft.IconButton(
+                                        icon=ft.Icons.SETTINGS, tooltip="Settings",
+                                        icon_size=20,
+                                        on_click=lambda e: navigate(page, "/settings"),
+                                    ),
                                 ]),
                             ],
                         ),
@@ -161,6 +171,11 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                                 ft.Text(
                                     f"📅 {gs.current_date.strftime('%d %b %Y')}",
                                     size=13, color=ft.Colors.GREY_500,
+                                ),
+                                ft.TextButton(
+                                    "🏟️ Club",
+                                    on_click=lambda e: navigate(page, "/club"),
+                                    style=ft.ButtonStyle(padding=0),
                                 ),
                             ],
                         ),
@@ -209,8 +224,11 @@ def _build_news_ticker(conn, gs) -> ft.Container:
         is_home = next_fix.home_club_id == gs.user_club_id
         opp = next_fix.away_club_name if is_home else next_fix.home_club_name
         venue = "H" if is_home else "A"
-        days = (next_fix.date - gs.current_date).days if next_fix.date else 0
-        when = "TODAY" if days <= 0 else f"in {days}d"
+        if next_fix.date:
+            days = (next_fix.date - gs.current_date).days
+            when = "TODAY" if days <= 0 else f"in {days}d"
+        else:
+            when = "TBD"
         items.append(
             ft.Text(f"📅 Next: vs {opp} ({venue}) {when}", size=11,
                      color=ft.Colors.AMBER_300, weight=ft.FontWeight.W_500)

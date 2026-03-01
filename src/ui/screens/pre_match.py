@@ -54,6 +54,10 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
     is_home = fixture.home_club_id == gs.user_club_id
     opp_name = fixture.away_club_name if is_home else fixture.home_club_name
 
+    # Count unavailable players
+    injured_players = [p for p in squad if p.injury_days_remaining > 0]
+    suspended_players = [p for p in squad if p.suspension_matches > 0]
+
     # Auto-select starting XI
     xi_ids, bench_ids = auto_select_xi(squad, club.formation)
     player_map = {p.id: p for p in squad}
@@ -259,6 +263,32 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                         ),
                         ft.Text(f"vs {opp_name} {venue}", size=13, color=ft.Colors.GREY_400),
                         ft.Text(f"Formation: {club.formation}", size=12, color=ft.Colors.AMBER_300),
+                        # Unavailable warning
+                        *(
+                            [ft.Container(
+                                content=ft.Column(spacing=2, controls=[
+                                    *(
+                                        [ft.Text(
+                                            f"🏥 {len(injured_players)} injured: " +
+                                            ", ".join(p.name for p in injured_players[:3]) +
+                                            ("..." if len(injured_players) > 3 else ""),
+                                            size=10, color=ft.Colors.RED_400,
+                                        )] if injured_players else []
+                                    ),
+                                    *(
+                                        [ft.Text(
+                                            f"🚫 {len(suspended_players)} suspended: " +
+                                            ", ".join(p.name for p in suspended_players[:3]) +
+                                            ("..." if len(suspended_players) > 3 else ""),
+                                            size=10, color=ft.Colors.ORANGE_400,
+                                        )] if suspended_players else []
+                                    ),
+                                ]),
+                                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                                border_radius=6,
+                                bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.RED),
+                            )] if (injured_players or suspended_players) else []
+                        ),
                         ft.Text("Tap a starter, then tap a bench player to swap",
                                  size=10, color=ft.Colors.GREY_600, italic=True),
                         ft.Divider(height=1),

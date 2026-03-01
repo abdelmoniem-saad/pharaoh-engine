@@ -44,6 +44,8 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
     # Squad stats
     avg_age = get_squad_average_age(squad)
     avg_ability = get_squad_average_ability(squad)
+    injured_count = sum(1 for p in squad if p.injury_days_remaining > 0)
+    suspended_count = sum(1 for p in squad if p.suspension_matches > 0)
 
     # Top scorers from user's squad
     squad_scorers = sorted(
@@ -101,8 +103,39 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         _finance_row("Youth Rating", f"Lv.{club.youth_rating}"),
         _finance_row("Squad Size", str(len(squad))),
         _finance_row("Avg Age", f"{avg_age:.1f}"),
+        _finance_row("🏥 Injured", str(injured_count),
+                      ft.Colors.RED_400 if injured_count > 0 else ft.Colors.GREY_500),
+        _finance_row("🚫 Suspended", str(suspended_count),
+                      ft.Colors.ORANGE_400 if suspended_count > 0 else ft.Colors.GREY_500),
         ft.Divider(height=1),
     ]
+
+    # Injured players list
+    injured_players = [p for p in squad if p.injury_days_remaining > 0]
+    if injured_players:
+        sections.append(ft.Text("🏥 Injured Players", size=16, weight=ft.FontWeight.W_500))
+        for p in injured_players:
+            sections.append(
+                ft.Row(spacing=8, controls=[
+                    ft.Text(p.name, size=12, width=140),
+                    ft.Text(f"{p.injury_type}", size=11, color=ft.Colors.RED_400),
+                    ft.Text(f"({p.injury_days_remaining}d)", size=11, color=ft.Colors.GREY_500),
+                ])
+            )
+        sections.append(ft.Divider(height=1))
+
+    # Suspended players
+    suspended_players = [p for p in squad if p.suspension_matches > 0]
+    if suspended_players:
+        sections.append(ft.Text("🚫 Suspended Players", size=16, weight=ft.FontWeight.W_500))
+        for p in suspended_players:
+            sections.append(
+                ft.Row(spacing=8, controls=[
+                    ft.Text(p.name, size=12, width=140),
+                    ft.Text(f"{p.suspension_matches} match(es)", size=11, color=ft.Colors.ORANGE_400),
+                ])
+            )
+        sections.append(ft.Divider(height=1))
 
     # Squad top scorers
     if squad_scorers:

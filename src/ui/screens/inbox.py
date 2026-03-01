@@ -128,6 +128,14 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
             )
         )
 
+    # Summary row
+    total_count = len(messages)
+    summary_row = ft.Text(
+        f"{total_count} message{'s' if total_count != 1 else ''} — "
+        f"{unread} unread",
+        size=11, color=ft.Colors.GREY_500,
+    )
+
     return ft.Column(
         expand=True,
         scroll=ft.ScrollMode.AUTO,
@@ -138,6 +146,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                     spacing=8,
                     controls=[
                         ft.Row(controls=header_controls),
+                        summary_row,
                         ft.Divider(height=1),
                         *msg_tiles,
                     ],

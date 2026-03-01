@@ -223,13 +223,22 @@ def simulate_match(
                     player_id=inj_player.id,
                     player_name=inj_player.name,
                     club_id=inj_club.id,
-                    description=f"{inj_player.name} goes down with a {inj_type.lower()} injury!",
+                    description=commentary.generate(
+                        MatchEventType.INJURY,
+                        player=inj_player.name,
+                        club=inj_club.name,
+                        detail=inj_type.lower(),
+                    ),
                 ))
 
     # Full time
     events.append(MatchEvent(
         minute=90, event_type=MatchEventType.FULL_TIME,
-        description=f"Full time! {home_club.name} {home_goals} - {away_goals} {away_club.name}"
+        description=commentary.generate(
+            MatchEventType.FULL_TIME,
+            home=home_club.name, away=away_club.name,
+            home_goals=home_goals, away_goals=away_goals,
+        ),
     ))
 
     # ── Generate individual player ratings ──────────────────────────────

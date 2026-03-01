@@ -65,6 +65,12 @@ def build_table_screen(page: ft.Page) -> ft.Column:
                     ft.DataCell(ft.Text(str(s.lost), size=12)),
                     ft.DataCell(ft.Text(f"{s.goals_for}:{s.goals_against}", size=11)),
                     ft.DataCell(ft.Text(
+                        f"{s.goal_difference:+d}", size=11,
+                        color=ft.Colors.GREEN_400 if s.goal_difference > 0
+                        else ft.Colors.RED_400 if s.goal_difference < 0
+                        else ft.Colors.GREY_500,
+                    )),
+                    ft.DataCell(ft.Text(
                         str(s.points), size=13,
                         weight=ft.FontWeight.BOLD,
                         color=ft.Colors.AMBER_300 if is_user else None,
@@ -82,6 +88,7 @@ def build_table_screen(page: ft.Page) -> ft.Column:
             ft.DataColumn(label=ft.Text("D", size=11, weight=ft.FontWeight.BOLD), numeric=True),
             ft.DataColumn(label=ft.Text("L", size=11, weight=ft.FontWeight.BOLD), numeric=True),
             ft.DataColumn(label=ft.Text("G", size=11, weight=ft.FontWeight.BOLD)),
+            ft.DataColumn(label=ft.Text("GD", size=11, weight=ft.FontWeight.BOLD), numeric=True),
             ft.DataColumn(label=ft.Text("Pts", size=11, weight=ft.FontWeight.BOLD), numeric=True),
         ],
         rows=rows,
@@ -158,6 +165,10 @@ def build_table_screen(page: ft.Page) -> ft.Column:
                                 ft.OutlinedButton(
                                     "🏟️ My Club",
                                     on_click=lambda e: navigate(page, "/club"),
+                                ),
+                                ft.OutlinedButton(
+                                    "⚙️ Settings",
+                                    on_click=lambda e: navigate(page, "/settings"),
                                 ),
                             ],
                         ),

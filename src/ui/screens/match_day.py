@@ -65,10 +65,17 @@ def build_match_day_screen(page: ft.Page) -> ft.Column:
                          text_align=ft.TextAlign.CENTER),
                 ft.Container(height=30),
                 ft.ElevatedButton("📊 Season Summary", width=250, height=45,
+                                   style=ft.ButtonStyle(
+                                       bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
+                                       text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
+                                   ),
                                    on_click=lambda e: navigate(page, "/season_summary")),
                 ft.Container(height=10),
                 ft.OutlinedButton("📊 View Final Table", width=250, height=45,
                                    on_click=lambda e: navigate(page, "/table")),
+                ft.Container(height=10),
+                ft.OutlinedButton("💾 Save Game", width=250, height=45,
+                                   on_click=lambda e: _save_and_notify(page, conn, gs)),
                 ft.Container(height=10),
                 ft.OutlinedButton("🏠 Main Menu", width=250, height=45,
                                    on_click=lambda e: navigate(page, "/")),
@@ -179,6 +186,11 @@ def _build_match_preview(page, conn, gs, fixture):
         ),
     )
 
+    # Squad availability
+    user_squad = queries.get_players_by_club(conn, gs.user_club_id)
+    injured_count = sum(1 for p in user_squad if p.injury_days_remaining > 0)
+    suspended_count = sum(1 for p in user_squad if p.suspension_matches > 0)
+
     # Info chips
     info_items = []
     if user_club and user_club.formation:
@@ -194,6 +206,10 @@ def _build_match_preview(page, conn, gs, fixture):
         info_items.append(_info_chip("Board",
                                       get_confidence_level(user_club.board_confidence).value,
                                       ft.Icons.ACCOUNT_BALANCE))
+    if injured_count > 0:
+        info_items.append(_info_chip("Injured", str(injured_count), ft.Icons.LOCAL_HOSPITAL))
+    if suspended_count > 0:
+        info_items.append(_info_chip("Suspended", str(suspended_count), ft.Icons.BLOCK))
 
     # Recent form
     user_form = _build_club_form(conn, gs.user_club_id)
@@ -374,6 +390,13 @@ def _build_club_form(conn, club_id) -> ft.Row:
     return ft.Row(spacing=4, controls=chips)
 
 
+def _save_and_notify(page, conn, gs):
+    """Quick save game from match day screen."""
+    from src.ui.app import show_snackbar
+    queries.save_game_state(conn, gs)
+    show_snackbar(page, "💾 Game saved!")
+
+
 def _show_result_dialog(page, outcome):
     """Show match result dialog with user result + all other matchday results."""
     from src.ui.app import navigate
@@ -401,6 +424,7 @@ def _show_result_dialog(page, outcome):
         ("Corners", str(result.home_stats.corners), str(result.away_stats.corners)),
         ("Fouls", str(result.home_stats.fouls), str(result.away_stats.fouls)),
         ("Yellow Cards", str(result.home_stats.yellow_cards), str(result.away_stats.yellow_cards)),
+        ("Red Cards", str(result.home_stats.red_cards), str(result.away_stats.red_cards)),
     ]
     stat_widgets = []
     for label, home_val, away_val in stats_rows:
@@ -412,6 +436,22 @@ def _show_result_dialog(page, outcome):
                 ft.Text(away_val, size=12, width=40, text_align=ft.TextAlign.CENTER),
             ],
         ))
+
+    # Cards & injuries
+    card_injury_widgets = []
+    cards = [e for e in result.events if e.event_type in (MatchEventType.YELLOW_CARD, MatchEventType.RED_CARD)]
+    injuries = [e for e in result.events if e.event_type == MatchEventType.INJURY]
+    if cards:
+        for c in cards:
+            icon = "🟡" if c.event_type == MatchEventType.YELLOW_CARD else "🟥"
+            card_injury_widgets.append(
+                ft.Text(f"{icon} {c.minute}' {c.player_name}", size=11)
+            )
+    if injuries:
+        for inj in injuries:
+            card_injury_widgets.append(
+                ft.Text(f"🏥 {inj.minute}' {inj.description}", size=11, color=ft.Colors.RED_400)
+            )
 
     # Other results on the same matchday
     other_results_widgets = []
@@ -595,6 +635,12 @@ def _show_result_dialog(page, outcome):
                                  width=80, text_align=ft.TextAlign.RIGHT),
                     ]),
                     *stat_widgets,
+                    *(
+                        [ft.Divider(),
+                         ft.Text("📋 Cards & Injuries", size=14, weight=ft.FontWeight.W_500)]
+                        + card_injury_widgets
+                        if card_injury_widgets else []
+                    ),
                     *other_results_widgets,
                 ],
                 spacing=5,
