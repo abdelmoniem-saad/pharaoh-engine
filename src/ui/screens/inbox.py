@@ -136,7 +136,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
 
 def _show_message_detail(page: ft.Page, conn, msg):
     """Show the full message in a dialog, then mark as read."""
-    from src.ui.app import navigate
+    from src.ui.app import navigate, show_snackbar
 
     cat_icons = {
         "match": "⚽", "media": "📰", "board": "🏛️",
@@ -149,6 +149,46 @@ def _show_message_detail(page: ft.Page, conn, msg):
             queries.mark_message_read(conn, msg.id)
         page.pop_dialog()
         navigate(page, "/inbox")
+
+    # Check if this is a transfer offer with parseable data
+    actions = [ft.TextButton("Close", on_click=close_handler)]
+    display_body = msg.body
+
+    if msg.category == "transfer" and "TRANSFER_OFFER|" in msg.body:
+        # Parse transfer offer: TRANSFER_OFFER|player_id|from_club|to_club|fee|wage
+        try:
+            parts = msg.body.split("TRANSFER_OFFER|")[1].split("|")
+            player_id = int(parts[0])
+            from_club_id = int(parts[1])
+            to_club_id = int(parts[2])
+            fee = int(parts[3])
+            wage = int(parts[4])
+
+            # Show body without the parseable line
+            display_body = msg.body.split("\nTRANSFER_OFFER|")[0]
+
+            def accept_offer(e):
+                queries.transfer_player(conn, player_id, from_club_id, to_club_id,
+                                         fee=fee, wage=wage)
+                if not msg.is_read:
+                    queries.mark_message_read(conn, msg.id)
+                page.pop_dialog()
+                show_snackbar(page, f"✅ Transfer accepted! Fee: {fee:,} EGP")
+                navigate(page, "/inbox")
+
+            def decline_offer(e):
+                if not msg.is_read:
+                    queries.mark_message_read(conn, msg.id)
+                page.pop_dialog()
+                show_snackbar(page, "❌ Offer declined.")
+                navigate(page, "/inbox")
+
+            actions = [
+                ft.TextButton("❌ Decline", on_click=decline_offer),
+                ft.ElevatedButton("✅ Accept", on_click=accept_offer),
+            ]
+        except (IndexError, ValueError):
+            pass  # Not a valid offer format, show normally
 
     dlg = ft.AlertDialog(
         title=ft.Text(f"{cat_emoji} {msg.subject}", size=16,
@@ -168,7 +208,7 @@ def _show_message_detail(page: ft.Page, conn, msg):
                     ft.Divider(height=1),
                     ft.Container(height=5),
                     ft.Text(
-                        msg.body,
+                        display_body,
                         size=14,
                     ),
                 ],
@@ -178,8 +218,6 @@ def _show_message_detail(page: ft.Page, conn, msg):
             width=320,
             height=250,
         ),
-        actions=[
-            ft.TextButton("Close", on_click=close_handler),
-        ],
+        actions=actions,
     )
     page.show_dialog(dlg)

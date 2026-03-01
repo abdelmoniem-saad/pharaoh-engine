@@ -192,6 +192,7 @@ class MatchResult(BaseModel):
     events: list[MatchEvent] = Field(default_factory=list)
     home_stats: MatchStats = Field(default_factory=MatchStats)
     away_stats: MatchStats = Field(default_factory=MatchStats)
+    player_ratings: dict[int, float] = Field(default_factory=dict)   # player_id → 1-10 rating
     competition: str = ""
     matchday: int = 0
     date: Optional[_dt.date] = None

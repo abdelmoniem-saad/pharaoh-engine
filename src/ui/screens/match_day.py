@@ -448,6 +448,72 @@ def _show_result_dialog(page, outcome):
         page.pop_dialog()
         navigate(page, "/match_day")
 
+    def show_commentary(e):
+        """Show full minute-by-minute commentary log."""
+        all_events = [ev for ev in result.events
+                      if ev.event_type not in (MatchEventType.KICKOFF, MatchEventType.FULL_TIME)]
+        event_rows = []
+        for ev in all_events:
+            icon = {
+                MatchEventType.GOAL: "⚽",
+                MatchEventType.SHOT_ON_TARGET: "🎯",
+                MatchEventType.SHOT_OFF_TARGET: "💨",
+                MatchEventType.YELLOW_CARD: "🟡",
+                MatchEventType.CORNER: "📐",
+                MatchEventType.HALF_TIME: "⏸️",
+            }.get(ev.event_type, "📌")
+            event_rows.append(
+                ft.Text(f"{ev.minute}' {icon} {ev.description}", size=11)
+            )
+        if not event_rows:
+            event_rows.append(ft.Text("No notable events.", size=12, color=ft.Colors.GREY_500))
+
+        commentary_dlg = ft.AlertDialog(
+            title=ft.Text("📜 Match Commentary", size=16, weight=ft.FontWeight.BOLD),
+            content=ft.Container(
+                content=ft.Column(controls=event_rows, spacing=3, scroll=ft.ScrollMode.AUTO),
+                width=330, height=400,
+            ),
+            actions=[ft.TextButton("Close", on_click=lambda e: page.pop_dialog())],
+        )
+        page.show_dialog(commentary_dlg)
+
+    def show_ratings(e):
+        """Show individual player ratings."""
+        rating_rows = []
+        all_ratings = sorted(result.player_ratings.items(), key=lambda x: -x[1])
+        for pid, rating in all_ratings:
+            # Try to find player name from events
+            name = str(pid)
+            for ev in result.events:
+                if ev.player_id == pid and ev.player_name:
+                    name = ev.player_name
+                    break
+                if ev.second_player_id == pid and ev.second_player_name:
+                    name = ev.second_player_name
+                    break
+            r_color = (ft.Colors.GREEN_400 if rating >= 7.5
+                       else ft.Colors.YELLOW_400 if rating >= 6.0
+                       else ft.Colors.RED_400)
+            rating_rows.append(
+                ft.Row(spacing=6, controls=[
+                    ft.Text(name, size=11, width=150),
+                    ft.Text(f"{rating:.1f}", size=12, weight=ft.FontWeight.BOLD, color=r_color),
+                ])
+            )
+        if not rating_rows:
+            rating_rows.append(ft.Text("No ratings available.", size=12))
+
+        ratings_dlg = ft.AlertDialog(
+            title=ft.Text("📊 Player Ratings", size=16, weight=ft.FontWeight.BOLD),
+            content=ft.Container(
+                content=ft.Column(controls=rating_rows, spacing=3, scroll=ft.ScrollMode.AUTO),
+                width=330, height=400,
+            ),
+            actions=[ft.TextButton("Close", on_click=lambda e: page.pop_dialog())],
+        )
+        page.show_dialog(ratings_dlg)
+
     dlg = ft.AlertDialog(
         title=ft.Column(
             horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2,
@@ -482,6 +548,8 @@ def _show_result_dialog(page, outcome):
             height=420,
         ),
         actions=[
+            ft.TextButton("📜 Commentary", on_click=show_commentary),
+            ft.TextButton("📊 Ratings", on_click=show_ratings),
             ft.TextButton("Continue ➡️", on_click=close_and_refresh),
         ],
     )

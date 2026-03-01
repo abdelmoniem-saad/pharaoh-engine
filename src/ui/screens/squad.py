@@ -28,46 +28,61 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
 
     players = queries.get_players_by_club(conn, club.id)
 
+    # Sorting
+    sort_options = {
+        "Position": lambda p: (p.position.value, -calculate_overall_rating(p)),
+        "OVR ↓": lambda p: -calculate_overall_rating(p),
+        "Age": lambda p: p.age,
+        "Fitness": lambda p: -p.fitness,
+        "Form ↓": lambda p: -p.form,
+        "Morale": lambda p: -p.morale,
+    }
+    default_sort = "Position"
+    players.sort(key=sort_options[default_sort])
+
     # Build player rows for the DataTable
-    rows = []
-    for player in players:
-        ovr = calculate_overall_rating(player)
-        fit_color = (
-            ft.Colors.GREEN_400 if player.fitness >= 80
-            else ft.Colors.YELLOW_400 if player.fitness >= 50
-            else ft.Colors.RED_400
-        )
-        ovr_color = ft.Colors.GREEN_300 if ovr >= 70 else ft.Colors.WHITE
-        morale_icon = "😊" if player.morale >= 70 else "😐" if player.morale >= 40 else "😞"
-
-        # Name with badges
-        name_parts = [player.name]
-        if player.is_captain:
-            name_parts.append("©")
-        if player.transfer_listed:
-            name_parts.append("🔴")
-        display_name = " ".join(name_parts)
-
-        def make_click_handler(p=player, o=ovr):
-            def handler(e):
-                _show_player_detail(page, p, o)
-            return handler
-
-        rows.append(
-            ft.DataRow(
-                cells=[
-                    ft.DataCell(ft.Text(display_name, size=12)),
-                    ft.DataCell(ft.Text(player.position.value, size=11,
-                                        color=ft.Colors.AMBER_300)),
-                    ft.DataCell(ft.Text(str(player.age), size=11)),
-                    ft.DataCell(ft.Text(str(ovr), size=12,
-                                        weight=ft.FontWeight.BOLD, color=ovr_color)),
-                    ft.DataCell(ft.Text(f"{player.fitness}%", size=11, color=fit_color)),
-                    ft.DataCell(ft.Text(f"{player.form:.1f}", size=11)),
-                ],
-                on_select_change=make_click_handler(),
+    def _build_rows(sorted_players):
+        rows = []
+        for player in sorted_players:
+            ovr = calculate_overall_rating(player)
+            fit_color = (
+                ft.Colors.GREEN_400 if player.fitness >= 80
+                else ft.Colors.YELLOW_400 if player.fitness >= 50
+                else ft.Colors.RED_400
             )
-        )
+            ovr_color = ft.Colors.GREEN_300 if ovr >= 70 else ft.Colors.WHITE
+
+            # Name with badges
+            name_parts = [player.name]
+            if player.is_captain:
+                name_parts.append("©")
+            if player.transfer_listed:
+                name_parts.append("🔴")
+            display_name = " ".join(name_parts)
+
+            def make_click_handler(p=player, o=ovr):
+                def handler(e):
+                    _show_player_detail(page, p, o)
+                return handler
+
+            rows.append(
+                ft.DataRow(
+                    cells=[
+                        ft.DataCell(ft.Text(display_name, size=12)),
+                        ft.DataCell(ft.Text(player.position.value, size=11,
+                                            color=ft.Colors.AMBER_300)),
+                        ft.DataCell(ft.Text(str(player.age), size=11)),
+                        ft.DataCell(ft.Text(str(ovr), size=12,
+                                            weight=ft.FontWeight.BOLD, color=ovr_color)),
+                        ft.DataCell(ft.Text(f"{player.fitness}%", size=11, color=fit_color)),
+                        ft.DataCell(ft.Text(f"{player.form:.1f}", size=11)),
+                    ],
+                    on_select_change=make_click_handler(),
+                )
+            )
+        return rows
+
+    rows = _build_rows(players)
 
     # Squad summary
     avg_ovr = sum(calculate_overall_rating(p) for p in players) / max(len(players), 1)
@@ -89,6 +104,13 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
         data_row_min_height=34,
         data_row_max_height=38,
     )
+
+    def on_sort_change(e):
+        key = e.control.value
+        sort_fn = sort_options.get(key, sort_options["Position"])
+        players.sort(key=sort_fn)
+        data_table.rows = _build_rows(players)
+        page.update()
 
     return ft.Column(
         expand=True,
@@ -143,8 +165,21 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                             ],
                         ),
                         ft.Divider(height=1),
-                        ft.Text("Tap a player for details",
-                                size=11, color=ft.Colors.GREY_600, italic=True),
+                        ft.Row(
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                            controls=[
+                                ft.Text("Tap a player for details",
+                                        size=11, color=ft.Colors.GREY_600, italic=True),
+                                ft.Dropdown(
+                                    label="Sort",
+                                    value=default_sort,
+                                    options=[ft.dropdown.Option(k) for k in sort_options],
+                                    on_select=on_sort_change,
+                                    width=120,
+                                    text_size=11,
+                                ),
+                            ],
+                        ),
                         data_table,
                     ],
                 ),
@@ -236,14 +271,17 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
         ]
 
     # Season stats row
+    avg_rating_str = f"{s.average_rating:.1f}" if s.average_rating > 0 else "—"
     season_info = ft.Row(
         wrap=True, spacing=12,
         controls=[
             ft.Text(f"⚽ {s.goals}G", size=12),
             ft.Text(f"🅰️ {s.assists}A", size=12),
             ft.Text(f"📋 {s.appearances} Apps", size=12),
+            ft.Text(f"⭐ {avg_rating_str}", size=12),
             ft.Text(f"🟡 {s.yellow_cards}", size=12),
             ft.Text(f"🟥 {s.red_cards}", size=12),
+            ft.Text(f"🏅 {s.man_of_the_match} MOTM", size=12) if s.man_of_the_match > 0 else ft.Container(),
         ],
     )
 
@@ -341,6 +379,10 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
                 "🔴 Unlist" if player.transfer_listed else "📤 List",
                 on_click=lambda e, pid=player.id, listed=player.transfer_listed: _toggle_transfer(page, pid, listed),
             ),
+            ft.TextButton(
+                "📝 Renew",
+                on_click=lambda e, pid=player.id: _renew_contract(page, pid),
+            ),
             ft.TextButton("Close", on_click=lambda e: page.pop_dialog()),
         ],
     )
@@ -366,6 +408,19 @@ def _toggle_transfer(page, player_id, currently_listed):
     page.pop_dialog()
     msg = "Player removed from transfer list." if currently_listed else "Player listed for transfer!"
     show_snackbar(page, msg)
+    navigate(page, "/squad")
+
+
+def _renew_contract(page, player_id):
+    """Renew a player's contract (+2 years, +15% wage)."""
+    from src.ui.app import app_state, navigate, show_snackbar
+    conn = app_state.db_conn
+    player = queries.get_player(conn, player_id)
+    if not player:
+        return
+    queries.renew_contract(conn, player_id, years=2, wage_increase_pct=15)
+    page.pop_dialog()
+    show_snackbar(page, f"📝 {player.name}'s contract renewed (+2 years)!")
     navigate(page, "/squad")
 
 

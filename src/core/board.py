@@ -5,7 +5,7 @@ Phase 2 module — stub with core mechanics.
 """
 from __future__ import annotations
 
-from src.data.models import Club, BoardObjective, LeagueStanding
+from src.data.models import Club, BoardObjective
 from src.utils.config import BoardConfidence
 from src.utils.rng import clamp
 
@@ -77,28 +77,35 @@ def generate_season_objectives(club: Club) -> list[BoardObjective]:
     return objectives
 
 
-def evaluate_objectives(club: Club, standing: LeagueStanding,
+def evaluate_objectives(club: Club, position: int,
                          total_teams: int = 18) -> list[str]:
     """Evaluate board objectives at season end. Returns feedback messages."""
     messages = []
-    standings_pos = 0  # Would need actual position
 
     for obj in club.board_objectives:
-        if obj.target == "win_league" and standings_pos == 1:
-            obj.achieved = True
-            messages.append("✅ Board objective achieved: Win the league!")
+        achieved = False
+        if obj.target == "win_league" and position == 1:
+            achieved = True
             club.board_confidence = min(100, club.board_confidence + 20)
-        elif obj.target == "finish_top_4" and standings_pos <= 4:
-            obj.achieved = True
-            messages.append("✅ Board objective achieved: Top 4 finish!")
+        elif obj.target == "finish_top_4" and position <= 4:
+            achieved = True
             club.board_confidence = min(100, club.board_confidence + 10)
-        elif obj.target == "avoid_relegation" and standings_pos <= total_teams - 3:
-            obj.achieved = True
-            messages.append("✅ Board objective achieved: Survived relegation!")
+        elif obj.target == "finish_top_half" and position <= total_teams // 2:
+            achieved = True
             club.board_confidence = min(100, club.board_confidence + 5)
+        elif obj.target == "avoid_relegation" and position <= total_teams - 3:
+            achieved = True
+            club.board_confidence = min(100, club.board_confidence + 5)
+        elif obj.target == "cup_semis":
+            # Cup not implemented yet — auto-pass
+            achieved = True
+
+        if achieved:
+            obj.achieved = True
+            messages.append(f"✅ {obj.description}")
         else:
-            messages.append(f"❌ Board objective missed: {obj.description}")
-            club.board_confidence = max(0, club.board_confidence - 15)
+            messages.append(f"❌ {obj.description}")
+            club.board_confidence = max(0, club.board_confidence - 10)
 
     return messages
 

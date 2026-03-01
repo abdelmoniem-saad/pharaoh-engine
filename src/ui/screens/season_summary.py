@@ -7,7 +7,7 @@ import flet as ft
 
 from src.data import queries
 from src.core.season import get_season_awards, start_new_season
-from src.core.board import get_confidence_level
+from src.core.board import get_confidence_level, generate_season_objectives, evaluate_objectives
 from src.core.fans import get_fan_happiness_level
 
 
@@ -53,11 +53,23 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
     # Board evaluation
     confidence_text = ""
     fan_text = ""
+    board_eval_rows = []
     if club:
         conf = get_confidence_level(club.board_confidence)
         fan_lvl = get_fan_happiness_level(club.fan_happiness)
         confidence_text = f"Board Confidence: {conf.value} ({club.board_confidence}%)"
         fan_text = f"Fan Happiness: {fan_lvl} ({club.fan_happiness}%)"
+
+        # Evaluate objectives for display
+        objectives = generate_season_objectives(club)
+        club.board_objectives = objectives
+        eval_msgs = evaluate_objectives(club, user_pos)
+        for msg in eval_msgs:
+            is_achieved = msg.startswith("✅")
+            board_eval_rows.append(
+                ft.Text(msg, size=12,
+                         color=ft.Colors.GREEN_400 if is_achieved else ft.Colors.RED_400)
+            )
 
     # Top scorers section
     scorer_rows = []
@@ -141,6 +153,13 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
                                 ft.Text(confidence_text, size=12, color=ft.Colors.GREY_400),
                                 ft.Text(fan_text, size=12, color=ft.Colors.GREY_400),
                             ],
+                        ),
+
+                        # Board Objectives Evaluation
+                        *(
+                            [ft.Text("📋 Board Objectives", size=16, weight=ft.FontWeight.W_500)]
+                            + board_eval_rows
+                            if board_eval_rows else []
                         ),
                         ft.Divider(height=1),
 

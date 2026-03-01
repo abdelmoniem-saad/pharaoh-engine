@@ -192,6 +192,13 @@ def simulate_match(
         description=f"Full time! {home_club.name} {home_goals} - {away_goals} {away_club.name}"
     ))
 
+    # ── Generate individual player ratings ──────────────────────────────
+    player_ratings: dict[int, float] = {}
+    _rate_players(player_ratings, home_tactics.starting_xi, home_players,
+                  events, home_club.id, home_goals, away_goals, is_home_team=True)
+    _rate_players(player_ratings, away_tactics.starting_xi, away_players,
+                  events, away_club.id, away_goals, home_goals, is_home_team=False)
+
     # Build result
     return MatchResult(
         home_club_id=home_club.id,
@@ -221,6 +228,7 @@ def simulate_match(
             red_cards=away_reds,
             saves=away_saves,
         ),
+        player_ratings=player_ratings,
     )
 
 
@@ -388,4 +396,49 @@ def _pick_random_player(players: dict[int, Player],
     if not valid:
         return None
     return rng.choice(valid)
+
+
+def _rate_players(ratings: dict[int, float], xi: list[int],
+                   players: dict[int, Player], events: list[MatchEvent],
+                   club_id: int, own_goals: int, opp_goals: int,
+                   is_home_team: bool) -> None:
+    """Generate 1-10 ratings for every starter on a team."""
+    # Base rating depends on team result
+    if own_goals > opp_goals:
+        base = rng.gaussian_clamped(7.2, 0.6, 6.0, 9.0)
+    elif own_goals == opp_goals:
+        base = rng.gaussian_clamped(6.5, 0.5, 5.5, 8.0)
+    else:
+        base = rng.gaussian_clamped(5.8, 0.6, 4.0, 7.5)
+
+    # Count per-player event bonuses
+    goal_count: dict[int, int] = {}
+    assist_count: dict[int, int] = {}
+    yellow_count: dict[int, int] = {}
+    for ev in events:
+        if ev.club_id != club_id:
+            continue
+        if ev.event_type == MatchEventType.GOAL and ev.player_id:
+            goal_count[ev.player_id] = goal_count.get(ev.player_id, 0) + 1
+        if ev.event_type == MatchEventType.GOAL and ev.second_player_id:
+            assist_count[ev.second_player_id] = assist_count.get(ev.second_player_id, 0) + 1
+        if ev.event_type == MatchEventType.YELLOW_CARD and ev.player_id:
+            yellow_count[ev.player_id] = yellow_count.get(ev.player_id, 0) + 1
+
+    for pid in xi:
+        p = players.get(pid)
+        if not p:
+            continue
+        r = base + rng.uniform(-0.4, 0.4)
+        # Goal bonus
+        r += goal_count.get(pid, 0) * 0.8
+        # Assist bonus
+        r += assist_count.get(pid, 0) * 0.4
+        # Yellow card penalty
+        r -= yellow_count.get(pid, 0) * 0.3
+        # Clean sheet bonus for defenders/GK
+        if opp_goals == 0 and p.position.value in ("GK", "CB", "LB", "RB"):
+            r += 0.3
+        ratings[pid] = round(max(1.0, min(10.0, r)), 1)
+
 

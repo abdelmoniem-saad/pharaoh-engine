@@ -656,3 +656,19 @@ def get_list_save_files() -> list[str]:
     return [f.stem for f in saves_dir.glob("*.db")]
 
 
+def renew_contract(conn: sqlite3.Connection, player_id: int,
+                    years: int = 2, wage_increase_pct: int = 15) -> None:
+    """Renew a player's contract with a wage increase."""
+    from datetime import timedelta
+    player = get_player(conn, player_id)
+    if not player:
+        return
+    base_date = player.contract.contract_expiry or date.today()
+    new_expiry = base_date + timedelta(days=365 * years)
+    new_wage = int(player.contract.wage_weekly * (1 + wage_increase_pct / 100))
+    conn.execute("""
+        UPDATE players SET contract_expiry = ?, wage_weekly = ? WHERE id = ?
+    """, (new_expiry.isoformat(), new_wage, player_id))
+    conn.commit()
+
+

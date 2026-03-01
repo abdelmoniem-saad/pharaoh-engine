@@ -117,3 +117,36 @@ def get_match_readiness(player: Player) -> float:
     form_factor = player.form / 10.0
     return fitness_factor * 0.5 + morale_factor * 0.25 + form_factor * 0.25
 
+
+def update_morale(player: Player, result_type: str, rating: float = 6.5,
+                   played: bool = True) -> None:
+    """
+    Update player morale after a match.
+    result_type: 'win', 'draw', 'loss'
+    rating: individual match rating (1-10)
+    played: whether the player was in the starting XI
+    """
+    change = 0
+    # Team result
+    if result_type == "win":
+        change += 3
+    elif result_type == "draw":
+        change += 0
+    else:
+        change -= 3
+
+    if played:
+        # Good personal rating boost
+        if rating >= 7.5:
+            change += 2
+        elif rating >= 7.0:
+            change += 1
+        elif rating < 5.5:
+            change -= 2
+    else:
+        # Not selected — slight morale drop
+        change -= 1
+
+    player.morale = int(clamp(player.morale + change, 0, 100))
+
+

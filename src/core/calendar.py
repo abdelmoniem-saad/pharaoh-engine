@@ -14,12 +14,14 @@ from src.data import queries
 from src.core import league, match_engine, club as club_module
 from src.core.player import (
     update_form, update_fitness_after_match, rest_recovery,
+    update_morale,
 )
 from src.core.media import create_match_report_message
 from src.core.board import update_confidence_after_match
 from src.core.fans import update_fan_happiness
 from src.core.youth import develop_player
 from src.core.finance import process_monthly_finances
+from src.core.transfers import generate_ai_bids, check_expiring_contracts
 from src.utils.config import MatchEventType
 
 
@@ -48,13 +50,17 @@ def advance_day(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
     if not messages:
         _daily_recovery(conn, game_state)
 
+    # AI transfer offers for listed players (daily)
+    messages.extend(generate_ai_bids(conn, game_state))
+
     # Weekly player development (every 7 days)
     if game_state.day_count % 7 == 0:
         messages.extend(_weekly_development(conn, game_state))
 
-    # Monthly finances (every 30 days)
+    # Monthly finances + contract checks (every 30 days)
     if game_state.day_count % 30 == 0:
         messages.extend(_monthly_finances(conn, game_state))
+        messages.extend(check_expiring_contracts(conn, game_state))
 
     # Check season completion
     if league.is_season_complete(conn):
@@ -280,42 +286,106 @@ def _update_player_stats_after_match(
     """Update individual player statistics after a match."""
     all_players = {p.id: p for p in home_squad + away_squad}
 
+    # Determine result type for each side
+    if result.home_goals > result.away_goals:
+        home_result, away_result = "win", "loss"
+    elif result.home_goals < result.away_goals:
+        home_result, away_result = "loss", "win"
+    else:
+        home_result = away_result = "draw"
+
+    # Count goals/assists from events (for stats deduplication)
+    goal_players: set[int] = set()
+    assist_players: set[int] = set()
+    yellow_players: set[int] = set()
+
     for event in result.events:
         if event.event_type == MatchEventType.GOAL and event.player_id:
             player = all_players.get(event.player_id)
-            if player:
+            if player and event.player_id not in goal_players:
                 player.season_stats.goals += 1
-                player.season_stats.appearances += 1
-                update_form(player, 8.0)
-                queries.update_player_stats(conn, player)
+                goal_players.add(event.player_id)
+            elif player:
+                player.season_stats.goals += 1  # multiple goals
 
             if event.second_player_id:
                 assister = all_players.get(event.second_player_id)
                 if assister:
                     assister.season_stats.assists += 1
-                    update_form(assister, 7.5)
-                    queries.update_player_stats(conn, assister)
 
         elif event.event_type == MatchEventType.YELLOW_CARD and event.player_id:
             player = all_players.get(event.player_id)
             if player:
                 player.season_stats.yellow_cards += 1
-                queries.update_player_stats(conn, player)
+                yellow_players.add(event.player_id)
 
-    # Update appearances and fitness for all starters
-    for pid in home_tactics.starting_xi + away_tactics.starting_xi:
+    # Process all starters — appearances, form, fitness, morale, rating
+    home_starters = set(home_tactics.starting_xi)
+    away_starters = set(away_tactics.starting_xi)
+
+    # Clean sheet check
+    home_clean = result.away_goals == 0
+    away_clean = result.home_goals == 0
+
+    for pid in home_starters:
         player = all_players.get(pid)
-        if player:
-            update_fitness_after_match(player, 90)
+        if not player:
+            continue
+        player.season_stats.appearances += 1
+        player.season_stats.minutes_played += 90
+        rating = result.player_ratings.get(pid, 6.5)
+        player.season_stats.average_rating = round(
+            (player.season_stats.average_rating * (player.season_stats.appearances - 1) + rating)
+            / player.season_stats.appearances, 1
+        )
+        if home_clean and player.position.value in ("GK", "CB", "LB", "RB"):
+            player.season_stats.clean_sheets += 1
+        if rating >= 8.5:
+            player.season_stats.man_of_the_match += 1
+        update_form(player, rating)
+        update_fitness_after_match(player, 90)
+        update_morale(player, home_result, rating, played=True)
+        queries.update_player_stats(conn, player)
+
+    for pid in away_starters:
+        player = all_players.get(pid)
+        if not player:
+            continue
+        player.season_stats.appearances += 1
+        player.season_stats.minutes_played += 90
+        rating = result.player_ratings.get(pid, 6.5)
+        player.season_stats.average_rating = round(
+            (player.season_stats.average_rating * (player.season_stats.appearances - 1) + rating)
+            / player.season_stats.appearances, 1
+        )
+        if away_clean and player.position.value in ("GK", "CB", "LB", "RB"):
+            player.season_stats.clean_sheets += 1
+        if rating >= 8.5:
+            player.season_stats.man_of_the_match += 1
+        update_form(player, rating)
+        update_fitness_after_match(player, 90)
+        update_morale(player, away_result, rating, played=True)
+        queries.update_player_stats(conn, player)
+
+    # Non-starters morale drop (bench + unused)
+    for player in home_squad:
+        if player.id not in home_starters:
+            update_morale(player, home_result, played=False)
+            queries.update_player_stats(conn, player)
+    for player in away_squad:
+        if player.id not in away_starters:
+            update_morale(player, away_result, played=False)
+            queries.update_player_stats(conn, player)
 
 
 def _daily_recovery(conn: sqlite3.Connection, game_state: GameState) -> None:
-    """Apply daily fitness recovery to all players."""
-    clubs = queries.get_all_clubs(conn)
-    for c in clubs:
-        squad = queries.get_players_by_club(conn, c.id)
-        for player in squad:
-            rest_recovery(player, days=1)
+    """Apply daily fitness recovery to user club players only (AI recovers before matches)."""
+    squad = queries.get_players_by_club(conn, game_state.user_club_id)
+    for player in squad:
+        old_fitness = player.fitness
+        rest_recovery(player, days=1)
+        if player.fitness != old_fitness:
+            queries.update_player_stats(conn, player)
 
 
 def _weekly_development(conn: sqlite3.Connection,
@@ -326,11 +396,21 @@ def _weekly_development(conn: sqlite3.Connection,
     if not club:
         return messages
     squad = queries.get_players_by_club(conn, club.id)
+    dev_lines = []
     for player in squad:
         dev_msgs = develop_player(player, club)
         if dev_msgs:
+            dev_lines.extend(dev_msgs)
             messages.extend(dev_msgs)
             queries.update_player_stats(conn, player)
+    # Send a consolidated training report if anything changed
+    if dev_lines:
+        queries.insert_message(conn, InboxMessage(
+            date=game_state.current_date,
+            subject="📈 Weekly Training Report",
+            body="\n".join(dev_lines),
+            category="general",
+        ))
     return messages
 
 

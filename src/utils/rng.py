@@ -78,6 +78,11 @@ def gaussian(mu: float, sigma: float) -> float:
     return _game_rng.gauss(mu, sigma)
 
 
+def gaussian_clamped(mu: float, sigma: float, lo: float, hi: float) -> float:
+    """Return a Gaussian random value clamped to [lo, hi]."""
+    return clamp(_game_rng.gauss(mu, sigma), lo, hi)
+
+
 def gaussian_clamped(mu: float, sigma: float, minimum: float, maximum: float) -> float:
     """Return a Gaussian random value clamped to [minimum, maximum]."""
     return clamp(gaussian(mu, sigma), minimum, maximum)
