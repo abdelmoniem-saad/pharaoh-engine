@@ -9,6 +9,16 @@ from src.data import queries
 from src.core.calendar import simulate_user_match, advance_to_next_match, advance_day
 from src.core.league import is_season_complete, get_champion
 from src.ui.widgets.nav_bar import build_nav_bar
+from src.ui.widgets.cards import (
+    section_card, info_tile, match_score_card, form_chips, action_card,
+)
+from src.ui.theme import (
+    ACCENT, ACCENT_DARK, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
+    TEXT_SUCCESS, TEXT_WARNING, TEXT_DANGER,
+    CARD_BG, CARD_BG_HIGHLIGHT, CARD_RADIUS, CARD_RADIUS_SM,
+    PAGE_PADDING, SECTION_SPACING,
+    TITLE_SIZE, BODY_SIZE, CAPTION_SIZE, TINY_SIZE,
+)
 from src.utils.config import MatchEventType, expectation_display
 
 
@@ -130,67 +140,14 @@ def _build_match_preview(page, conn, gs, fixture):
         advance_day(conn, gs)
         navigate(page, "/match_day")
 
-    # Match card
-    match_card = ft.Card(
-        content=ft.Container(
-            padding=20,
-            content=ft.Column(
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=8,
-                controls=[
-                    ft.Text(fixture.competition, size=12, color=ft.Colors.AMBER_400,
-                             weight=ft.FontWeight.W_500, text_align=ft.TextAlign.CENTER),
-                    ft.Text(matchday_str, size=11, color=ft.Colors.GREY_500,
-                             text_align=ft.TextAlign.CENTER),
-                    ft.Divider(height=1),
-                    ft.Container(height=5),
-                    ft.Row(
-                        alignment=ft.MainAxisAlignment.SPACE_EVENLY,
-                        controls=[
-                            ft.Column(
-                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                spacing=5,
-                                controls=[
-                                    ft.Icon(ft.Icons.SPORTS_SOCCER, size=40,
-                                             color=ft.Colors.GREEN_400 if is_home else ft.Colors.GREY_500),
-                                    ft.Text(fixture.home_club_name, size=14,
-                                             weight=ft.FontWeight.BOLD if is_home else ft.FontWeight.NORMAL,
-                                             text_align=ft.TextAlign.CENTER, width=120),
-                                ],
-                            ),
-                            ft.Column(
-                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                spacing=2,
-                                controls=[
-                                    ft.Text("VS", size=22, weight=ft.FontWeight.BOLD,
-                                             color=ft.Colors.AMBER_300),
-                                    ft.Text(date_str, size=10, color=ft.Colors.GREY_500),
-                                ],
-                            ),
-                            ft.Column(
-                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                spacing=5,
-                                controls=[
-                                    ft.Icon(ft.Icons.SPORTS_SOCCER, size=40,
-                                             color=ft.Colors.GREEN_400 if not is_home else ft.Colors.GREY_500),
-                                    ft.Text(fixture.away_club_name, size=14,
-                                             weight=ft.FontWeight.BOLD if not is_home else ft.FontWeight.NORMAL,
-                                             text_align=ft.TextAlign.CENTER, width=120),
-                                ],
-                            ),
-                        ],
-                    ),
-                    ft.Container(height=5),
-                    ft.Container(
-                        content=ft.Text(venue_text, size=12, weight=ft.FontWeight.BOLD,
-                                         color=venue_color),
-                        padding=ft.padding.symmetric(horizontal=12, vertical=4),
-                        border_radius=12,
-                        border=ft.border.all(1, venue_color),
-                    ),
-                ],
-            ),
-        ),
+    # Match card — use shared widget
+    match_card = match_score_card(
+        home_name=fixture.home_club_name,
+        away_name=fixture.away_club_name,
+        competition=fixture.competition,
+        matchday=matchday_str,
+        is_home=is_home,
+        date_str=date_str,
     )
 
     # Squad availability
@@ -198,28 +155,30 @@ def _build_match_preview(page, conn, gs, fixture):
     injured_count = sum(1 for p in user_squad if p.injury_days_remaining > 0)
     suspended_count = sum(1 for p in user_squad if p.suspension_matches > 0)
 
-    # Info chips
+    # Info chips — using shared info_tile
     info_items = []
     if user_club and user_club.formation:
-        info_items.append(_info_chip("Formation", user_club.formation, ft.Icons.GRID_VIEW))
+        info_items.append(info_tile("Formation", user_club.formation, icon=ft.Icons.GRID_VIEW))
     if user_club and user_club.mentality:
-        info_items.append(_info_chip("Mentality",
-                                      user_club.mentality.name.replace("_", " ").title(),
-                                      ft.Icons.PSYCHOLOGY))
+        info_items.append(info_tile("Mentality",
+                                     user_club.mentality.name.replace("_", " ").title(),
+                                     icon=ft.Icons.PSYCHOLOGY))
     if opp_club:
-        info_items.append(_info_chip("Opp. Rep", str(opp_club.reputation), ft.Icons.STAR))
+        info_items.append(info_tile("Opp. Rep", str(opp_club.reputation), icon=ft.Icons.STAR))
     if user_club:
         from src.core.board import get_confidence_level
-        info_items.append(_info_chip("Board",
-                                      get_confidence_level(user_club.board_confidence).value,
-                                      ft.Icons.ACCOUNT_BALANCE))
-        info_items.append(_info_chip("Target",
-                                      expectation_display(user_club.season_expectation),
-                                      ft.Icons.FLAG))
+        info_items.append(info_tile("Board",
+                                     get_confidence_level(user_club.board_confidence).value,
+                                     icon=ft.Icons.ACCOUNT_BALANCE))
+        info_items.append(info_tile("Target",
+                                     expectation_display(user_club.season_expectation),
+                                     icon=ft.Icons.FLAG))
     if injured_count > 0:
-        info_items.append(_info_chip("Injured", str(injured_count), ft.Icons.LOCAL_HOSPITAL))
+        info_items.append(info_tile("Injured", str(injured_count),
+                                     icon=ft.Icons.LOCAL_HOSPITAL, color=TEXT_DANGER))
     if suspended_count > 0:
-        info_items.append(_info_chip("Suspended", str(suspended_count), ft.Icons.BLOCK))
+        info_items.append(info_tile("Suspended", str(suspended_count),
+                                     icon=ft.Icons.BLOCK, color=TEXT_WARNING))
 
     # Attendance preview
     from src.core.fans import calculate_attendance, get_atmosphere_description

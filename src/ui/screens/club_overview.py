@@ -11,6 +11,11 @@ from src.core.board import get_confidence_level
 from src.core.fans import get_fan_happiness_level, get_atmosphere_description
 from src.core.club import get_squad_average_age, get_squad_average_ability, calculate_wage_bill
 from src.ui.widgets.nav_bar import build_nav_bar
+from src.ui.widgets.cards import section_card, info_tile, kv_row, action_card
+from src.ui.theme import (
+    ACCENT, TEXT_SECONDARY, TEXT_MUTED, TEXT_SUCCESS, TEXT_WARNING, TEXT_DANGER,
+    PAGE_PADDING, SECTION_SPACING, TITLE_SIZE, CAPTION_SIZE,
+)
 from src.utils.config import expectation_display, expectation_description
 
 
@@ -73,181 +78,149 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
 
     # Build sections
     sections = [
-        ft.Text(f"🏟️ {club.name}", size=22, weight=ft.FontWeight.BOLD),
-        ft.Text(f"👤 Manager: {gs.manager_name} | 📅 {gs.current_date.strftime('%d %b %Y')}",
-                 size=12, color=ft.Colors.GREY_400),
-        ft.Divider(height=1),
+        ft.Text(f"🏟️ {club.name}", size=TITLE_SIZE, weight=ft.FontWeight.BOLD),
+        ft.Text(f"👤 {gs.manager_name}  •  📅 {gs.current_date.strftime('%d %b %Y')}",
+                 size=CAPTION_SIZE, color=TEXT_SECONDARY),
 
         # ── Dashboard: Next Match Card ───────────────
         *_build_next_match_card(conn, gs, club),
 
         # ── Mini League Table ────────────────────────
         *_build_mini_table(conn, gs),
-        ft.Divider(height=1),
 
         # ── Board & Fans ─────────────────────────
-        ft.Text("🏛️ Board & Fans", size=16, weight=ft.FontWeight.W_500),
-        _card_row("Board Confidence", f"{confidence.value} ({club.board_confidence}%)", conf_color),
-        _card_row("Fan Happiness", f"{fan_level} ({club.fan_happiness}%)", fan_color),
-        ft.Text(f"🎤 {atmosphere}", size=11, color=ft.Colors.GREY_400, italic=True),
-        ft.Divider(height=1),
+        section_card("🏛️ Board & Fans", [
+            kv_row("Board Confidence", f"{confidence.value} ({club.board_confidence}%)", conf_color),
+            kv_row("Fan Happiness", f"{fan_level} ({club.fan_happiness}%)", fan_color),
+            ft.Text(f"🎤 {atmosphere}", size=CAPTION_SIZE, color=TEXT_MUTED, italic=True),
+        ], title_color=ft.Colors.PURPLE_400),
 
         # ── Season Expectation ───────────────────
-        ft.Text("🎯 Season Expectation", size=16, weight=ft.FontWeight.W_500),
-        ft.Container(
-            content=ft.Column(spacing=4, controls=[
-                ft.Text(
-                    expectation_display(club.season_expectation),
-                    size=15, weight=ft.FontWeight.BOLD,
-                    color=ft.Colors.AMBER_300,
-                ),
-                ft.Text(
-                    expectation_description(club.season_expectation),
-                    size=12, color=ft.Colors.GREY_400, italic=True,
-                ),
-            ]),
-            padding=ft.padding.symmetric(horizontal=10, vertical=8),
-            border_radius=8,
-            bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.AMBER),
-        ),
-        ft.Divider(height=1),
+        section_card("🎯 Season Expectation", [
+            ft.Text(
+                expectation_display(club.season_expectation),
+                size=15, weight=ft.FontWeight.BOLD, color=ACCENT,
+            ),
+            ft.Text(
+                expectation_description(club.season_expectation),
+                size=12, color=TEXT_SECONDARY, italic=True,
+            ),
+        ], title_color=ft.Colors.ORANGE_400),
 
         # ── Finances ─────────────────────────────
-        ft.Text("💰 Monthly Finances", size=16, weight=ft.FontWeight.W_500),
-        _finance_row("Balance", f"{club.finances.balance:,} EGP"),
-        _finance_row("Monthly Income", f"+{income:,} EGP", ft.Colors.GREEN_400),
-        _finance_row("Monthly Expenses", f"-{expenses:,} EGP", ft.Colors.RED_400),
-        _finance_row("Net Cash Flow", f"{'+' if net >= 0 else ''}{net:,} EGP", net_color),
-        _finance_row("Weekly Wage Bill", f"{wage_bill:,} EGP"),
-        _finance_row("Transfer Budget", f"{club.finances.transfer_budget:,} EGP"),
-        ft.Divider(height=1),
+        section_card("💰 Monthly Finances", [
+            kv_row("Balance", f"{club.finances.balance:,} EGP"),
+            kv_row("Monthly Income", f"+{income:,} EGP", TEXT_SUCCESS),
+            kv_row("Monthly Expenses", f"-{expenses:,} EGP", TEXT_DANGER),
+            kv_row("Net Cash Flow", f"{'+' if net >= 0 else ''}{net:,} EGP", net_color),
+            kv_row("Weekly Wage Bill", f"{wage_bill:,} EGP"),
+            kv_row("Transfer Budget", f"{club.finances.transfer_budget:,} EGP"),
+        ], title_color=TEXT_SUCCESS),
 
-        # ── Stadium ──────────────────────────────
-        ft.Text("🏟️ Club Info", size=16, weight=ft.FontWeight.W_500),
-        _finance_row("Stadium", f"{club.stadium_name} ({club.stadium_capacity:,} seats)"),
-        _finance_row("City", club.city),
-        _finance_row("Reputation", f"{'⭐' * (club.reputation // 40 + 1)} {club.reputation}"),
-        _finance_row("Facilities", f"{'🟢' * min(club.facilities_level, 10)} Lv.{club.facilities_level}"),
-        _finance_row("Youth Rating", f"Lv.{club.youth_rating}"),
-        _finance_row("Squad Size", str(len(squad))),
-        _finance_row("Avg Age", f"{avg_age:.1f}"),
-        _finance_row("🏥 Injured", str(injured_count),
-                      ft.Colors.RED_400 if injured_count > 0 else ft.Colors.GREY_500),
-        _finance_row("🚫 Suspended", str(suspended_count),
-                      ft.Colors.ORANGE_400 if suspended_count > 0 else ft.Colors.GREY_500),
-        ft.Divider(height=1),
+        # ── Club Info ────────────────────────────
+        section_card("🏟️ Club Info", [
+            kv_row("Stadium", f"{club.stadium_name} ({club.stadium_capacity:,})"),
+            kv_row("City", club.city),
+            kv_row("Reputation", f"{'⭐' * (club.reputation // 40 + 1)} {club.reputation}"),
+            kv_row("Facilities", f"Lv.{club.facilities_level}"),
+            kv_row("Youth Rating", f"Lv.{club.youth_rating}"),
+            kv_row("Squad Size", str(len(squad))),
+            kv_row("Avg Age", f"{avg_age:.1f}"),
+            kv_row("🏥 Injured", str(injured_count),
+                    TEXT_DANGER if injured_count > 0 else TEXT_MUTED),
+            kv_row("🚫 Suspended", str(suspended_count),
+                    TEXT_WARNING if suspended_count > 0 else TEXT_MUTED),
+        ], title_color=ft.Colors.BLUE_400),
     ]
 
-    # Injured players list
+    # Injured players card
     injured_players = [p for p in squad if p.injury_days_remaining > 0]
     if injured_players:
-        sections.append(ft.Text("🏥 Injured Players", size=16, weight=ft.FontWeight.W_500))
-        for p in injured_players:
-            sections.append(
-                ft.Row(spacing=8, controls=[
-                    ft.Text(p.name, size=12, width=140),
-                    ft.Text(f"{p.injury_type}", size=11, color=ft.Colors.RED_400),
-                    ft.Text(f"({p.injury_days_remaining}d)", size=11, color=ft.Colors.GREY_500),
-                ])
-            )
-        sections.append(ft.Divider(height=1))
+        injury_rows = [
+            kv_row(p.name, f"{p.injury_type} ({p.injury_days_remaining}d)", TEXT_DANGER)
+            for p in injured_players
+        ]
+        sections.append(section_card("🏥 Injured Players", injury_rows, title_color=TEXT_DANGER))
 
-    # Suspended players
+    # Suspended players card
     suspended_players = [p for p in squad if p.suspension_matches > 0]
     if suspended_players:
-        sections.append(ft.Text("🚫 Suspended Players", size=16, weight=ft.FontWeight.W_500))
-        for p in suspended_players:
-            sections.append(
-                ft.Row(spacing=8, controls=[
-                    ft.Text(p.name, size=12, width=140),
-                    ft.Text(f"{p.suspension_matches} match(es)", size=11, color=ft.Colors.ORANGE_400),
-                ])
-            )
-        sections.append(ft.Divider(height=1))
+        susp_rows = [
+            kv_row(p.name, f"{p.suspension_matches} match(es)", TEXT_WARNING)
+            for p in suspended_players
+        ]
+        sections.append(section_card("🚫 Suspended", susp_rows, title_color=TEXT_WARNING))
 
-    # Squad top scorers
+    # Squad top scorers card
     if squad_scorers:
-        sections.append(ft.Text("⚽ Your Top Scorers", size=16, weight=ft.FontWeight.W_500))
+        scorer_rows = []
         for p in squad_scorers:
-            sections.append(
-                ft.Row(
-                    spacing=8,
-                    controls=[
-                        ft.Text(p.name, size=12, width=140),
-                        ft.Text(f"⚽ {p.season_stats.goals}", size=12,
-                                 weight=ft.FontWeight.BOLD, color=ft.Colors.AMBER_300),
-                        ft.Text(f"🅰️ {p.season_stats.assists}", size=12),
-                        ft.Text(f"({p.position.value})", size=11, color=ft.Colors.GREY_500),
-                    ],
+            scorer_rows.append(
+                ft.Container(
+                    content=ft.Row(
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        controls=[
+                            ft.Text(p.name, size=12, expand=True, max_lines=1,
+                                    overflow=ft.TextOverflow.ELLIPSIS),
+                            ft.Row(spacing=8, tight=True, controls=[
+                                ft.Text(f"⚽{p.season_stats.goals}", size=12,
+                                        weight=ft.FontWeight.BOLD, color=ACCENT),
+                                ft.Text(f"🅰️{p.season_stats.assists}", size=12),
+                                ft.Text(p.position.value, size=10, color=TEXT_SECONDARY),
+                            ]),
+                        ],
+                    ),
+                    padding=ft.padding.symmetric(horizontal=4, vertical=2),
                 )
             )
-        sections.append(ft.Divider(height=1))
+        sections.append(section_card("⚽ Your Top Scorers", scorer_rows, title_color=ACCENT))
 
-    # League top scorers
+    # League top scorers card
     if league_scorers:
-        sections.append(ft.Text("🏆 League Top Scorers", size=16, weight=ft.FontWeight.W_500))
+        league_rows = []
         for i, scorer in enumerate(league_scorers, 1):
             is_user_player = scorer.get("club_short") == club.short_name
-            sections.append(
-                ft.Row(
-                    spacing=6,
-                    controls=[
-                        ft.Text(f"{i}.", size=11, width=20, color=ft.Colors.GREY_500),
-                        ft.Text(scorer["name"], size=12, width=130,
-                                 weight=ft.FontWeight.BOLD if is_user_player else ft.FontWeight.NORMAL,
-                                 color=ft.Colors.GREEN_300 if is_user_player else None),
-                        ft.Text(f"⚽ {scorer['goals']}", size=12, weight=ft.FontWeight.BOLD,
-                                 color=ft.Colors.AMBER_300),
-                        ft.Text(f"🅰️ {scorer['assists']}", size=11),
-                        ft.Text(scorer.get("club_short", ""), size=10, color=ft.Colors.GREY_500),
-                    ],
+            league_rows.append(
+                ft.Container(
+                    content=ft.Row(
+                        spacing=4,
+                        controls=[
+                            ft.Text(f"{i}.", size=CAPTION_SIZE, width=18, color=TEXT_MUTED),
+                            ft.Text(scorer["name"], size=12, expand=True,
+                                    weight=ft.FontWeight.BOLD if is_user_player else ft.FontWeight.NORMAL,
+                                    color=TEXT_SUCCESS if is_user_player else None,
+                                    max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                            ft.Text(f"⚽{scorer['goals']}", size=12,
+                                    weight=ft.FontWeight.BOLD, color=ACCENT),
+                            ft.Text(f"🅰️{scorer['assists']}", size=CAPTION_SIZE),
+                            ft.Text(scorer.get("club_short", ""), size=10, color=TEXT_MUTED,
+                                    width=40),
+                        ],
+                    ),
+                    padding=ft.padding.symmetric(horizontal=4, vertical=2),
                 )
             )
+        sections.append(section_card("🏆 League Top Scorers", league_rows))
 
-    # Back button
-    sections.append(ft.Container(height=10))
-    sections.append(
-        ft.ElevatedButton("← Back to Table", width=200,
-                           on_click=lambda e: navigate(page, "/table")),
-    )
+    # Navigation cards
+    sections.append(action_card("📊 Full League Table", subtitle="View complete standings",
+                                 icon=ft.Icons.TABLE_CHART,
+                                 on_click=lambda e: navigate(page, "/table")))
+    sections.append(action_card("🏪 Transfer Market", subtitle="Buy and sell players",
+                                 icon=ft.Icons.STORE,
+                                 on_click=lambda e: navigate(page, "/transfers")))
 
     return ft.Column(
         expand=True,
         scroll=ft.ScrollMode.AUTO,
         controls=[
             ft.Container(
-                padding=ft.padding.only(left=12, right=12, top=10, bottom=10),
-                content=ft.Column(spacing=6, controls=sections),
+                padding=ft.padding.all(PAGE_PADDING),
+                content=ft.Column(
+                    spacing=SECTION_SPACING,
+                    controls=sections,
+                ),
             ),
-        ],
-    )
-
-
-def _card_row(label: str, value: str, color=None) -> ft.Container:
-    """A labeled row with optional color."""
-    return ft.Container(
-        content=ft.Row(
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            controls=[
-                ft.Text(label, size=13, color=ft.Colors.GREY_400),
-                ft.Text(value, size=13, weight=ft.FontWeight.BOLD,
-                         color=color or ft.Colors.WHITE),
-            ],
-        ),
-        padding=ft.padding.symmetric(horizontal=10, vertical=4),
-        border_radius=6,
-        bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
-    )
-
-
-def _finance_row(label: str, value: str, color=None) -> ft.Row:
-    """A simple label-value row."""
-    return ft.Row(
-        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-        controls=[
-            ft.Text(label, size=12, color=ft.Colors.GREY_500),
-            ft.Text(value, size=12, weight=ft.FontWeight.W_500,
-                     color=color or ft.Colors.WHITE),
         ],
     )
 
@@ -402,5 +375,4 @@ def _build_mini_table(conn, gs) -> list:
             bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.WHITE),
         ),
     ]
-
 

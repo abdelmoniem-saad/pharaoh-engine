@@ -9,10 +9,19 @@ from src.data import queries
 from src.core.player import calculate_overall_rating
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.widgets.stat_bar import stat_bar
+from src.ui.widgets.cards import (
+    section_card, info_tile, player_card_h, position_group_header,
+    action_card, form_chips, kv_row,
+)
+from src.ui.theme import (
+    ACCENT, TEXT_SECONDARY, TEXT_MUTED,
+    CARD_BG, CARD_RADIUS, PAGE_PADDING, SECTION_SPACING,
+    TITLE_SIZE, BODY_SIZE, CAPTION_SIZE,
+)
 
 
 def build_squad_screen(page: ft.Page) -> ft.Column:
-    """Build the squad management content."""
+    """Build the squad management content with mobile-friendly card layout."""
     from src.ui.app import app_state, navigate
 
     page.navigation_bar = build_nav_bar(page, 0)
@@ -40,264 +49,197 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
     default_sort = "Position"
     players.sort(key=sort_options[default_sort])
 
-    # Build player rows for the DataTable
-    def _build_rows(sorted_players):
-        rows = []
-        for player in sorted_players:
-            ovr = calculate_overall_rating(player)
-            fit_color = (
-                ft.Colors.GREEN_400 if player.fitness >= 80
-                else ft.Colors.YELLOW_400 if player.fitness >= 50
-                else ft.Colors.RED_400
-            )
-            ovr_color = ft.Colors.GREEN_300 if ovr >= 70 else ft.Colors.WHITE
+    # Squad summary
+    avg_ovr = sum(calculate_overall_rating(p) for p in players) / max(len(players), 1)
+    avg_age = sum(p.age for p in players) / max(len(players), 1)
+    injured_count = sum(1 for p in players if p.injury_days_remaining > 0)
+    suspended_count = sum(1 for p in players if p.suspension_matches > 0)
 
-            # Name with badges
-            name_parts = [player.name]
-            if player.is_captain:
-                name_parts.append("©")
-            if player.transfer_listed:
-                name_parts.append("🔴")
-            if player.injury_days_remaining > 0:
-                name_parts.append("🏥")
-            if player.suspension_matches > 0:
-                name_parts.append("🚫")
-            display_name = " ".join(name_parts)
+    # Build player cards
+    def _build_player_list(sorted_players):
+        """Build a list of player_card_h widgets, grouped by position."""
+        cards = []
+        from src.utils.config import POSITION_GROUP_MAP, PositionGroup
+
+        current_group = None
+        group_counter = {}
+
+        # Pre-count groups
+        for p in sorted_players:
+            grp = POSITION_GROUP_MAP.get(p.position, PositionGroup.MIDFIELDER)
+            group_counter[grp.value] = group_counter.get(grp.value, 0) + 1
+
+        for player in sorted_players:
+            grp = POSITION_GROUP_MAP.get(player.position, PositionGroup.MIDFIELDER)
+            if grp.value != current_group:
+                current_group = grp.value
+                display_name = {
+                    "GK": "GK", "DEF": "DEF", "MID": "MID", "ATT": "FWD",
+                }.get(current_group, current_group)
+                cards.append(position_group_header(
+                    display_name, group_counter.get(current_group, 0)
+                ))
+
+            ovr = calculate_overall_rating(player)
 
             def make_click_handler(p=player, o=ovr):
                 def handler(e):
                     _show_player_detail(page, p, o)
                 return handler
 
-            # Training focus emoji
-            train_map = {
-                "Shooting": "⚽", "Defending": "🛡️", "Physical": "🏃",
-                "Playmaking": "🎯", "Mental": "🧠",
-            }
-            train_label = train_map.get(player.training_focus, "—")
+            cards.append(player_card_h(
+                name=player.name,
+                position=player.position.value,
+                ovr=ovr,
+                age=player.age,
+                fitness=player.fitness,
+                form=player.form,
+                morale=player.morale,
+                is_captain=player.is_captain,
+                is_injured=player.injury_days_remaining > 0,
+                is_suspended=player.suspension_matches > 0,
+                transfer_listed=player.transfer_listed,
+                training_focus=player.training_focus,
+                on_click=make_click_handler(),
+            ))
+        return cards
 
-            rows.append(
-                ft.DataRow(
-                    cells=[
-                        ft.DataCell(ft.Text(display_name, size=12)),
-                        ft.DataCell(ft.Text(player.position.value, size=11,
-                                            color=ft.Colors.AMBER_300)),
-                        ft.DataCell(ft.Text(str(player.age), size=11)),
-                        ft.DataCell(ft.Text(str(ovr), size=12,
-                                            weight=ft.FontWeight.BOLD, color=ovr_color)),
-                        ft.DataCell(ft.Text(f"{player.fitness}%", size=11, color=fit_color)),
-                        ft.DataCell(ft.Text(f"{player.form:.1f}", size=11)),
-                        ft.DataCell(ft.Text(
-                            "😊" if player.morale >= 70 else "😐" if player.morale >= 40 else "😞",
-                            size=13,
-                        )),
-                        ft.DataCell(ft.Text(train_label, size=12)),
-                    ],
-                    on_select_change=make_click_handler(),
-                )
-            )
-        return rows
+    player_cards = _build_player_list(players)
 
-    rows = _build_rows(players)
-
-    # Squad summary
-    avg_ovr = sum(calculate_overall_rating(p) for p in players) / max(len(players), 1)
-    avg_age = sum(p.age for p in players) / max(len(players), 1)
-
-    data_table = ft.DataTable(
-        columns=[
-            ft.DataColumn(label=ft.Text("Name", size=11, weight=ft.FontWeight.BOLD)),
-            ft.DataColumn(label=ft.Text("Pos", size=11, weight=ft.FontWeight.BOLD)),
-            ft.DataColumn(label=ft.Text("Age", size=11, weight=ft.FontWeight.BOLD), numeric=True),
-            ft.DataColumn(label=ft.Text("OVR", size=11, weight=ft.FontWeight.BOLD), numeric=True),
-            ft.DataColumn(label=ft.Text("Fit", size=11, weight=ft.FontWeight.BOLD)),
-            ft.DataColumn(label=ft.Text("Form", size=11, weight=ft.FontWeight.BOLD), numeric=True),
-            ft.DataColumn(label=ft.Text("😊", size=11, weight=ft.FontWeight.BOLD)),
-            ft.DataColumn(label=ft.Text("🏋️", size=11, weight=ft.FontWeight.BOLD)),
-        ],
-        rows=rows,
-        column_spacing=10,
-        horizontal_lines=ft.BorderSide(0.3, ft.Colors.WHITE24),
-        heading_row_height=35,
-        data_row_min_height=34,
-        data_row_max_height=38,
-    )
+    # The player list container (will be rebuilt on sort)
+    player_list_col = ft.Column(spacing=4, controls=player_cards)
 
     def on_sort_change(e):
         key = e.control.value
         sort_fn = sort_options.get(key, sort_options["Position"])
         players.sort(key=sort_fn)
-        data_table.rows = _build_rows(players)
+        player_list_col.controls = _build_player_list(players)
         page.update()
+
+    # Recent form
+    recent_fixes = queries.get_user_recent_fixtures(conn, gs.user_club_id, limit=5)
+    form_results = []
+    for f in recent_fixes:
+        if not f.result:
+            continue
+        is_h = f.home_club_id == gs.user_club_id
+        ug = f.result.home_goals if is_h else f.result.away_goals
+        og = f.result.away_goals if is_h else f.result.home_goals
+        form_results.append("W" if ug > og else "L" if ug < og else "D")
+
+    # League position
+    standings = queries.get_standings(conn)
+    user_pos = 0
+    user_pts = 0
+    for i, s in enumerate(standings, 1):
+        if s.club_id == gs.user_club_id:
+            user_pos = i
+            user_pts = s.points
+            break
 
     return ft.Column(
         expand=True,
         scroll=ft.ScrollMode.AUTO,
         controls=[
             ft.Container(
-                padding=ft.padding.only(left=10, right=10, top=10),
+                padding=ft.padding.all(PAGE_PADDING),
                 content=ft.Column(
-                    spacing=8,
+                    spacing=SECTION_SPACING,
                     controls=[
+                        # ── Header ──────────────────────────────────────
                         ft.Row(
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
-                                ft.Text(
-                                    f"📋 {gs.user_club_name}",
-                                    size=22, weight=ft.FontWeight.BOLD,
-                                ),
-                                ft.Row(spacing=4, controls=[
-                                    ft.IconButton(
-                                        icon=ft.Icons.COMPARE_ARROWS, tooltip="Compare Players",
-                                        icon_size=20,
-                                        on_click=lambda e: _start_compare(page, players),
-                                    ),
-                                    ft.IconButton(
-                                        icon=ft.Icons.SAVE, tooltip="Save Game",
-                                        icon_size=20,
-                                        on_click=lambda e: _save_game(page, conn, gs),
-                                    ),
-                                    ft.IconButton(
-                                        icon=ft.Icons.STORE, tooltip="Transfer Market",
-                                        icon_size=20,
-                                        on_click=lambda e: navigate(page, "/transfers"),
-                                    ),
-                                    ft.IconButton(
-                                        icon=ft.Icons.SETTINGS, tooltip="Settings",
-                                        icon_size=20,
-                                        on_click=lambda e: navigate(page, "/settings"),
-                                    ),
+                                ft.Column(spacing=0, controls=[
+                                    ft.Text(gs.user_club_name, size=TITLE_SIZE,
+                                            weight=ft.FontWeight.BOLD),
+                                    ft.Text(f"👤 {gs.manager_name}  •  📅 {gs.current_date.strftime('%d %b %Y')}",
+                                            size=CAPTION_SIZE, color=TEXT_SECONDARY),
+                                ]),
+                                ft.Row(spacing=0, controls=[
+                                    ft.IconButton(icon=ft.Icons.SAVE, icon_size=18,
+                                                  tooltip="Save",
+                                                  on_click=lambda e: _save_game(page, conn, gs)),
+                                    ft.IconButton(icon=ft.Icons.SETTINGS, icon_size=18,
+                                                  tooltip="Settings",
+                                                  on_click=lambda e: navigate(page, "/settings")),
                                 ]),
                             ],
                         ),
+
+                        # ── Quick Info Strip ────────────────────────────
                         ft.Row(
-                            spacing=15,
+                            spacing=6, scroll=ft.ScrollMode.AUTO,
                             controls=[
-                                ft.Text(
-                                    f"👤 {gs.manager_name}",
-                                    size=13, color=ft.Colors.GREY_400,
-                                ),
-                                ft.Text(
-                                    f"📅 {gs.current_date.strftime('%d %b %Y')}",
-                                    size=13, color=ft.Colors.GREY_500,
-                                ),
-                                ft.TextButton(
-                                    "🏟️ Club",
-                                    on_click=lambda e: navigate(page, "/club"),
-                                    style=ft.ButtonStyle(padding=0),
-                                ),
+                                info_tile("Position", f"{user_pos}{'st' if user_pos == 1 else 'nd' if user_pos == 2 else 'rd' if user_pos == 3 else 'th'}",
+                                          icon=ft.Icons.EMOJI_EVENTS),
+                                info_tile("Points", str(user_pts), icon=ft.Icons.STAR),
+                                info_tile("Squad", str(len(players)), icon=ft.Icons.PEOPLE),
+                                info_tile("Avg OVR", f"{avg_ovr:.0f}", icon=ft.Icons.INSIGHTS),
                             ],
                         ),
-                        # Squad summary chips
-                        ft.Row(
-                            spacing=8,
-                            controls=[
-                                _summary_chip("Squad", str(len(players)), ft.Icons.PEOPLE),
-                                _summary_chip("Avg OVR", f"{avg_ovr:.0f}", ft.Icons.STAR),
-                                _summary_chip("Avg Age", f"{avg_age:.1f}", ft.Icons.CAKE),
-                            ],
+
+                        # ── Form strip ──────────────────────────────────
+                        ft.Container(
+                            content=ft.Row(
+                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                controls=[
+                                    ft.Row(spacing=6, tight=True, controls=[
+                                        ft.Text("Form:", size=CAPTION_SIZE, color=TEXT_MUTED),
+                                        form_chips(form_results),
+                                    ]),
+                                    ft.Row(spacing=4, tight=True, controls=[
+                                        *([ ft.Container(
+                                            content=ft.Text(f"🏥 {injured_count}", size=CAPTION_SIZE,
+                                                            color=ft.Colors.RED_400),
+                                        )] if injured_count > 0 else []),
+                                        *([ ft.Container(
+                                            content=ft.Text(f"🚫 {suspended_count}", size=CAPTION_SIZE,
+                                                            color=ft.Colors.ORANGE_400),
+                                        )] if suspended_count > 0 else []),
+                                    ]),
+                                ],
+                            ),
+                            padding=ft.padding.symmetric(horizontal=8, vertical=6),
+                            border_radius=8,
+                            bgcolor=CARD_BG,
                         ),
-                        # News ticker
-                        _build_news_ticker(conn, gs),
-                        ft.Divider(height=1),
+
+                        # ── Quick Actions ───────────────────────────────
+                        ft.Row(spacing=6, controls=[
+                            ft.OutlinedButton("🏟️ Club", height=34,
+                                              on_click=lambda e: navigate(page, "/club"),
+                                              style=ft.ButtonStyle(padding=ft.padding.symmetric(horizontal=12))),
+                            ft.OutlinedButton("🏪 Transfers", height=34,
+                                              on_click=lambda e: navigate(page, "/transfers"),
+                                              style=ft.ButtonStyle(padding=ft.padding.symmetric(horizontal=12))),
+                            ft.OutlinedButton("🔄 Compare", height=34,
+                                              on_click=lambda e: _start_compare(page, players),
+                                              style=ft.ButtonStyle(padding=ft.padding.symmetric(horizontal=12))),
+                        ]),
+
+                        # ── Sort + Player List ──────────────────────────
                         ft.Row(
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
                                 ft.Text("Tap a player for details",
-                                        size=11, color=ft.Colors.GREY_600, italic=True),
+                                        size=CAPTION_SIZE, color=TEXT_MUTED, italic=True),
                                 ft.Dropdown(
                                     label="Sort",
                                     value=default_sort,
                                     options=[ft.dropdown.Option(k) for k in sort_options],
                                     on_select=on_sort_change,
-                                    width=120,
-                                    text_size=11,
+                                    width=120, text_size=11,
                                 ),
                             ],
                         ),
-                        data_table,
+
+                        # ── Player Cards ────────────────────────────────
+                        player_list_col,
                     ],
                 ),
             ),
         ],
-    )
-
-
-def _build_news_ticker(conn, gs) -> ft.Container:
-    """Build a compact league news ticker showing position, upcoming match, and recent results."""
-    items = []
-
-    # League position
-    try:
-        standings = queries.get_standings(conn)
-        for i, s in enumerate(standings, 1):
-            if s.club_id == gs.user_club_id:
-                suffix = {1: "st", 2: "nd", 3: "rd"}.get(i if i < 20 else i % 10, "th")
-                items.append(
-                    ft.Text(f"🏆 {i}{suffix} — {s.points}pts (W{s.won} D{s.drawn} L{s.lost})",
-                             size=11, color=ft.Colors.GREY_400)
-                )
-                break
-    except Exception:
-        pass
-
-    # Upcoming fixture
-    next_fix = queries.get_user_next_fixture(conn, gs.user_club_id)
-    if next_fix:
-        is_home = next_fix.home_club_id == gs.user_club_id
-        opp = next_fix.away_club_name if is_home else next_fix.home_club_name
-        venue = "H" if is_home else "A"
-        if next_fix.date:
-            days = (next_fix.date - gs.current_date).days
-            when = "TODAY" if days <= 0 else f"in {days}d"
-        else:
-            when = "TBD"
-        items.append(
-            ft.Text(f"📅 Next: vs {opp} ({venue}) {when}", size=11,
-                     color=ft.Colors.AMBER_300, weight=ft.FontWeight.W_500)
-        )
-
-    # Last matchday results (up to 4)
-    played_mds = queries.get_all_matchdays_played(conn)
-    if played_mds:
-        last_md = played_mds[0]
-        results = queries.get_matchday_results(conn, last_md)
-        for fix in results[:4]:
-            r = fix.result
-            if not r:
-                continue
-            is_user = (fix.home_club_id == gs.user_club_id or fix.away_club_id == gs.user_club_id)
-            color = ft.Colors.GREEN_300 if is_user else ft.Colors.GREY_500
-            items.append(
-                ft.Text(f"  {fix.home_club_name[:10]} {r.home_goals}-{r.away_goals} {fix.away_club_name[:10]}",
-                         size=10, color=color)
-            )
-
-    if not items:
-        return ft.Container()
-
-    return ft.Container(
-        content=ft.Column(controls=items, spacing=2),
-        padding=ft.padding.symmetric(horizontal=4, vertical=4),
-        border_radius=6,
-        bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
-    )
-
-
-def _summary_chip(label: str, value: str, icon) -> ft.Container:
-    """Small summary chip widget."""
-    return ft.Container(
-        content=ft.Row(
-            spacing=4, tight=True,
-            controls=[
-                ft.Icon(icon, size=13, color=ft.Colors.AMBER_300),
-                ft.Text(f"{label}: ", size=10, color=ft.Colors.GREY_500),
-                ft.Text(value, size=11, weight=ft.FontWeight.BOLD),
-            ],
-        ),
-        padding=ft.padding.symmetric(horizontal=8, vertical=4),
-        border_radius=6,
-        bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
     )
 
 

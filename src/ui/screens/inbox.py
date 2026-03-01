@@ -1,5 +1,5 @@
 """
-Inbox screen — game messages with expandable detail view.
+Inbox screen — game messages with card-based mobile layout.
 """
 from __future__ import annotations
 
@@ -7,10 +7,32 @@ import flet as ft
 
 from src.data import queries
 from src.ui.widgets.nav_bar import build_nav_bar
+from src.ui.theme import (
+    ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
+    CARD_BG, CARD_RADIUS, CARD_RADIUS_SM, PAGE_PADDING, SECTION_SPACING,
+    TITLE_SIZE, BODY_SIZE, CAPTION_SIZE, TINY_SIZE, ACCENT_BG,
+)
+
+
+# Category styling
+_CAT_COLORS = {
+    "match": ft.Colors.GREEN_400,
+    "media": ft.Colors.BLUE_400,
+    "board": ft.Colors.PURPLE_400,
+    "transfer": ft.Colors.AMBER_400,
+    "general": ft.Colors.GREY_400,
+}
+_CAT_ICONS = {
+    "match": ft.Icons.SPORTS_SOCCER,
+    "media": ft.Icons.NEWSPAPER,
+    "board": ft.Icons.ACCOUNT_BALANCE,
+    "transfer": ft.Icons.ATTACH_MONEY,
+    "general": ft.Icons.MAIL,
+}
 
 
 def build_inbox_screen(page: ft.Page) -> ft.Column:
-    """Build the inbox/messages content."""
+    """Build the inbox/messages content with mobile card layout."""
     from src.ui.app import app_state, navigate
 
     page.navigation_bar = build_nav_bar(page, 4)
@@ -23,21 +45,6 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
     messages = queries.get_inbox(conn, limit=30)
     unread = queries.get_unread_count(conn)
 
-    cat_icons = {
-        "match": ft.Icons.SPORTS_SOCCER,
-        "media": ft.Icons.NEWSPAPER,
-        "board": ft.Icons.ACCOUNT_BALANCE,
-        "transfer": ft.Icons.ATTACH_MONEY,
-        "general": ft.Icons.MAIL,
-    }
-    cat_colors = {
-        "match": ft.Colors.GREEN_400,
-        "media": ft.Colors.BLUE_400,
-        "board": ft.Colors.PURPLE_400,
-        "transfer": ft.Colors.AMBER_400,
-        "general": ft.Colors.GREY_400,
-    }
-
     msg_tiles = []
     if not messages:
         msg_tiles.append(
@@ -45,34 +52,33 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                 content=ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        ft.Icon(ft.Icons.INBOX, size=48, color=ft.Colors.GREY_600),
+                        ft.Icon(ft.Icons.INBOX, size=48, color=TEXT_MUTED),
                         ft.Container(height=8),
-                        ft.Text("No messages yet.", size=14, color=ft.Colors.GREY_500),
+                        ft.Text("No messages yet.", size=BODY_SIZE, color=TEXT_SECONDARY),
                         ft.Text("Play some matches to receive updates!",
-                                size=12, color=ft.Colors.GREY_600),
+                                size=CAPTION_SIZE, color=TEXT_MUTED),
                     ],
                 ),
                 padding=40,
-                alignment=ft.Alignment(0, 0),
             )
         )
     else:
         for msg in messages:
-            icon = cat_icons.get(msg.category, ft.Icons.MAIL)
-            icon_color = cat_colors.get(msg.category, ft.Colors.GREY_400) if not msg.is_read else ft.Colors.GREY_700
-            title_weight = ft.FontWeight.BOLD if not msg.is_read else ft.FontWeight.NORMAL
-            bg_color = ft.Colors.with_opacity(0.05, ft.Colors.AMBER) if not msg.is_read else None
+            cat_color = _CAT_COLORS.get(msg.category, ft.Colors.GREY_400)
+            cat_icon = _CAT_ICONS.get(msg.category, ft.Icons.MAIL)
+            icon_color = cat_color if not msg.is_read else TEXT_MUTED
+            title_weight = ft.FontWeight.W_600 if not msg.is_read else ft.FontWeight.NORMAL
+            bg = ft.Colors.with_opacity(0.04, ft.Colors.AMBER) if not msg.is_read else CARD_BG
 
             def make_handler(m=msg):
                 def handler(e):
                     _show_message_detail(page, conn, m)
                 return handler
 
-            title_controls = [
-                ft.Text(msg.subject, size=13, weight=title_weight, expand=True),
-            ]
+            # Badge for unread
+            unread_badge = []
             if not msg.is_read:
-                title_controls.append(
+                unread_badge.append(
                     ft.Container(
                         content=ft.Text("NEW", size=8, color=ft.Colors.WHITE,
                                         weight=ft.FontWeight.BOLD),
@@ -84,25 +90,47 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
 
             msg_tiles.append(
                 ft.Container(
-                    content=ft.ListTile(
-                        leading=ft.Icon(icon, color=icon_color, size=22),
-                        title=ft.Row(controls=title_controls, spacing=5),
-                        subtitle=ft.Text(
-                            f"{msg.date.strftime('%d %b')} — {msg.body}",
-                            size=11, color=ft.Colors.GREY_400,
-                            max_lines=2,
-                            overflow=ft.TextOverflow.ELLIPSIS,
-                        ),
-                        on_click=make_handler(),
+                    content=ft.Row(
+                        spacing=10,
+                        vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                        controls=[
+                            # Category icon
+                            ft.Container(
+                                content=ft.Icon(cat_icon, size=18, color=icon_color),
+                                width=36, height=36, border_radius=18,
+                                bgcolor=ft.Colors.with_opacity(0.1, cat_color),
+                                alignment=ft.Alignment(0, 0),
+                            ),
+                            # Content
+                            ft.Column(spacing=2, expand=True, controls=[
+                                ft.Row(spacing=4, tight=True, controls=[
+                                    ft.Text(msg.subject, size=BODY_SIZE, weight=title_weight,
+                                            max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
+                                            expand=True),
+                                    *unread_badge,
+                                ]),
+                                ft.Text(
+                                    f"{msg.date.strftime('%d %b')} — {msg.body}",
+                                    size=CAPTION_SIZE, color=TEXT_SECONDARY,
+                                    max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
+                                ),
+                            ]),
+                            # Chevron
+                            ft.Icon(ft.Icons.CHEVRON_RIGHT, size=16, color=TEXT_MUTED),
+                        ],
                     ),
-                    bgcolor=bg_color,
-                    border_radius=4,
+                    padding=ft.padding.symmetric(horizontal=12, vertical=10),
+                    border_radius=CARD_RADIUS_SM,
+                    bgcolor=bg,
+                    border=ft.border.only(left=ft.BorderSide(3, cat_color)),
+                    on_click=make_handler(),
+                    ink=True,
                 )
             )
 
-    # Header with unread count
+    # Header controls
     header_controls = [
-        ft.Text("📥 Inbox", size=22, weight=ft.FontWeight.BOLD, expand=True),
+        ft.Text("📥 Inbox", size=TITLE_SIZE, weight=ft.FontWeight.BOLD, expand=True),
     ]
     if unread > 0:
         def mark_all_read(e):
@@ -112,43 +140,35 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
             navigate(page, "/inbox")
 
         header_controls.append(
-            ft.TextButton(
-                "Mark all read",
-                icon=ft.Icons.DONE_ALL,
-                on_click=mark_all_read,
-            )
-        )
-        header_controls.append(
-            ft.Container(
-                content=ft.Text(f"{unread} unread", size=11,
-                                color=ft.Colors.AMBER_300, weight=ft.FontWeight.W_500),
-                padding=ft.padding.symmetric(horizontal=8, vertical=3),
-                border_radius=10,
-                bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.AMBER),
-            )
+            ft.TextButton("Mark all read", icon=ft.Icons.DONE_ALL,
+                          on_click=mark_all_read)
         )
 
-    # Summary row
-    total_count = len(messages)
-    summary_row = ft.Text(
-        f"{total_count} message{'s' if total_count != 1 else ''} — "
-        f"{unread} unread",
-        size=11, color=ft.Colors.GREY_500,
-    )
+    # Unread pill
+    unread_pill = []
+    if unread > 0:
+        unread_pill.append(
+            ft.Container(
+                content=ft.Text(f"{unread} unread", size=CAPTION_SIZE,
+                                color=ACCENT, weight=ft.FontWeight.W_500),
+                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                border_radius=12,
+                bgcolor=ACCENT_BG,
+            )
+        )
 
     return ft.Column(
         expand=True,
         scroll=ft.ScrollMode.AUTO,
         controls=[
             ft.Container(
-                padding=15,
+                padding=ft.padding.all(PAGE_PADDING),
                 content=ft.Column(
-                    spacing=8,
+                    spacing=SECTION_SPACING,
                     controls=[
                         ft.Row(controls=header_controls),
-                        summary_row,
-                        ft.Divider(height=1),
-                        *msg_tiles,
+                        *unread_pill,
+                        ft.Column(spacing=4, controls=msg_tiles),
                     ],
                 ),
             ),
