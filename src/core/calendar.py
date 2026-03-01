@@ -16,12 +16,12 @@ from src.core.player import (
     update_form, update_fitness_after_match, rest_recovery,
     update_morale,
 )
-from src.core.media import create_match_report_message, generate_random_event
+from src.core.media import create_match_report_message, generate_random_event, generate_league_roundup
 from src.core.board import update_confidence_after_match
 from src.core.fans import update_fan_happiness, calculate_attendance
 from src.core.youth import develop_player
 from src.core.finance import process_monthly_finances
-from src.core.transfers import generate_ai_bids, check_expiring_contracts, process_pending_negotiations
+from src.core.transfers import generate_ai_bids, check_expiring_contracts, process_pending_negotiations, process_loan_returns
 from src.utils.config import MatchEventType, INJURY_TYPES
 from src.utils import rng
 
@@ -53,6 +53,9 @@ def advance_day(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
 
     # Process pending transfer negotiations (responses arrive)
     messages.extend(process_pending_negotiations(conn, game_state))
+
+    # Process loan returns
+    messages.extend(process_loan_returns(conn, game_state))
 
     # AI transfer offers for listed players (daily)
     messages.extend(generate_ai_bids(conn, game_state))
@@ -244,6 +247,10 @@ def simulate_user_match(conn: sqlite3.Connection,
     queries.mark_fixture_played(conn, fixture.fixture_id, user_result)
     queries.update_standings_for_result(conn, user_result)
 
+    # Track head-to-head
+    queries.update_head_to_head(conn, user_result.home_club_id, user_result.away_club_id,
+                                user_result.home_goals, user_result.away_goals)
+
     # Update player stats for user match
     _update_player_stats_after_match(conn, user_result, home_squad, away_squad,
                                       club_module.prepare_team_for_match(home_club, home_squad),
@@ -307,6 +314,9 @@ def simulate_user_match(conn: sqlite3.Connection,
         result = _simulate_single_fixture(conn, other_fixture)
         queries.mark_fixture_played(conn, other_fixture.fixture_id, result)
         queries.update_standings_for_result(conn, result)
+        # Track head-to-head for other matches too
+        queries.update_head_to_head(conn, result.home_club_id, result.away_club_id,
+                                    result.home_goals, result.away_goals)
         other_results.append(result)
 
         # Inbox message for each result
@@ -326,6 +336,14 @@ def simulate_user_match(conn: sqlite3.Connection,
         if s.club_id == game_state.user_club_id:
             position_after = i
             break
+
+    # Generate league roundup for the matchday
+    all_results_for_roundup = [user_result] + other_results
+    roundup_msg = generate_league_roundup(
+        fixture.matchday, all_results_for_roundup,
+        standings_after, game_state.current_date,
+    )
+    queries.insert_message(conn, roundup_msg)
 
     return MatchdayOutcome(
         user_result=user_result,
@@ -501,19 +519,30 @@ def _daily_recovery(conn: sqlite3.Connection, game_state: GameState) -> None:
 
 def _weekly_development(conn: sqlite3.Connection,
                          game_state: GameState) -> list[str]:
-    """Weekly player development for user club."""
+    """Weekly player development using the training system."""
     messages: list[str] = []
     club = queries.get_club(conn, game_state.user_club_id)
     if not club:
         return messages
+
+    from src.core.training import process_weekly_training, TrainingIntensity
+
     squad = queries.get_players_by_club(conn, club.id)
     dev_lines = []
     for player in squad:
-        dev_msgs = develop_player(player, club)
+        if player.injury_days_remaining > 0:
+            continue
+        dev_msgs = process_weekly_training(player, club, TrainingIntensity.NORMAL)
         if dev_msgs:
             dev_lines.extend(dev_msgs)
             messages.extend(dev_msgs)
             queries.update_player_stats(conn, player)
+
+        # Check milestones
+        milestone_msgs = queries.check_player_milestones(conn, player, game_state.current_date)
+        for m in milestone_msgs:
+            queries.insert_message(conn, m)
+
     # Send a consolidated training report if anything changed
     if dev_lines:
         queries.insert_message(conn, InboxMessage(

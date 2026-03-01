@@ -32,6 +32,10 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
     user_pos = awards["user_position"]
     user_standing = awards["user_standing"]
     is_champ = awards["is_user_champion"]
+    golden_boot = awards.get("golden_boot")
+    golden_glove = awards.get("golden_glove")
+    young_player = awards.get("young_player")
+    most_assists = awards.get("most_assists")
 
     # Trophy section
     if is_champ:
@@ -190,6 +194,34 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
                         ]),
                         ft.Divider(height=1),
 
+                        # Season Awards
+                        ft.Text("🏅 Season Awards", size=16, weight=ft.FontWeight.W_500),
+                        *(
+                            [_award_card("🥇 Golden Boot", golden_boot["name"],
+                                         f"⚽ {golden_boot['goals']} goals",
+                                         golden_boot.get("club_short", ""))]
+                            if golden_boot else []
+                        ),
+                        *(
+                            [_award_card("🧤 Golden Glove", golden_glove["name"],
+                                         f"🧤 {golden_glove['clean_sheets']} clean sheets",
+                                         golden_glove.get("club_name", ""))]
+                            if golden_glove else []
+                        ),
+                        *(
+                            [_award_card("⭐ Young Player", young_player["name"],
+                                         f"📊 {young_player['rating']:.1f} avg rating (Age {young_player['age']})",
+                                         young_player.get("club_name", ""))]
+                            if young_player else []
+                        ),
+                        *(
+                            [_award_card("🅰️ Most Assists", most_assists["name"],
+                                         f"🅰️ {most_assists['assists']} assists",
+                                         most_assists.get("club_name", ""))]
+                            if most_assists else []
+                        ),
+                        ft.Divider(height=1),
+
                         # Actions
                         ft.Container(height=10),
                         ft.ElevatedButton(
@@ -219,4 +251,25 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
     )
 
 
-
+def _award_card(award_name: str, player_name: str, detail: str, club: str) -> ft.Container:
+    """Build a small award card widget."""
+    return ft.Container(
+        content=ft.Row(
+            spacing=10,
+            controls=[
+                ft.Text(award_name.split()[0], size=22),  # emoji
+                ft.Column(spacing=0, expand=True, controls=[
+                    ft.Text(" ".join(award_name.split()[1:]), size=12,
+                            color=ft.Colors.AMBER_300, weight=ft.FontWeight.W_500),
+                    ft.Text(player_name, size=14, weight=ft.FontWeight.BOLD),
+                    ft.Row(spacing=6, controls=[
+                        ft.Text(detail, size=11, color=ft.Colors.GREY_400),
+                        ft.Text(f"({club})", size=10, color=ft.Colors.GREY_600) if club else ft.Container(),
+                    ]),
+                ]),
+            ],
+        ),
+        padding=ft.padding.symmetric(horizontal=12, vertical=8),
+        bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.AMBER),
+        border_radius=8,
+    )

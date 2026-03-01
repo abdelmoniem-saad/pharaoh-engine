@@ -18,7 +18,7 @@ def get_season_awards(conn: sqlite3.Connection,
     """Compute end-of-season awards."""
     standings = get_current_standings(conn)
     champion = standings[0] if standings else None
-    top_scorers = queries.get_top_scorers(conn, limit=3)
+    top_scorers = queries.get_top_scorers(conn, limit=10)
 
     # Find user position
     user_pos = 0
@@ -29,6 +29,51 @@ def get_season_awards(conn: sqlite3.Connection,
             user_standing = s
             break
 
+    # Golden Boot — top scorer
+    golden_boot = top_scorers[0] if top_scorers else None
+
+    # Golden Glove — most clean sheets
+    all_clubs = queries.get_all_clubs(conn)
+    golden_glove = None
+    best_cs = 0
+    for club in all_clubs:
+        squad = queries.get_players_by_club(conn, club.id)
+        for p in squad:
+            if p.position.value == "GK" and p.season_stats.clean_sheets > best_cs:
+                best_cs = p.season_stats.clean_sheets
+                golden_glove = {
+                    "name": p.name, "clean_sheets": p.season_stats.clean_sheets,
+                    "club_name": club.short_name,
+                }
+
+    # Young Player of the Season — best average rating for U21
+    young_player = None
+    best_young_rating = 0.0
+    for club in all_clubs:
+        squad = queries.get_players_by_club(conn, club.id)
+        for p in squad:
+            if p.age <= 21 and p.season_stats.appearances >= 10:
+                if p.season_stats.average_rating > best_young_rating:
+                    best_young_rating = p.season_stats.average_rating
+                    young_player = {
+                        "name": p.name, "age": p.age,
+                        "rating": p.season_stats.average_rating,
+                        "club_name": club.short_name,
+                    }
+
+    # Most assists
+    most_assists = None
+    best_assists = 0
+    for club in all_clubs:
+        squad = queries.get_players_by_club(conn, club.id)
+        for p in squad:
+            if p.season_stats.assists > best_assists:
+                best_assists = p.season_stats.assists
+                most_assists = {
+                    "name": p.name, "assists": p.season_stats.assists,
+                    "club_name": club.short_name,
+                }
+
     return {
         "champion": champion,
         "standings": standings,
@@ -36,7 +81,11 @@ def get_season_awards(conn: sqlite3.Connection,
         "user_position": user_pos,
         "user_standing": user_standing,
         "is_user_champion": champion and champion.club_id == game_state.user_club_id,
-        "board_evaluation": [],  # populated by start_new_season
+        "board_evaluation": [],
+        "golden_boot": golden_boot,
+        "golden_glove": golden_glove,
+        "young_player": young_player,
+        "most_assists": most_assists,
     }
 
 

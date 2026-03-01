@@ -169,6 +169,56 @@ def simulate_match(
                 away_fouls += 1
                 foul_player = _pick_random_player(away_players, away_tactics.starting_xi)
 
+            # Penalty chance (~3% of fouls are in the box)
+            if rng.chance(0.03):
+                # Penalty!
+                if is_home_foul:
+                    # Penalty to away team
+                    pen_taker = _pick_scorer(away_players, away_tactics.starting_xi, away_tactics.formation)
+                    pen_club = away_club
+                else:
+                    # Penalty to home team
+                    pen_taker = _pick_scorer(home_players, home_tactics.starting_xi, home_tactics.formation)
+                    pen_club = home_club
+
+                if pen_taker:
+                    # Penalty conversion based on composure + finishing
+                    pen_quality = (pen_taker.attributes.composure * 0.5 +
+                                   pen_taker.attributes.finishing * 0.5)
+                    if rng.chance(0.75 + pen_quality / 200.0):  # ~80-90% conversion
+                        if pen_club.id == home_club.id:
+                            home_goals += 1
+                            home_shots += 1
+                            home_shots_on_target += 1
+                        else:
+                            away_goals += 1
+                            away_shots += 1
+                            away_shots_on_target += 1
+                        events.append(MatchEvent(
+                            minute=min(minute, 90 + second_half_added),
+                            event_type=MatchEventType.PENALTY,
+                            player_id=pen_taker.id,
+                            player_name=pen_taker.name,
+                            club_id=pen_club.id,
+                            description=commentary.generate(MatchEventType.GOAL,
+                                                            player=pen_taker.name,
+                                                            club=pen_club.name) + " (Penalty!)",
+                        ))
+                    else:
+                        events.append(MatchEvent(
+                            minute=min(minute, 90 + second_half_added),
+                            event_type=MatchEventType.PENALTY_MISS,
+                            player_id=pen_taker.id,
+                            player_name=pen_taker.name,
+                            club_id=pen_club.id,
+                            description=f"PENALTY MISSED! {pen_taker.name} fails from the spot!",
+                        ))
+                        if pen_club.id == home_club.id:
+                            home_shots += 1
+                        else:
+                            away_shots += 1
+                continue  # Skip the regular card logic for penalty fouls
+
             # Card probability
             if rng.chance(0.15):  # ~15% of fouls get a yellow
                 card_type = MatchEventType.YELLOW_CARD

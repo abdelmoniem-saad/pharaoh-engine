@@ -435,9 +435,12 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
         form_trend_color = ft.Colors.GREY_500
 
     # Training focus dropdown
-    from src.utils.config import TRAINING_FOCUSES
+    from src.core.training import get_training_programs, get_recommended_focus
+    training_programs = get_training_programs()
+    recommended = get_recommended_focus(player)
     training_options = [ft.dropdown.Option("", text="None")] + [
-        ft.dropdown.Option(k) for k in TRAINING_FOCUSES
+        ft.dropdown.Option(k, text=f"{'⭐ ' if k == recommended else ''}{k}")
+        for k in training_programs
     ]
 
     def on_training_change(e):
@@ -446,7 +449,7 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
         player.training_focus = new_focus
         queries.update_player_stats(app_state.db_conn, player)
         label = new_focus if new_focus else "None"
-        show_snackbar(page, f"Training focus set to {label}")
+        show_snackbar(page, f"Training focus set to {label} for {player.name}")
 
     training_dd = ft.Dropdown(
         label="Training Focus",
@@ -602,16 +605,111 @@ def _toggle_transfer(page, player_id, currently_listed):
 
 
 def _renew_contract(page, player_id):
-    """Renew a player's contract (+2 years, +15% wage)."""
+    """Show a contract renewal negotiation dialog."""
     from src.ui.app import app_state, navigate, show_snackbar
     conn = app_state.db_conn
     player = queries.get_player(conn, player_id)
     if not player:
         return
-    queries.renew_contract(conn, player_id, years=2, wage_increase_pct=15)
-    page.pop_dialog()
-    show_snackbar(page, f"📝 {player.name}'s contract renewed (+2 years)!")
-    navigate(page, "/squad")
+
+    current_wage = player.contract.wage_weekly
+    # Player expects at least 10% raise; bigger stars want more
+    from src.core.player import calculate_overall_rating
+    ovr = calculate_overall_rating(player)
+    min_raise_pct = 5 if ovr < 60 else 10 if ovr < 70 else 15 if ovr < 80 else 20
+    min_acceptable = int(current_wage * (1 + min_raise_pct / 100))
+
+    expiry_str = player.contract.contract_expiry.strftime("%b %Y") if player.contract.contract_expiry else "N/A"
+
+    years_dd = ft.Dropdown(
+        label="Contract Length",
+        value="2",
+        options=[ft.dropdown.Option("1", text="1 year"),
+                 ft.dropdown.Option("2", text="2 years"),
+                 ft.dropdown.Option("3", text="3 years"),
+                 ft.dropdown.Option("4", text="4 years")],
+        width=180,
+    )
+
+    wage_field = ft.TextField(
+        label="Weekly Wage Offer (EGP)",
+        value=str(min_acceptable),
+        width=180, text_size=13,
+    )
+
+    result_text = ft.Text("", size=12, color=ft.Colors.GREY_400)
+
+    def submit_renewal(e):
+        try:
+            offered_wage = int(wage_field.value)
+            years = int(years_dd.value)
+        except ValueError:
+            show_snackbar(page, "Enter valid numbers!", bgcolor=ft.Colors.RED_800)
+            return
+
+        if offered_wage < min_acceptable:
+            result_text.value = (
+                f"❌ {player.name} wants at least {min_acceptable:,} EGP/wk. "
+                f"Your offer of {offered_wage:,} is too low."
+            )
+            result_text.color = ft.Colors.RED_400
+            page.update()
+            return
+
+        # Check wage budget
+        club = queries.get_club(conn, app_state.game_state.user_club_id)
+        if club:
+            wage_increase = offered_wage - current_wage
+            if club.finances.wage_bill_weekly + wage_increase > club.finances.wage_budget_weekly:
+                result_text.value = "❌ Cannot afford this wage increase!"
+                result_text.color = ft.Colors.RED_400
+                page.update()
+                return
+
+        # Accept renewal
+        from datetime import timedelta, date as dt_date
+        base = player.contract.contract_expiry or dt_date.today()
+        new_expiry = base + timedelta(days=365 * years)
+        conn.execute(
+            "UPDATE players SET contract_expiry = ?, wage_weekly = ? WHERE id = ?",
+            (new_expiry.isoformat(), offered_wage, player_id)
+        )
+        conn.commit()
+
+        page.pop_dialog()
+        show_snackbar(page, f"📝 {player.name} renewed! {years}yr @ {offered_wage:,} EGP/wk")
+
+        # Close the underlying player dialog too
+        try:
+            page.pop_dialog()
+        except Exception:
+            pass
+        navigate(page, "/squad")
+
+    renewal_dlg = ft.AlertDialog(
+        title=ft.Text(f"📝 Renew: {player.name}", size=16, weight=ft.FontWeight.BOLD),
+        content=ft.Container(
+            content=ft.Column(spacing=8, controls=[
+                ft.Row(spacing=10, controls=[
+                    ft.Text(f"Current wage: {current_wage:,} EGP/wk", size=12),
+                    ft.Text(f"Expires: {expiry_str}", size=12, color=ft.Colors.GREY_400),
+                ]),
+                ft.Text(f"Player expects: ≥{min_acceptable:,} EGP/wk (+{min_raise_pct}%)",
+                        size=11, color=ft.Colors.AMBER_300, italic=True),
+                years_dd,
+                wage_field,
+                result_text,
+            ]),
+            width=300, height=220,
+        ),
+        actions=[
+            ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),
+            ft.ElevatedButton("Offer", on_click=submit_renewal,
+                              style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
+                                                   color=ft.Colors.WHITE)),
+        ],
+    )
+    page.show_dialog(renewal_dlg)
 
 
 def _save_game(page, conn, gs):

@@ -75,7 +75,7 @@ def build_main_menu(page: ft.Page) -> ft.Column:
             ),
             ft.Container(expand=2),
             ft.Text(
-                f"v{APP_VERSION} — MVP",
+                f"v{APP_VERSION}",
                 size=12, color=ft.Colors.GREY_600,
             ),
         ],

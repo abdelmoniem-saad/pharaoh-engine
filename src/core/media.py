@@ -298,3 +298,46 @@ def generate_random_event(club_name: str, player_name: str,
         body=template["body"].format(club=club_name, player=player_name),
         category=template["category"],
     )
+
+
+def generate_league_roundup(matchday: int, results: list,
+                             standings: list, current_date: date) -> InboxMessage:
+    """Generate a weekly league roundup message summarizing all matchday results."""
+    lines = [f"📰 Matchday {matchday} Round-Up", ""]
+
+    # Results summary
+    lines.append("📋 Results:")
+    for r in results:
+        lines.append(f"  {r.home_club_name} {r.home_goals}-{r.away_goals} {r.away_club_name}")
+    lines.append("")
+
+    # Table movers
+    if standings and len(standings) >= 3:
+        lines.append("📊 Table Snapshot:")
+        for i, s in enumerate(standings[:5], 1):
+            lines.append(f"  {i}. {s.club_name} — {s.points} pts (GD {s.goal_difference:+d})")
+        lines.append("")
+
+    # Big wins
+    big_wins = [r for r in results
+                if abs(r.home_goals - r.away_goals) >= 3]
+    if big_wins:
+        lines.append("🔥 Big Results:")
+        for r in big_wins:
+            winner = r.home_club_name if r.home_goals > r.away_goals else r.away_club_name
+            lines.append(f"  {winner} with a dominant {r.home_goals}-{r.away_goals} display!")
+        lines.append("")
+
+    # Total goals
+    total_goals = sum(r.home_goals + r.away_goals for r in results)
+    avg_goals = total_goals / max(len(results), 1)
+    lines.append(f"⚽ {total_goals} goals scored across {len(results)} matches "
+                 f"({avg_goals:.1f} per game)")
+
+    return InboxMessage(
+        date=current_date,
+        subject=f"📰 Matchday {matchday} Round-Up",
+        body="\n".join(lines),
+        category="media",
+    )
+

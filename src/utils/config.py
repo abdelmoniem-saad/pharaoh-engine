@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 # ── Version ──────────────────────────────────────────────────────────────────
 APP_NAME = "Pharaoh Engine"
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.3.0"
 
 # ── League Structure ─────────────────────────────────────────────────────────
 LEAGUE_TEAM_COUNT = 18
@@ -36,6 +36,12 @@ CURRENCY_NAME = "Egyptian Pound"
 SEASON_START_MONTH = 8   # August
 SEASON_START_DAY = 15
 SEASON_END_MONTH = 5     # May
+
+# ── Transfer Windows ────────────────────────────────────────────────────────
+SUMMER_WINDOW_START = (6, 1)   # June 1
+SUMMER_WINDOW_END = (8, 31)    # August 31
+WINTER_WINDOW_START = (1, 1)   # January 1
+WINTER_WINDOW_END = (1, 31)    # January 31
 
 
 class Position(str, Enum):

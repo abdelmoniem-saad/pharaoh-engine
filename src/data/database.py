@@ -254,6 +254,47 @@ CREATE TABLE IF NOT EXISTS transfer_negotiations (
     respond_date TEXT NOT NULL DEFAULT '',
     direction TEXT NOT NULL DEFAULT 'user_buying'
 );
+
+CREATE TABLE IF NOT EXISTS loan_deals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER NOT NULL,
+    player_name TEXT NOT NULL DEFAULT '',
+    from_club_id INTEGER NOT NULL,
+    from_club_name TEXT NOT NULL DEFAULT '',
+    to_club_id INTEGER NOT NULL,
+    to_club_name TEXT NOT NULL DEFAULT '',
+    start_date TEXT NOT NULL DEFAULT '',
+    end_date TEXT NOT NULL DEFAULT '',
+    wage_split INTEGER NOT NULL DEFAULT 100,
+    buy_option INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'active'
+);
+
+CREATE TABLE IF NOT EXISTS transfer_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    player_id INTEGER NOT NULL,
+    player_name TEXT NOT NULL DEFAULT '',
+    from_club_id INTEGER NOT NULL,
+    from_club_name TEXT NOT NULL DEFAULT '',
+    to_club_id INTEGER NOT NULL,
+    to_club_name TEXT NOT NULL DEFAULT '',
+    fee INTEGER NOT NULL DEFAULT 0,
+    wage INTEGER NOT NULL DEFAULT 0,
+    transfer_date TEXT NOT NULL DEFAULT '',
+    transfer_type TEXT NOT NULL DEFAULT 'permanent'
+);
+
+CREATE TABLE IF NOT EXISTS head_to_head (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    club_a_id INTEGER NOT NULL,
+    club_b_id INTEGER NOT NULL,
+    club_a_wins INTEGER NOT NULL DEFAULT 0,
+    club_b_wins INTEGER NOT NULL DEFAULT 0,
+    draws INTEGER NOT NULL DEFAULT 0,
+    club_a_goals INTEGER NOT NULL DEFAULT 0,
+    club_b_goals INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(club_a_id, club_b_id)
+);
 """
 
 
@@ -271,6 +312,54 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_def}")
         except sqlite3.OperationalError:
             pass  # Column already exists
+
+    # Ensure new tables exist (in case of old saves)
+    new_tables = [
+        """CREATE TABLE IF NOT EXISTS loan_deals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id INTEGER NOT NULL,
+            player_name TEXT NOT NULL DEFAULT '',
+            from_club_id INTEGER NOT NULL,
+            from_club_name TEXT NOT NULL DEFAULT '',
+            to_club_id INTEGER NOT NULL,
+            to_club_name TEXT NOT NULL DEFAULT '',
+            start_date TEXT NOT NULL DEFAULT '',
+            end_date TEXT NOT NULL DEFAULT '',
+            wage_split INTEGER NOT NULL DEFAULT 100,
+            buy_option INTEGER NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'active'
+        )""",
+        """CREATE TABLE IF NOT EXISTS transfer_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id INTEGER NOT NULL,
+            player_name TEXT NOT NULL DEFAULT '',
+            from_club_id INTEGER NOT NULL,
+            from_club_name TEXT NOT NULL DEFAULT '',
+            to_club_id INTEGER NOT NULL,
+            to_club_name TEXT NOT NULL DEFAULT '',
+            fee INTEGER NOT NULL DEFAULT 0,
+            wage INTEGER NOT NULL DEFAULT 0,
+            transfer_date TEXT NOT NULL DEFAULT '',
+            transfer_type TEXT NOT NULL DEFAULT 'permanent'
+        )""",
+        """CREATE TABLE IF NOT EXISTS head_to_head (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            club_a_id INTEGER NOT NULL,
+            club_b_id INTEGER NOT NULL,
+            club_a_wins INTEGER NOT NULL DEFAULT 0,
+            club_b_wins INTEGER NOT NULL DEFAULT 0,
+            draws INTEGER NOT NULL DEFAULT 0,
+            club_a_goals INTEGER NOT NULL DEFAULT 0,
+            club_b_goals INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(club_a_id, club_b_id)
+        )""",
+    ]
+    for sql in new_tables:
+        try:
+            conn.execute(sql)
+        except sqlite3.OperationalError:
+            pass
+
     conn.commit()
 
 

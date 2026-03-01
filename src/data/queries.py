@@ -698,3 +698,171 @@ def renew_contract(conn: sqlite3.Connection, player_id: int,
     conn.commit()
 
 
+# ── Head-to-Head ─────────────────────────────────────────────────────────────
+
+def update_head_to_head(conn: sqlite3.Connection, club_a_id: int,
+                         club_b_id: int, a_goals: int, b_goals: int) -> None:
+    """Update head-to-head record after a match. Always store with smaller ID as club_a."""
+    if club_a_id > club_b_id:
+        club_a_id, club_b_id = club_b_id, club_a_id
+        a_goals, b_goals = b_goals, a_goals
+
+    row = conn.execute(
+        "SELECT * FROM head_to_head WHERE club_a_id = ? AND club_b_id = ?",
+        (club_a_id, club_b_id)
+    ).fetchone()
+
+    if row:
+        if a_goals > b_goals:
+            conn.execute("""
+                UPDATE head_to_head SET club_a_wins = club_a_wins + 1,
+                    club_a_goals = club_a_goals + ?, club_b_goals = club_b_goals + ?
+                WHERE club_a_id = ? AND club_b_id = ?
+            """, (a_goals, b_goals, club_a_id, club_b_id))
+        elif b_goals > a_goals:
+            conn.execute("""
+                UPDATE head_to_head SET club_b_wins = club_b_wins + 1,
+                    club_a_goals = club_a_goals + ?, club_b_goals = club_b_goals + ?
+                WHERE club_a_id = ? AND club_b_id = ?
+            """, (a_goals, b_goals, club_a_id, club_b_id))
+        else:
+            conn.execute("""
+                UPDATE head_to_head SET draws = draws + 1,
+                    club_a_goals = club_a_goals + ?, club_b_goals = club_b_goals + ?
+                WHERE club_a_id = ? AND club_b_id = ?
+            """, (a_goals, b_goals, club_a_id, club_b_id))
+    else:
+        a_wins = 1 if a_goals > b_goals else 0
+        b_wins = 1 if b_goals > a_goals else 0
+        draws = 1 if a_goals == b_goals else 0
+        conn.execute("""
+            INSERT INTO head_to_head (club_a_id, club_b_id, club_a_wins, club_b_wins,
+                draws, club_a_goals, club_b_goals)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (club_a_id, club_b_id, a_wins, b_wins, draws, a_goals, b_goals))
+    conn.commit()
+
+
+def get_head_to_head(conn: sqlite3.Connection, club_a_id: int,
+                      club_b_id: int) -> dict:
+    """Get head-to-head record between two clubs."""
+    # Always query with smaller ID as club_a
+    swapped = club_a_id > club_b_id
+    if swapped:
+        club_a_id, club_b_id = club_b_id, club_a_id
+
+    row = conn.execute(
+        "SELECT * FROM head_to_head WHERE club_a_id = ? AND club_b_id = ?",
+        (club_a_id, club_b_id)
+    ).fetchone()
+
+    if not row:
+        return {"wins": 0, "draws": 0, "losses": 0, "goals_for": 0, "goals_against": 0, "total": 0}
+
+    if swapped:
+        return {
+            "wins": row["club_b_wins"],
+            "draws": row["draws"],
+            "losses": row["club_a_wins"],
+            "goals_for": row["club_b_goals"],
+            "goals_against": row["club_a_goals"],
+            "total": row["club_a_wins"] + row["club_b_wins"] + row["draws"],
+        }
+    else:
+        return {
+            "wins": row["club_a_wins"],
+            "draws": row["draws"],
+            "losses": row["club_b_wins"],
+            "goals_for": row["club_a_goals"],
+            "goals_against": row["club_b_goals"],
+            "total": row["club_a_wins"] + row["club_b_wins"] + row["draws"],
+        }
+
+
+# ── Transfer History ─────────────────────────────────────────────────────────
+
+def log_transfer(conn: sqlite3.Connection, player_id: int, player_name: str,
+                  from_club_id: int, from_club_name: str,
+                  to_club_id: int, to_club_name: str,
+                  fee: int, wage: int, transfer_date: date,
+                  transfer_type: str = "permanent") -> None:
+    """Log a completed transfer to the history table."""
+    conn.execute("""
+        INSERT INTO transfer_history
+        (player_id, player_name, from_club_id, from_club_name,
+         to_club_id, to_club_name, fee, wage, transfer_date, transfer_type)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (player_id, player_name, from_club_id, from_club_name,
+          to_club_id, to_club_name, fee, wage,
+          transfer_date.isoformat(), transfer_type))
+    conn.commit()
+
+
+def get_transfer_history(conn: sqlite3.Connection, limit: int = 30) -> list[dict]:
+    """Get recent transfer history."""
+    rows = conn.execute("""
+        SELECT * FROM transfer_history ORDER BY id DESC LIMIT ?
+    """, (limit,)).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_club_transfer_history(conn: sqlite3.Connection,
+                               club_id: int, limit: int = 20) -> list[dict]:
+    """Get transfer history for a specific club."""
+    rows = conn.execute("""
+        SELECT * FROM transfer_history
+        WHERE from_club_id = ? OR to_club_id = ?
+        ORDER BY id DESC LIMIT ?
+    """, (club_id, club_id, limit)).fetchall()
+    return [dict(row) for row in rows]
+
+
+# ── Player Milestones ────────────────────────────────────────────────────────
+
+def check_player_milestones(conn: sqlite3.Connection, player: "Player",
+                             current_date: date) -> list[InboxMessage]:
+    """Check for player milestone achievements and return inbox messages."""
+    messages = []
+    s = player.season_stats
+
+    # Appearance milestones
+    app_milestones = [50, 100, 150, 200, 250, 300]
+    for milestone in app_milestones:
+        if s.appearances == milestone:
+            messages.append(InboxMessage(
+                date=current_date,
+                subject=f"🎉 {player.name} — {milestone} Appearances!",
+                body=(f"Congratulations! {player.name} has made {milestone} appearances. "
+                      f"A magnificent achievement for the club."),
+                category="general",
+            ))
+            break
+
+    # Goal milestones
+    goal_milestones = [10, 25, 50, 75, 100]
+    for milestone in goal_milestones:
+        if s.goals == milestone:
+            messages.append(InboxMessage(
+                date=current_date,
+                subject=f"⚽ {player.name} — {milestone} Goals!",
+                body=(f"What a scorer! {player.name} has reached {milestone} career goals. "
+                      f"The fans are ecstatic!"),
+                category="general",
+            ))
+            break
+
+    # Assist milestones
+    assist_milestones = [10, 25, 50]
+    for milestone in assist_milestones:
+        if s.assists == milestone:
+            messages.append(InboxMessage(
+                date=current_date,
+                subject=f"🅰️ {player.name} — {milestone} Assists!",
+                body=f"{player.name} has provided {milestone} assists this season. Creative genius!",
+                category="general",
+            ))
+            break
+
+    return messages
+
+

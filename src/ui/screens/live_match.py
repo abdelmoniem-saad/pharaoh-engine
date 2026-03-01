@@ -48,7 +48,10 @@ _MAJOR_EVENTS = {
 
 def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
     """Build the live match simulation view."""
-    from src.ui.screens.match_day import _show_result_dialog
+    from src.ui.app import app_state, navigate
+
+    # Store outcome for the post-match screen
+    app_state._last_outcome = outcome
 
     result = outcome.user_result
 
@@ -67,6 +70,8 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
     home_goals = [0]
     away_goals = [0]
     skip_flag = [False]
+    halftime_done = [False]
+    halftime_choice = [None]  # Will store the team talk choice
 
     # ── UI Controls ──────────────────────────────────────────────────
     score_text = ft.Text(
@@ -106,7 +111,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         skip_flag[0] = True
 
     def on_continue(e):
-        _show_result_dialog(page, outcome)
+        navigate(page, "/post_match")
 
     skip_btn.on_click = on_skip
     continue_btn.on_click = on_continue
@@ -209,6 +214,28 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                 if ev.event_type == MatchEventType.HALF_TIME:
                     status_text.value = "⏸️ Half Time"
                     status_text.color = ft.Colors.BLUE_400
+                    # Show team talk at halftime (unless skipping)
+                    if not skip_flag[0] and not halftime_done[0]:
+                        halftime_done[0] = True
+                        _show_halftime_talk(page, event_list, halftime_choice)
+                        page.update()
+                        # Wait until user makes a choice
+                        while halftime_choice[0] is None and not skip_flag[0]:
+                            await asyncio.sleep(0.15)
+                        if halftime_choice[0]:
+                            event_list.controls.append(ft.Container(
+                                content=ft.Row(spacing=6, controls=[
+                                    ft.Text("HT", size=11, color=ft.Colors.GREY_500, width=30,
+                                            text_align=ft.TextAlign.RIGHT),
+                                    ft.Text("🗣️", size=14),
+                                    ft.Text(f"Team Talk: {halftime_choice[0]}", size=12,
+                                            color=ft.Colors.BLUE_300, weight=ft.FontWeight.W_500),
+                                ]),
+                                padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                                border_radius=6,
+                                bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.BLUE),
+                            ))
+                            page.update()
                 elif ev.event_type == MatchEventType.FULL_TIME:
                     status_text.value = "🏁 Full Time"
                     status_text.color = ft.Colors.AMBER_300
@@ -320,4 +347,49 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
     page.run_task(_run_simulation)
 
     return content
+
+
+def _show_halftime_talk(page: ft.Page, event_list, halftime_choice):
+    """Show halftime team talk options in the event list."""
+    talks = [
+        ("💪 Encourage", "Encourage", "Keep it up lads, we're doing well!"),
+        ("🔥 Demand More", "Demand More", "I want more intensity! Push harder!"),
+        ("🧘 Stay Calm", "Stay Calm", "Relax and stick to the plan."),
+        ("😤 Criticize", "Criticize", "That first half was NOT good enough!"),
+    ]
+
+    talk_controls = []
+    for emoji_label, key, desc in talks:
+        def make_handler(k=key):
+            def handler(e):
+                halftime_choice[0] = k
+                # Remove the talk buttons from event list
+                for ctrl in talk_controls:
+                    if ctrl in event_list.controls:
+                        event_list.controls.remove(ctrl)
+                page.update()
+            return handler
+
+        btn = ft.Container(
+            content=ft.Row(spacing=8, controls=[
+                ft.Text(emoji_label, size=13, weight=ft.FontWeight.W_500),
+                ft.Text(f"— {desc}", size=10, color=ft.Colors.GREY_400, italic=True),
+            ]),
+            padding=ft.padding.symmetric(horizontal=10, vertical=8),
+            border_radius=6,
+            bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.BLUE),
+            on_click=make_handler(),
+            ink=True,
+        )
+        talk_controls.append(btn)
+
+    header = ft.Container(
+        content=ft.Text("🗣️ Halftime Team Talk — Choose your message:",
+                        size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_300),
+        padding=ft.padding.symmetric(horizontal=8, vertical=4),
+    )
+    talk_controls.insert(0, header)
+
+    event_list.controls.extend(talk_controls)
+
 

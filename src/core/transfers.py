@@ -4,6 +4,8 @@ Transfer market — negotiations, offers, and player trading.
 Negotiations are async (take days, not instant):
   Phase 1: Fee negotiation → submit offer → next day get response
   Phase 2: Wage negotiation → offer wage → next day player responds
+
+Supports transfer windows (summer/winter) and loan deals.
 """
 from __future__ import annotations
 
@@ -15,6 +17,176 @@ from src.data.models import Player, Club, InboxMessage, GameState
 from src.core.finance import can_afford_transfer, can_afford_wage
 from src.data import queries
 from src.utils import rng
+from src.utils.config import (
+    SUMMER_WINDOW_START, SUMMER_WINDOW_END,
+    WINTER_WINDOW_START, WINTER_WINDOW_END,
+)
+
+
+# ── Transfer Window ─────────────────────────────────────────────────────────
+
+def is_transfer_window_open(current_date: date) -> bool:
+    """Check if the current date falls within a transfer window."""
+    month, day = current_date.month, current_date.day
+    md = (month, day)
+    return (SUMMER_WINDOW_START <= md <= SUMMER_WINDOW_END or
+            WINTER_WINDOW_START <= md <= WINTER_WINDOW_END)
+
+
+def get_window_status(current_date: date) -> str:
+    """Get a human-readable transfer window status string."""
+    month, day = current_date.month, current_date.day
+    md = (month, day)
+    if SUMMER_WINDOW_START <= md <= SUMMER_WINDOW_END:
+        days_left = (date(current_date.year, *SUMMER_WINDOW_END) - current_date).days
+        return f"🟢 Summer Window OPEN ({days_left}d left)"
+    elif WINTER_WINDOW_START <= md <= WINTER_WINDOW_END:
+        days_left = (date(current_date.year, *WINTER_WINDOW_END) - current_date).days
+        return f"🟢 Winter Window OPEN ({days_left}d left)"
+    else:
+        # Calculate next window opening
+        year = current_date.year
+        summer_open = date(year, *SUMMER_WINDOW_START)
+        winter_open = date(year, *WINTER_WINDOW_START)
+        if current_date < summer_open:
+            next_open = summer_open
+            next_name = "Summer"
+        elif current_date < winter_open:
+            # winter is in the same year
+            next_open = winter_open
+            next_name = "Winter"
+        else:
+            next_open = date(year + 1, *WINTER_WINDOW_START)
+            next_name = "Winter"
+        days_until = (next_open - current_date).days
+        return f"🔴 Window CLOSED — {next_name} opens in {days_until}d"
+
+
+# ── Loan System ─────────────────────────────────────────────────────────────
+
+@dataclass
+class LoanDeal:
+    """A player loan arrangement."""
+    id: int
+    player_id: int
+    player_name: str
+    from_club_id: int
+    from_club_name: str
+    to_club_id: int
+    to_club_name: str
+    start_date: str
+    end_date: str
+    wage_split: int        # percentage paid by borrowing club (0-100)
+    buy_option: int        # optional buy clause fee, 0 = no option
+    status: str            # "active", "completed", "cancelled"
+
+
+def create_loan_deal(conn: sqlite3.Connection, gs: GameState,
+                     player: Player, to_club_id: int,
+                     duration_months: int = 6,
+                     wage_split: int = 100,
+                     buy_option: int = 0,
+                     direction: str = "loan_out") -> LoanDeal | None:
+    """Create a new loan deal."""
+    from_club = queries.get_club(conn, player.club_id) if player.club_id else None
+    to_club = queries.get_club(conn, to_club_id)
+    if not from_club or not to_club:
+        return None
+
+    end_date = gs.current_date + timedelta(days=30 * duration_months)
+
+    conn.execute("""
+        INSERT INTO loan_deals
+        (player_id, player_name, from_club_id, from_club_name,
+         to_club_id, to_club_name, start_date, end_date,
+         wage_split, buy_option, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+    """, (
+        player.id, player.name,
+        player.club_id, from_club.name,
+        to_club_id, to_club.name,
+        gs.current_date.isoformat(), end_date.isoformat(),
+        wage_split, buy_option,
+    ))
+
+    # Move player temporarily
+    conn.execute("UPDATE players SET club_id = ? WHERE id = ?",
+                 (to_club_id, player.id))
+    conn.commit()
+
+    deal_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+    queries.insert_message(conn, InboxMessage(
+        date=gs.current_date,
+        subject=f"📋 Loan: {player.name} → {to_club.short_name}",
+        body=(f"{player.name} has joined {to_club.name} on loan until "
+              f"{end_date.strftime('%d %b %Y')}."
+              + (f"\nBuy option: {buy_option:,} EGP" if buy_option > 0 else "")),
+        category="transfer",
+    ))
+
+    return LoanDeal(
+        id=deal_id, player_id=player.id, player_name=player.name,
+        from_club_id=player.club_id or 0, from_club_name=from_club.name,
+        to_club_id=to_club_id, to_club_name=to_club.name,
+        start_date=gs.current_date.isoformat(), end_date=end_date.isoformat(),
+        wage_split=wage_split, buy_option=buy_option, status="active",
+    )
+
+
+def process_loan_returns(conn: sqlite3.Connection, gs: GameState) -> list[str]:
+    """Process any loan deals that have expired. Called daily from advance_day."""
+    messages: list[str] = []
+    today = gs.current_date.isoformat()
+
+    rows = conn.execute("""
+        SELECT * FROM loan_deals WHERE status = 'active' AND end_date <= ?
+    """, (today,)).fetchall()
+
+    for row in rows:
+        player_id = row["player_id"]
+        from_club_id = row["from_club_id"]
+        player_name = row["player_name"]
+        from_club_name = row["from_club_name"]
+
+        # Return player to parent club
+        conn.execute("UPDATE players SET club_id = ? WHERE id = ?",
+                     (from_club_id, player_id))
+        conn.execute("UPDATE loan_deals SET status = 'completed' WHERE id = ?",
+                     (row["id"],))
+
+        queries.insert_message(conn, InboxMessage(
+            date=gs.current_date,
+            subject=f"🔙 Loan Ended: {player_name}",
+            body=f"{player_name} has returned to {from_club_name} after their loan spell.",
+            category="transfer",
+        ))
+        messages.append(f"{player_name} returned from loan")
+
+    if rows:
+        conn.commit()
+    return messages
+
+
+def get_active_loans(conn: sqlite3.Connection, club_id: int) -> list[LoanDeal]:
+    """Get all active loans involving a club (as lender or borrower)."""
+    rows = conn.execute("""
+        SELECT * FROM loan_deals
+        WHERE status = 'active' AND (from_club_id = ? OR to_club_id = ?)
+        ORDER BY end_date ASC
+    """, (club_id, club_id)).fetchall()
+    return [_row_to_loan(r) for r in rows]
+
+
+def _row_to_loan(row) -> LoanDeal:
+    return LoanDeal(
+        id=row["id"], player_id=row["player_id"], player_name=row["player_name"],
+        from_club_id=row["from_club_id"], from_club_name=row["from_club_name"],
+        to_club_id=row["to_club_id"], to_club_name=row["to_club_name"],
+        start_date=row["start_date"], end_date=row["end_date"],
+        wage_split=row["wage_split"], buy_option=row["buy_option"],
+        status=row["status"],
+    )
 
 
 # ── Data classes ─────────────────────────────────────────────────────────────

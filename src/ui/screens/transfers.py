@@ -277,9 +277,19 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
         page.update()
 
     # ── Budget info ──────────────────────────────────────────────────
+    from src.core.transfers import get_window_status, is_transfer_window_open
+    window_status = get_window_status(gs.current_date)
+    window_open = is_transfer_window_open(gs.current_date)
+
     weekly_wage = sum(p.contract.wage_weekly for p in my_players)
     budget_bar = ft.Container(
         content=ft.Column(spacing=2, controls=[
+            ft.Container(
+                content=ft.Text(window_status, size=12,
+                                weight=ft.FontWeight.W_500,
+                                color=ft.Colors.GREEN_400 if window_open else ft.Colors.RED_400),
+                padding=ft.padding.symmetric(vertical=4),
+            ),
             ft.Row(
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
@@ -516,7 +526,13 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
 def _show_buy_dialog(page, conn, gs, user_club, player, estimated_value, shortlist=None):
     """Show dialog to submit a transfer offer (fee only — wage negotiated later)."""
     from src.ui.app import navigate, show_snackbar
-    from src.core.transfers import submit_transfer_offer
+    from src.core.transfers import submit_transfer_offer, is_transfer_window_open
+
+    # Check transfer window
+    if not is_transfer_window_open(gs.current_date):
+        show_snackbar(page, "❌ Transfer window is closed! Wait for the next window.",
+                      bgcolor=ft.Colors.RED_800)
+        return
 
     ovr = calculate_overall_rating(player)
     a = player.attributes

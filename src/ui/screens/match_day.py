@@ -112,6 +112,13 @@ def _build_match_preview(page, conn, gs, fixture):
     # Opponent form
     opp_form = _build_club_form(conn, opp_id)
 
+    # Head-to-head record
+    h2h = queries.get_head_to_head(conn, gs.user_club_id, opp_id)
+
+    # Transfer window status
+    from src.core.transfers import get_window_status
+    window_status = get_window_status(gs.current_date)
+
     def simulate_click(e):
         navigate(page, "/pre_match")
 
@@ -313,6 +320,31 @@ def _build_match_preview(page, conn, gs, fixture):
                                 ]),
                             ],
                         ),
+                        # Head-to-head record
+                        *(
+                            [ft.Container(
+                                content=ft.Row(
+                                    alignment=ft.MainAxisAlignment.CENTER, spacing=12,
+                                    controls=[
+                                        ft.Text("📊 H2H:", size=11, color=ft.Colors.GREY_400),
+                                        ft.Text(f"W{h2h['wins']}", size=11,
+                                                color=ft.Colors.GREEN_400, weight=ft.FontWeight.BOLD),
+                                        ft.Text(f"D{h2h['draws']}", size=11,
+                                                color=ft.Colors.YELLOW_400),
+                                        ft.Text(f"L{h2h['losses']}", size=11,
+                                                color=ft.Colors.RED_400),
+                                        ft.Text(f"({h2h['goals_for']}:{h2h['goals_against']})", size=10,
+                                                color=ft.Colors.GREY_500),
+                                    ],
+                                ),
+                                padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                                border_radius=6,
+                                bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+                            )] if h2h['total'] > 0 else []
+                        ),
+                        # Transfer window status
+                        ft.Text(window_status, size=10, color=ft.Colors.GREY_500,
+                                text_align=ft.TextAlign.CENTER),
                         ft.Container(height=5),
                         *action_controls,
                     ],

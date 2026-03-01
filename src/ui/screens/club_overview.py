@@ -78,6 +78,13 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
                  size=12, color=ft.Colors.GREY_400),
         ft.Divider(height=1),
 
+        # ── Dashboard: Next Match Card ───────────────
+        *_build_next_match_card(conn, gs, club),
+
+        # ── Mini League Table ────────────────────────
+        *_build_mini_table(conn, gs),
+        ft.Divider(height=1),
+
         # ── Board & Fans ─────────────────────────
         ft.Text("🏛️ Board & Fans", size=16, weight=ft.FontWeight.W_500),
         _card_row("Board Confidence", f"{confidence.value} ({club.board_confidence}%)", conf_color),
@@ -243,5 +250,157 @@ def _finance_row(label: str, value: str, color=None) -> ft.Row:
                      color=color or ft.Colors.WHITE),
         ],
     )
+
+
+def _build_next_match_card(conn, gs, club) -> list:
+    """Build a dashboard card for the next match."""
+    fixture = queries.get_user_next_fixture(conn, gs.user_club_id)
+    if not fixture:
+        return [ft.Text("No upcoming match", size=13, color=ft.Colors.GREY_500)]
+
+    is_home = fixture.home_club_id == gs.user_club_id
+    opp_name = fixture.away_club_name if is_home else fixture.home_club_name
+    venue = "🏟️ HOME" if is_home else "✈️ AWAY"
+    venue_color = ft.Colors.GREEN_400 if is_home else ft.Colors.ORANGE_400
+
+    days_until = (fixture.date - gs.current_date).days if fixture.date else 0
+    when = "TODAY!" if days_until <= 0 else f"in {days_until} day{'s' if days_until != 1 else ''}"
+
+    # Recent form
+    recent = queries.get_user_recent_fixtures(conn, gs.user_club_id, limit=5)
+    form_chips = []
+    for f in recent:
+        if not f.result:
+            continue
+        is_h = f.home_club_id == gs.user_club_id
+        ug = f.result.home_goals if is_h else f.result.away_goals
+        og = f.result.away_goals if is_h else f.result.home_goals
+        if ug > og:
+            form_chips.append(("W", ft.Colors.GREEN_400))
+        elif ug < og:
+            form_chips.append(("L", ft.Colors.RED_400))
+        else:
+            form_chips.append(("D", ft.Colors.YELLOW_400))
+
+    form_row = ft.Row(spacing=3, controls=[
+        ft.Container(
+            content=ft.Text(label, size=9, weight=ft.FontWeight.BOLD,
+                            color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER),
+            width=20, height=20, border_radius=10, bgcolor=color,
+            alignment=ft.Alignment(0, 0),
+        )
+        for label, color in form_chips
+    ]) if form_chips else ft.Text("—", size=10, color=ft.Colors.GREY_600)
+
+    return [
+        ft.Card(
+            content=ft.Container(
+                padding=15,
+                content=ft.Column(
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=6,
+                    controls=[
+                        ft.Text("⚽ Next Match", size=14, weight=ft.FontWeight.W_500,
+                                color=ft.Colors.AMBER_300),
+                        ft.Row(
+                            alignment=ft.MainAxisAlignment.CENTER, spacing=15,
+                            controls=[
+                                ft.Text(gs.user_club_name, size=14, weight=ft.FontWeight.BOLD,
+                                        width=100, text_align=ft.TextAlign.RIGHT),
+                                ft.Text("VS", size=16, weight=ft.FontWeight.BOLD,
+                                        color=ft.Colors.AMBER_400),
+                                ft.Text(opp_name, size=14, weight=ft.FontWeight.BOLD,
+                                        width=100, text_align=ft.TextAlign.LEFT),
+                            ],
+                        ),
+                        ft.Row(alignment=ft.MainAxisAlignment.CENTER, spacing=10, controls=[
+                            ft.Text(venue, size=11, color=venue_color, weight=ft.FontWeight.W_500),
+                            ft.Text(f"⏰ {when}", size=11, color=ft.Colors.GREY_400),
+                        ]),
+                        ft.Row(alignment=ft.MainAxisAlignment.CENTER, spacing=5, controls=[
+                            ft.Text("Form:", size=10, color=ft.Colors.GREY_500),
+                            form_row,
+                        ]),
+                    ],
+                ),
+            ),
+        ),
+    ]
+
+
+def _build_mini_table(conn, gs) -> list:
+    """Build a mini league table showing 3 above and 3 below user position."""
+    standings = queries.get_standings(conn)
+    if not standings:
+        return []
+
+    user_idx = -1
+    for i, s in enumerate(standings):
+        if s.club_id == gs.user_club_id:
+            user_idx = i
+            break
+
+    if user_idx < 0:
+        return []
+
+    # Show 3 above and 3 below
+    start = max(0, user_idx - 3)
+    end = min(len(standings), user_idx + 4)
+    visible = standings[start:end]
+
+    rows = []
+    for i, s in enumerate(visible, start + 1):
+        is_user = s.club_id == gs.user_club_id
+        bg = ft.Colors.with_opacity(0.15, ft.Colors.GREEN) if is_user else None
+        rows.append(
+            ft.Container(
+                content=ft.Row(
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    controls=[
+                        ft.Text(f"{i}.", size=11, width=22,
+                                weight=ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL),
+                        ft.Text(s.club_name[:14], size=11, expand=True,
+                                weight=ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL,
+                                color=ft.Colors.GREEN_300 if is_user else None),
+                        ft.Text(f"{s.played}", size=10, width=20, color=ft.Colors.GREY_500,
+                                text_align=ft.TextAlign.CENTER),
+                        ft.Text(f"{s.goal_difference:+d}", size=10, width=25,
+                                color=ft.Colors.GREEN_400 if s.goal_difference > 0
+                                else ft.Colors.RED_400 if s.goal_difference < 0
+                                else ft.Colors.GREY_500,
+                                text_align=ft.TextAlign.CENTER),
+                        ft.Text(f"{s.points}", size=11, width=25,
+                                weight=ft.FontWeight.BOLD,
+                                color=ft.Colors.AMBER_300 if is_user else None,
+                                text_align=ft.TextAlign.CENTER),
+                    ],
+                ),
+                padding=ft.padding.symmetric(horizontal=8, vertical=3),
+                bgcolor=bg,
+                border_radius=4,
+            )
+        )
+
+    return [
+        ft.Text("📊 League Position", size=14, weight=ft.FontWeight.W_500),
+        ft.Container(
+            content=ft.Column(spacing=1, controls=[
+                ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
+                    ft.Text("#", size=9, width=22, color=ft.Colors.GREY_600),
+                    ft.Text("Team", size=9, color=ft.Colors.GREY_600, expand=True),
+                    ft.Text("P", size=9, width=20, color=ft.Colors.GREY_600,
+                            text_align=ft.TextAlign.CENTER),
+                    ft.Text("GD", size=9, width=25, color=ft.Colors.GREY_600,
+                            text_align=ft.TextAlign.CENTER),
+                    ft.Text("Pts", size=9, width=25, color=ft.Colors.GREY_600,
+                            text_align=ft.TextAlign.CENTER),
+                ]),
+                *rows,
+            ]),
+            padding=ft.padding.symmetric(horizontal=4, vertical=4),
+            border_radius=6,
+            bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.WHITE),
+        ),
+    ]
 
 
