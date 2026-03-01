@@ -326,5 +326,6 @@ class MatchdayOutcome(BaseModel):
     position_before: int = 0    # league position before this matchday
     position_after: int = 0     # league position after this matchday
     attendance: int = 0         # match attendance
+    newly_unlocked: list[str] = Field(default_factory=list)  # achievement keys
 
 

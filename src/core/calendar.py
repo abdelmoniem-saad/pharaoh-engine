@@ -80,6 +80,16 @@ def advance_day(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
         if event_msg:
             queries.insert_message(conn, event_msg)
 
+    # Interactive random events (stored on app_state for UI to display)
+    from src.core.events import generate_daily_event
+    daily_event = generate_daily_event(conn, game_state)
+    if daily_event:
+        try:
+            from src.ui.app import app_state
+            app_state.pending_event = daily_event
+        except Exception:
+            pass
+
     # Check season completion
     if league.is_season_complete(conn):
         champion = league.get_champion(conn)
@@ -283,6 +293,17 @@ def simulate_user_match(conn: sqlite3.Connection,
     # Save updated club
     queries.update_club(conn, user_club)
 
+    # ── Career stats & achievements ──────────────────────────────────
+    from src.core.achievements import update_career_after_match, seed_achievements
+    seed_achievements(conn)  # Ensure tables exist for old saves
+    newly_unlocked = update_career_after_match(
+        conn, result_type, user_goals, opp_goals,
+        user_club.board_confidence, user_club.fan_happiness,
+        game_state.current_date,
+    )
+    # Store on the outcome so post-match screen can show toasts
+    # (we'll attach to the MatchdayOutcome later via app_state)
+
     # Decrement suspensions for user squad after matchday
     full_squad = queries.get_players_by_club(conn, game_state.user_club_id)
     for p in full_squad:
@@ -348,6 +369,7 @@ def simulate_user_match(conn: sqlite3.Connection,
         position_before=position_before,
         position_after=position_after,
         attendance=attendance,
+        newly_unlocked=newly_unlocked,
     )
 
 

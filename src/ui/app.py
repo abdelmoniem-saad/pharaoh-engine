@@ -22,6 +22,7 @@ class AppState:
     def __init__(self):
         self.db_conn: sqlite3.Connection | None = None
         self.game_state: GameState | None = None
+        self.pending_event = None  # Interactive random event awaiting player choice
 
 
 # Global state instance

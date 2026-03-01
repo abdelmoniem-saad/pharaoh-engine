@@ -254,6 +254,17 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
         navigate(page, "/table")
 
     # ── Build the screen ────────────────────────────────────────────
+    # Show achievement toasts
+    if outcome.newly_unlocked:
+        from src.core.achievements import get_achievements
+        all_achs = {a["key"]: a for a in get_achievements(conn)}
+        for key in outcome.newly_unlocked:
+            ach = all_achs.get(key)
+            if ach:
+                show_snackbar(page,
+                    f"{ach['icon']} Achievement: {ach['title']}!",
+                    bgcolor=ft.Colors.AMBER_800)
+
     sections = [
         # Header
         ft.Container(
@@ -349,6 +360,37 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
             *other_widgets,
             ft.Divider(height=1),
         ])
+
+    # Unlocked achievements
+    if outcome.newly_unlocked:
+        from src.core.achievements import get_achievements
+        all_achs = {a["key"]: a for a in get_achievements(conn)}
+        ach_widgets = []
+        for key in outcome.newly_unlocked:
+            ach = all_achs.get(key)
+            if ach:
+                ach_widgets.append(
+                    ft.Container(
+                        content=ft.Row(spacing=10, controls=[
+                            ft.Text(ach["icon"], size=24),
+                            ft.Column(spacing=0, expand=True, controls=[
+                                ft.Text(ach["title"], size=13, weight=ft.FontWeight.BOLD,
+                                        color=ft.Colors.AMBER_300),
+                                ft.Text(ach["description"], size=10, color=ft.Colors.GREY_400),
+                            ]),
+                        ]),
+                        padding=ft.padding.symmetric(horizontal=12, vertical=8),
+                        border_radius=8,
+                        bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.AMBER),
+                    )
+                )
+        if ach_widgets:
+            sections.extend([
+                ft.Text("🏆 Achievements Unlocked!", size=15, weight=ft.FontWeight.W_500,
+                         color=ft.Colors.AMBER_400),
+                *ach_widgets,
+                ft.Divider(height=1),
+            ])
 
     # Action buttons
     sections.extend([

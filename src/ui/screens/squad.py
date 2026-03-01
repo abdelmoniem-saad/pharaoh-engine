@@ -179,6 +179,9 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                             ],
                         ),
 
+                        # ── Career Stats Bar ──────────────────────────
+                        *_build_career_bar(conn, page),
+
                         # ── Form strip ──────────────────────────────────
                         ft.Container(
                             content=ft.Row(
@@ -920,3 +923,132 @@ def _show_compare_dialog(page, p1, p2):
     page.show_dialog(dlg)
 
 
+def _build_career_bar(conn, page) -> list:
+    """Build the career stats strip + achievements button."""
+    from src.core.achievements import load_career, get_achievements, seed_achievements
+    try:
+        seed_achievements(conn)  # Ensure tables exist
+        career = load_career(conn)
+    except Exception:
+        return []
+
+    total = career["total_wins"] + career["total_draws"] + career["total_losses"]
+    if total == 0:
+        return []  # No matches played yet
+
+    win_pct = career["total_wins"] / total * 100
+
+    # Count unlocked achievements
+    achs = get_achievements(conn)
+    unlocked_count = sum(1 for a in achs if a["unlocked"])
+    total_achs = len(achs)
+
+    rating_color = (
+        ft.Colors.GREEN_400 if career["manager_rating"] >= 65
+        else ft.Colors.AMBER_300 if career["manager_rating"] >= 45
+        else ft.Colors.RED_400
+    )
+
+    def show_achievements(e):
+        _show_achievements_dialog(page, conn)
+
+    career_row = ft.Container(
+        content=ft.Column(spacing=4, controls=[
+            ft.Row(
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                controls=[
+                    ft.Text("📊 Manager Career", size=12, weight=ft.FontWeight.W_500,
+                            color=ft.Colors.AMBER_300),
+                    ft.Container(
+                        content=ft.Text(f"⭐ {career['manager_rating']:.0f}",
+                                        size=12, weight=ft.FontWeight.BOLD,
+                                        color=rating_color),
+                        padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                        border_radius=6,
+                        bgcolor=ft.Colors.with_opacity(0.1, rating_color),
+                    ),
+                ],
+            ),
+            ft.Row(
+                spacing=0,
+                controls=[
+                    ft.Text(f"W{career['total_wins']}", size=11,
+                            color=ft.Colors.GREEN_400, weight=ft.FontWeight.BOLD, width=40),
+                    ft.Text(f"D{career['total_draws']}", size=11,
+                            color=ft.Colors.YELLOW_400, width=30),
+                    ft.Text(f"L{career['total_losses']}", size=11,
+                            color=ft.Colors.RED_400, width=30),
+                    ft.Text(f"{win_pct:.0f}%", size=11, color=ft.Colors.GREY_400, width=35),
+                    ft.Container(expand=True),
+                    ft.Text(f"🔥{career['longest_win_streak']}", size=10,
+                            color=ft.Colors.GREY_500, width=30),
+                    ft.Text(f"🧤{career['clean_sheets']}", size=10,
+                            color=ft.Colors.GREY_500, width=30),
+                    ft.Text(f"⚽{career['total_goals_scored']}", size=10,
+                            color=ft.Colors.GREY_500, width=35),
+                ],
+            ),
+            ft.Row(
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                controls=[
+                    ft.Text(f"🏆 {unlocked_count}/{total_achs} achievements", size=10,
+                            color=ft.Colors.GREY_500),
+                    ft.TextButton("View All →", on_click=show_achievements,
+                                   style=ft.ButtonStyle(
+                                       text_style=ft.TextStyle(size=10))),
+                ],
+            ),
+        ]),
+        padding=ft.padding.symmetric(horizontal=10, vertical=8),
+        border_radius=8,
+        bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+    )
+    return [career_row]
+
+
+def _show_achievements_dialog(page, conn):
+    """Show all achievements in a dialog."""
+    from src.core.achievements import get_achievements
+    achs = get_achievements(conn)
+
+    rows = []
+    for a in achs:
+        if a["unlocked"]:
+            rows.append(ft.Container(
+                content=ft.Row(spacing=8, controls=[
+                    ft.Text(a["icon"], size=22),
+                    ft.Column(spacing=0, expand=True, controls=[
+                        ft.Text(a["title"], size=12, weight=ft.FontWeight.BOLD,
+                                color=ft.Colors.AMBER_300),
+                        ft.Text(a["description"], size=10, color=ft.Colors.GREY_400),
+                    ]),
+                    ft.Text(a["unlock_date"][:10] if a["unlock_date"] else "",
+                            size=9, color=ft.Colors.GREY_600),
+                ]),
+                padding=ft.padding.symmetric(horizontal=8, vertical=6),
+                border_radius=6,
+                bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.AMBER),
+            ))
+        else:
+            rows.append(ft.Container(
+                content=ft.Row(spacing=8, controls=[
+                    ft.Text("🔒", size=18, color=ft.Colors.GREY_700),
+                    ft.Column(spacing=0, expand=True, controls=[
+                        ft.Text(a["title"], size=12, color=ft.Colors.GREY_600),
+                        ft.Text(a["description"], size=10, color=ft.Colors.GREY_700),
+                    ]),
+                ]),
+                padding=ft.padding.symmetric(horizontal=8, vertical=6),
+                border_radius=6,
+                bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.WHITE),
+            ))
+
+    dlg = ft.AlertDialog(
+        title=ft.Text("🏆 Achievements", size=16, weight=ft.FontWeight.BOLD),
+        content=ft.Container(
+            content=ft.Column(spacing=4, controls=rows, scroll=ft.ScrollMode.AUTO),
+            width=300, height=400,
+        ),
+        actions=[ft.TextButton("Close", on_click=lambda e: page.pop_dialog())],
+    )
+    page.show_dialog(dlg)

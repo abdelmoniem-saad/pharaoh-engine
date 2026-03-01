@@ -34,6 +34,10 @@ def connect(save_name: str = "default") -> sqlite3.Connection:
     _db_connection.row_factory = sqlite3.Row
     _db_connection.execute("PRAGMA journal_mode=WAL")
     _db_connection.execute("PRAGMA foreign_keys=ON")
+
+    # Always run migrations so existing saves get new tables/columns
+    _migrate_schema(_db_connection)
+
     return _db_connection
 
 
@@ -299,6 +303,34 @@ CREATE TABLE IF NOT EXISTS head_to_head (
     club_b_goals INTEGER NOT NULL DEFAULT 0,
     UNIQUE(club_a_id, club_b_id)
 );
+
+CREATE TABLE IF NOT EXISTS manager_career (
+    id INTEGER PRIMARY KEY DEFAULT 1,
+    total_wins INTEGER NOT NULL DEFAULT 0,
+    total_draws INTEGER NOT NULL DEFAULT 0,
+    total_losses INTEGER NOT NULL DEFAULT 0,
+    trophies INTEGER NOT NULL DEFAULT 0,
+    longest_win_streak INTEGER NOT NULL DEFAULT 0,
+    current_win_streak INTEGER NOT NULL DEFAULT 0,
+    current_unbeaten INTEGER NOT NULL DEFAULT 0,
+    longest_unbeaten INTEGER NOT NULL DEFAULT 0,
+    clean_sheets INTEGER NOT NULL DEFAULT 0,
+    total_goals_scored INTEGER NOT NULL DEFAULT 0,
+    total_goals_conceded INTEGER NOT NULL DEFAULT 0,
+    best_signing_name TEXT NOT NULL DEFAULT '',
+    best_signing_fee INTEGER NOT NULL DEFAULT 0,
+    manager_rating REAL NOT NULL DEFAULT 50.0
+);
+
+CREATE TABLE IF NOT EXISTS achievements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    icon TEXT NOT NULL DEFAULT '🏆',
+    unlocked INTEGER NOT NULL DEFAULT 0,
+    unlock_date TEXT NOT NULL DEFAULT ''
+);
 """
 
 
@@ -358,6 +390,32 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
             club_a_goals INTEGER NOT NULL DEFAULT 0,
             club_b_goals INTEGER NOT NULL DEFAULT 0,
             UNIQUE(club_a_id, club_b_id)
+        )""",
+        """CREATE TABLE IF NOT EXISTS manager_career (
+            id INTEGER PRIMARY KEY DEFAULT 1,
+            total_wins INTEGER NOT NULL DEFAULT 0,
+            total_draws INTEGER NOT NULL DEFAULT 0,
+            total_losses INTEGER NOT NULL DEFAULT 0,
+            trophies INTEGER NOT NULL DEFAULT 0,
+            longest_win_streak INTEGER NOT NULL DEFAULT 0,
+            current_win_streak INTEGER NOT NULL DEFAULT 0,
+            current_unbeaten INTEGER NOT NULL DEFAULT 0,
+            longest_unbeaten INTEGER NOT NULL DEFAULT 0,
+            clean_sheets INTEGER NOT NULL DEFAULT 0,
+            total_goals_scored INTEGER NOT NULL DEFAULT 0,
+            total_goals_conceded INTEGER NOT NULL DEFAULT 0,
+            best_signing_name TEXT NOT NULL DEFAULT '',
+            best_signing_fee INTEGER NOT NULL DEFAULT 0,
+            manager_rating REAL NOT NULL DEFAULT 50.0
+        )""",
+        """CREATE TABLE IF NOT EXISTS achievements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT NOT NULL UNIQUE,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            icon TEXT NOT NULL DEFAULT '🏆',
+            unlocked INTEGER NOT NULL DEFAULT 0,
+            unlock_date TEXT NOT NULL DEFAULT ''
         )""",
     ]
     for sql in new_tables:

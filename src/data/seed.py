@@ -375,6 +375,10 @@ def seed_database(conn: sqlite3.Connection, game_seed: int = 42) -> GameState:
         is_read=False,
     ))
 
+    # 6. Seed achievements & career tracking
+    from src.core.achievements import seed_achievements
+    seed_achievements(conn)
+
     return game_state
 
 

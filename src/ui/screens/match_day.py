@@ -49,6 +49,11 @@ def build_match_day_screen(page: ft.Page) -> ft.Column:
     conn = app_state.db_conn
     gs = app_state.game_state
 
+    # ── Show pending interactive event if any ────────────────────────
+    if hasattr(app_state, 'pending_event') and app_state.pending_event is not None:
+        _show_event_dialog(page, app_state.pending_event)
+        app_state.pending_event = None
+
     # Check if season is complete
     if is_season_complete(conn):
         champ = get_champion(conn)
@@ -306,6 +311,36 @@ def _build_match_preview(page, conn, gs, fixture):
                                 text_align=ft.TextAlign.CENTER),
                         ft.Container(height=5),
                         *action_controls,
+                        ft.Container(height=10),
+
+                        # ── Quick Actions ────────────────────────────
+                        ft.Row(
+                            alignment=ft.MainAxisAlignment.CENTER,
+                            spacing=6, wrap=True,
+                            controls=[
+                                ft.OutlinedButton("📋 Tactics", height=36,
+                                                   on_click=lambda e: navigate(page, "/tactics")),
+                                ft.OutlinedButton("💰 Transfers", height=36,
+                                                   on_click=lambda e: navigate(page, "/transfers")),
+                                ft.OutlinedButton("🏟️ Club", height=36,
+                                                   on_click=lambda e: navigate(page, "/club")),
+                                *(
+                                    [ft.OutlinedButton(
+                                        f"🏥 {injured_count + suspended_count}",
+                                        height=36,
+                                        style=ft.ButtonStyle(color=ft.Colors.RED_400),
+                                        on_click=lambda e: _show_availability_dialog(page, user_squad),
+                                    )] if (injured_count + suspended_count) > 0 else []
+                                ),
+                            ],
+                        ),
+
+                        # ── Mini League Table ────────────────────────
+                        *_build_mini_table(conn, gs.user_club_id),
+                        ft.Container(height=5),
+
+                        # ── Matchday Fixture List ────────────────────
+                        *_build_matchday_fixtures(conn, fixture, gs.user_club_id),
                     ],
                 ),
             ),
@@ -756,3 +791,271 @@ def _show_result_dialog(page, outcome):
         ],
     )
     page.show_dialog(dlg)
+
+
+def _show_event_dialog(page, event):
+    """Show an interactive event dialog with choices."""
+    from src.ui.app import app_state, show_snackbar
+    from src.core.events import apply_event_choice
+
+    choice_buttons = []
+    for i, choice in enumerate(event.choices):
+        def make_handler(idx=i):
+            def handler(e):
+                conn = app_state.db_conn
+                gs = app_state.game_state
+                if conn and gs:
+                    response = apply_event_choice(conn, gs, event, idx)
+                    show_snackbar(page, response[:80], bgcolor=ft.Colors.AMBER_800)
+                page.pop_dialog()
+            return handler
+
+        # Show effect hints
+        hints = []
+        if choice.board_delta > 0:
+            hints.append(f"👔+{choice.board_delta}")
+        elif choice.board_delta < 0:
+            hints.append(f"👔{choice.board_delta}")
+        if choice.fan_delta > 0:
+            hints.append(f"👥+{choice.fan_delta}")
+        elif choice.fan_delta < 0:
+            hints.append(f"👥{choice.fan_delta}")
+        if choice.finance_delta > 0:
+            hints.append(f"💰+{choice.finance_delta:,}")
+        elif choice.finance_delta < 0:
+            hints.append(f"💰{choice.finance_delta:,}")
+        if choice.morale_delta > 0:
+            hints.append(f"😊+{choice.morale_delta}")
+        elif choice.morale_delta < 0:
+            hints.append(f"😊{choice.morale_delta}")
+        hint_text = "  ".join(hints) if hints else ""
+
+        choice_buttons.append(
+            ft.Container(
+                content=ft.Column(spacing=2, controls=[
+                    ft.Text(choice.text, size=13, weight=ft.FontWeight.W_500),
+                    ft.Text(hint_text, size=9, color=ft.Colors.GREY_500) if hint_text else ft.Container(),
+                ]),
+                padding=ft.padding.symmetric(horizontal=12, vertical=12),
+                border_radius=8,
+                bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
+                on_click=make_handler(),
+                ink=True,
+            )
+        )
+
+    dlg = ft.AlertDialog(
+        title=ft.Text(event.title, size=16, weight=ft.FontWeight.BOLD),
+        content=ft.Container(
+            content=ft.Column(spacing=8, controls=[
+                ft.Container(
+                    content=ft.Text(event.body, size=13),
+                    padding=10,
+                    border_radius=6,
+                    bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.BLUE),
+                ),
+                ft.Text("Choose your response:", size=12, color=ft.Colors.GREY_400),
+                *choice_buttons,
+            ]),
+            width=300, height=min(320, 100 + len(event.choices) * 65),
+        ),
+    )
+    page.show_dialog(dlg)
+
+
+def _build_mini_table(conn, user_club_id) -> list:
+    """Build a mini 5-row league table centered on the user's position."""
+    standings = queries.get_standings(conn)
+    if not standings:
+        return []
+
+    user_idx = -1
+    for i, s in enumerate(standings):
+        if s.club_id == user_club_id:
+            user_idx = i
+            break
+
+    if user_idx < 0:
+        return []
+
+    # Show 2 above and 2 below (clamped to bounds)
+    start = max(0, user_idx - 2)
+    end = min(len(standings), user_idx + 3)
+    subset = standings[start:end]
+
+    rows = []
+    for i, s in enumerate(subset):
+        pos = start + i + 1
+        is_user = s.club_id == user_club_id
+        bg = ft.Colors.with_opacity(0.15, ft.Colors.AMBER) if is_user else None
+        weight = ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL
+        rows.append(
+            ft.Container(
+                content=ft.Row(
+                    spacing=0,
+                    controls=[
+                        ft.Text(str(pos), size=11, width=22, weight=weight,
+                                text_align=ft.TextAlign.CENTER),
+                        ft.Text(s.club_name, size=11, expand=True, weight=weight,
+                                max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                        ft.Text(str(s.played), size=10, width=20, color=ft.Colors.GREY_500,
+                                text_align=ft.TextAlign.CENTER),
+                        ft.Text(f"{s.goal_difference:+d}", size=10, width=28,
+                                color=ft.Colors.GREY_400, text_align=ft.TextAlign.CENTER),
+                        ft.Text(str(s.points), size=11, width=26, weight=ft.FontWeight.BOLD,
+                                text_align=ft.TextAlign.CENTER,
+                                color=ft.Colors.AMBER_300 if is_user else ft.Colors.WHITE),
+                    ],
+                ),
+                padding=ft.padding.symmetric(horizontal=6, vertical=4),
+                border_radius=4,
+                bgcolor=bg,
+            )
+        )
+
+    return [
+        ft.Container(height=4),
+        ft.Container(
+            content=ft.Column(spacing=0, controls=[
+                ft.Container(
+                    content=ft.Row(spacing=0, controls=[
+                        ft.Text("", width=22),
+                        ft.Text("📊 League Table", size=12, weight=ft.FontWeight.W_500,
+                                expand=True, color=ft.Colors.AMBER_300),
+                        ft.Text("P", size=9, width=20, color=ft.Colors.GREY_600,
+                                text_align=ft.TextAlign.CENTER),
+                        ft.Text("GD", size=9, width=28, color=ft.Colors.GREY_600,
+                                text_align=ft.TextAlign.CENTER),
+                        ft.Text("Pts", size=9, width=26, color=ft.Colors.GREY_600,
+                                text_align=ft.TextAlign.CENTER),
+                    ]),
+                    padding=ft.padding.only(left=6, right=6, bottom=2),
+                ),
+                *rows,
+                ft.Container(
+                    content=ft.Text("Tap Table tab for full standings", size=9,
+                                     color=ft.Colors.GREY_600, text_align=ft.TextAlign.CENTER,
+                                     italic=True),
+                    padding=ft.padding.only(top=4),
+                ),
+            ]),
+            padding=ft.padding.symmetric(vertical=6, horizontal=4),
+            border_radius=8,
+            bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
+        ),
+    ]
+
+
+def _build_matchday_fixtures(conn, current_fixture, user_club_id) -> list:
+    """Build a list of all fixtures for the current matchday."""
+    all_fixtures = queries.get_fixtures_by_matchday(conn, current_fixture.matchday)
+    if not all_fixtures or len(all_fixtures) <= 1:
+        return []
+
+    fixture_rows = []
+    for f in all_fixtures:
+        is_user = (f.home_club_id == user_club_id or f.away_club_id == user_club_id)
+        bg = ft.Colors.with_opacity(0.12, ft.Colors.AMBER) if is_user else None
+        weight = ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL
+
+        if f.played and f.result:
+            score_text = f"{f.result.home_goals}-{f.result.away_goals}"
+            score_color = ft.Colors.WHITE
+        else:
+            score_text = "vs"
+            score_color = ft.Colors.GREY_500
+
+        fixture_rows.append(
+            ft.Container(
+                content=ft.Row(
+                    alignment=ft.MainAxisAlignment.CENTER, spacing=4,
+                    controls=[
+                        ft.Text(f.home_club_name, size=11, weight=weight,
+                                text_align=ft.TextAlign.RIGHT, expand=True,
+                                max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                        ft.Container(
+                            content=ft.Text(score_text, size=11, weight=ft.FontWeight.BOLD,
+                                            color=score_color),
+                            width=36, alignment=ft.Alignment(0, 0),
+                            bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.WHITE),
+                            border_radius=4,
+                            padding=ft.padding.symmetric(vertical=2),
+                        ),
+                        ft.Text(f.away_club_name, size=11, weight=weight,
+                                text_align=ft.TextAlign.LEFT, expand=True,
+                                max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                    ],
+                ),
+                padding=ft.padding.symmetric(horizontal=6, vertical=3),
+                border_radius=4,
+                bgcolor=bg,
+            )
+        )
+
+    return [
+        ft.Container(
+            content=ft.Column(spacing=0, controls=[
+                ft.Text(f"📋 Matchday {current_fixture.matchday} Fixtures",
+                         size=12, weight=ft.FontWeight.W_500, color=ft.Colors.AMBER_300),
+                ft.Container(height=4),
+                *fixture_rows,
+            ]),
+            padding=ft.padding.symmetric(vertical=6, horizontal=4),
+            border_radius=8,
+            bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
+        ),
+    ]
+
+
+def _show_availability_dialog(page, squad):
+    """Show a dialog listing all injured and suspended players."""
+    injured = [p for p in squad if p.injury_days_remaining > 0]
+    suspended = [p for p in squad if p.suspension_matches > 0]
+
+    rows = []
+    if injured:
+        rows.append(ft.Text("🏥 Injured", size=14, weight=ft.FontWeight.W_500,
+                             color=ft.Colors.RED_400))
+        for p in injured:
+            rows.append(ft.Container(
+                content=ft.Row(spacing=8, controls=[
+                    ft.Text(p.position.value, size=10, color=ft.Colors.AMBER_300, width=28),
+                    ft.Text(p.name, size=12, expand=True),
+                    ft.Column(spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END, controls=[
+                        ft.Text(p.injury_type or "Injury", size=10, color=ft.Colors.RED_300),
+                        ft.Text(f"{p.injury_days_remaining}d remaining", size=9,
+                                color=ft.Colors.GREY_500),
+                    ]),
+                ]),
+                padding=ft.padding.symmetric(horizontal=6, vertical=4),
+            ))
+        rows.append(ft.Divider(height=1))
+
+    if suspended:
+        rows.append(ft.Text("🚫 Suspended", size=14, weight=ft.FontWeight.W_500,
+                             color=ft.Colors.ORANGE_400))
+        for p in suspended:
+            rows.append(ft.Container(
+                content=ft.Row(spacing=8, controls=[
+                    ft.Text(p.position.value, size=10, color=ft.Colors.AMBER_300, width=28),
+                    ft.Text(p.name, size=12, expand=True),
+                    ft.Text(f"{p.suspension_matches} match(es)", size=10,
+                            color=ft.Colors.ORANGE_300),
+                ]),
+                padding=ft.padding.symmetric(horizontal=6, vertical=4),
+            ))
+
+    if not rows:
+        rows.append(ft.Text("All players available! ✅", size=13, color=ft.Colors.GREEN_400))
+
+    dlg = ft.AlertDialog(
+        title=ft.Text("🏥 Squad Availability", size=16, weight=ft.FontWeight.BOLD),
+        content=ft.Container(
+            content=ft.Column(spacing=4, controls=rows, scroll=ft.ScrollMode.AUTO),
+            width=290, height=300,
+        ),
+        actions=[ft.TextButton("Close", on_click=lambda e: page.pop_dialog())],
+    )
+    page.show_dialog(dlg)
+
+

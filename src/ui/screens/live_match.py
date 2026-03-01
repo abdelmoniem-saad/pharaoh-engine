@@ -128,7 +128,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         if subs_remaining[0] <= 0 or sub_pending[0]:
             return
         sub_pending[0] = True
-        _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made, sub_pending, subs_btn)
+        _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made, sub_pending, subs_btn, minute_text)
 
     skip_btn.on_click = on_skip
     continue_btn.on_click = on_continue
@@ -292,6 +292,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         status_text.value = "🏁 Full Time"
         status_text.color = ft.Colors.AMBER_300
         skip_btn.visible = False
+        subs_btn.visible = False          # ← hide subs at full time
         continue_btn.visible = True
 
         if skip_flag[0]:
@@ -423,7 +424,7 @@ def _show_halftime_talk(page: ft.Page, event_list, halftime_choice):
 
 
 def _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made,
-                      sub_pending, subs_btn):
+                      sub_pending, subs_btn, minute_text):
     """Show a substitution selection dialog — pick a starter to take OFF, then a bench player ON."""
     from src.ui.app import app_state
     from src.core.player import calculate_overall_rating
@@ -519,11 +520,48 @@ def _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made,
         off_p = selected_off[0]
         on_p = selected_on[0]
         subs_remaining[0] -= 1
-        subs_made.append((off_p.name, on_p.name, ""))
+
+        # ── Make the substitution count: update player stats ─────
+        # Estimate current match minute from the simulation progress
+        try:
+            current_min = int(float(minute_text.value.replace("'", "").replace("FT", "90")))
+        except (ValueError, AttributeError):
+            current_min = 60
+
+        subs_made.append((off_p.name, on_p.name, str(current_min)))
+
+        # Reload fresh player data from DB to avoid stale state
+        off_fresh = queries.get_player(conn, off_p.id)
+        on_fresh = queries.get_player(conn, on_p.id)
+
+        if off_fresh:
+            # Subbed-off player: reduce minutes (they played ~current_min, not full 90)
+            # The match engine credited them 90 mins — subtract the difference
+            mins_not_played = max(0, 90 - current_min)
+            off_fresh.season_stats.minutes_played = max(0,
+                off_fresh.season_stats.minutes_played - mins_not_played)
+            # Small fitness recovery (they rested the last part)
+            off_fresh.fitness = min(100, off_fresh.fitness + 3)
+            queries.update_player_stats(conn, off_fresh)
+
+        if on_fresh:
+            # Subbed-on player: gets partial minutes played
+            mins_played = max(0, 90 - current_min)
+            on_fresh.season_stats.minutes_played += mins_played
+            on_fresh.season_stats.appearances += 1
+            # Morale boost from getting on the pitch
+            on_fresh.morale = min(100, on_fresh.morale + 3)
+            # Reset benched streak — they got game time
+            on_fresh.matches_benched_streak = 0
+            # Small fitness cost for playing
+            on_fresh.fitness = max(0, on_fresh.fitness - (mins_played // 10))
+            queries.update_player_stats(conn, on_fresh)
 
         # Add substitution event to the event feed
         event_list.controls.append(ft.Container(
             content=ft.Row(spacing=6, controls=[
+                ft.Text(f"{current_min}'", size=11, color=ft.Colors.GREY_500,
+                         width=30, text_align=ft.TextAlign.RIGHT),
                 ft.Text("🔄", size=14),
                 ft.Text(f"{off_p.name} ⬇️  {on_p.name} ⬆️",
                          size=12, color=ft.Colors.CYAN_300, weight=ft.FontWeight.W_500,
