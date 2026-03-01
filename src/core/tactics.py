@@ -227,24 +227,25 @@ def calculate_team_strength(players: list[Player], tactics: TeamTactics) -> dict
     defense *= mentality_defense_mod.get(tactics.mentality, 1.0)
 
     # ── Tactical slider modifiers ────────────────────────────────────
-    # pressing_intensity (1-10): high pressing boosts midfield but costs stamina
+    # pressing_intensity (1-10): high pressing boosts midfield but costs defense
     press = getattr(tactics, "pressing_intensity", 5)
-    midfield *= 0.9 + press * 0.02          # 0.92 .. 1.10
-    defense *= 1.05 - press * 0.01          # 1.04 .. 0.95 (high press = riskier)
+    midfield *= 0.85 + press * 0.03           # 0.88 .. 1.15  (big midfield swing)
+    defense *= 1.10 - press * 0.02            # 1.08 .. 0.90  (high press = risky)
 
-    # tempo (1-10): high tempo = more chances but less accuracy
-    # (applied in match_engine's action_chance; here we nudge midfield control)
+    # tempo (1-10): high tempo = more chances created but midfield control drops
     tempo = getattr(tactics, "tempo", 5)
-    midfield *= 1.05 - abs(tempo - 5) * 0.01  # optimal at 5, slight penalty at extremes
+    midfield *= 1.08 - abs(tempo - 5) * 0.02  # 1.08 at 5, 0.98 at extremes
+    attack *= 0.95 + tempo * 0.01              # 0.96 .. 1.05 (faster = more attack)
 
-    # width (1-10): wide play boosts attack via crossing; narrow boosts central play
+    # width (1-10): wide play boosts crossing/attack; narrow boosts central/midfield
     width = getattr(tactics, "width", 5)
-    attack *= 0.95 + width * 0.01            # 0.96 .. 1.05
+    attack *= 0.90 + width * 0.02              # 0.92 .. 1.10  (wide = more attack)
+    midfield *= 1.10 - width * 0.02            # 1.08 .. 0.90  (wide = less midfield control)
 
     # defensive_line (1-10): high line compresses midfield; low line protects defense
     def_line = getattr(tactics, "defensive_line", 5)
-    defense *= 1.05 - def_line * 0.01       # 1.04 .. 0.95
-    midfield *= 0.95 + def_line * 0.01      # 0.96 .. 1.05
+    defense *= 1.10 - def_line * 0.02          # 1.08 .. 0.90 (high line = riskier)
+    midfield *= 0.90 + def_line * 0.02         # 0.92 .. 1.10 (high line = more midfield)
 
     return {
         "attack": round(attack, 2),

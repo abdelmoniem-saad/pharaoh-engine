@@ -55,6 +55,8 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
     app_state._last_outcome = outcome
 
     result = outcome.user_result
+    conn = app_state.db_conn
+    gs = app_state.game_state
 
     # ── Pre-index events by minute ───────────────────────────────────
     events_by_minute: dict[int, list] = {}
@@ -122,6 +124,8 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         skip_flag[0] = True
 
     def on_continue(e):
+        # ── Apply halftime team talk effects to player morale ────────
+        _apply_team_talk(conn, gs, halftime_choice[0], result)
         navigate(page, "/post_match")
 
     def on_subs(e):
@@ -613,3 +617,60 @@ def _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made,
     page.show_dialog(dlg)
 
 
+def _apply_team_talk(conn, gs, talk_choice, result):
+    """
+    Apply halftime team talk effects to player morale.
+
+    The effect depends on the talk type AND the match result:
+    - "Encourage" after a win = big morale boost
+    - "Criticize" after a loss = risk of morale drop or motivating
+    - "Demand More" when winning = small boost
+    - "Stay Calm" = safe neutral option
+    """
+    if not conn or not gs or not talk_choice:
+        return
+
+    from src.utils.rng import clamp
+
+    is_home = result.home_club_id == gs.user_club_id
+    user_goals = result.home_goals if is_home else result.away_goals
+    opp_goals = result.away_goals if is_home else result.home_goals
+
+    if user_goals > opp_goals:
+        match_context = "winning"
+    elif user_goals < opp_goals:
+        match_context = "losing"
+    else:
+        match_context = "drawing"
+
+    # Define morale deltas per talk × context
+    effects = {
+        ("Encourage", "winning"):  5,
+        ("Encourage", "drawing"):  3,
+        ("Encourage", "losing"):   2,
+        ("Demand More", "winning"):  2,
+        ("Demand More", "drawing"):  1,
+        ("Demand More", "losing"):  -1,  # already losing, demanding more hurts morale
+        ("Stay Calm", "winning"):  1,
+        ("Stay Calm", "drawing"):  1,
+        ("Stay Calm", "losing"):   0,
+        ("Criticize", "winning"):  -1,  # why criticize when winning?
+        ("Criticize", "drawing"):  1,   # fair criticism
+        ("Criticize", "losing"):  -2,   # piling on = bad for morale
+    }
+
+    morale_delta = effects.get((talk_choice, match_context), 0)
+
+    # Apply to all user squad players
+    squad = queries.get_players_by_club(conn, gs.user_club_id)
+    for p in squad:
+        # Players with high composure respond better to criticism
+        if talk_choice == "Criticize" and p.attributes.composure >= 14:
+            adj_delta = morale_delta + 2  # tough players are motivated by it
+        elif talk_choice == "Encourage" and p.age <= 21:
+            adj_delta = morale_delta + 1  # young players respond well to encouragement
+        else:
+            adj_delta = morale_delta
+
+        p.morale = int(clamp(p.morale + adj_delta, 0, 100))
+        queries.update_player_stats(conn, p)

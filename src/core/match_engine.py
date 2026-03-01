@@ -30,26 +30,63 @@ def simulate_match(
     """
     Simulate a full match between two teams.
 
-    Returns a MatchResult with score, events, and statistics.
+    Every tactical decision matters:
+    - Formation & position suitability drive team strength
+    - Mentality shifts attack/defense balance
+    - Pressing increases fouls but boosts midfield
+    - High tempo = more chances but more turnovers
+    - Fan happiness scales home advantage
+    - Stamina → fatigue penalty in 2nd half
+    - Red cards remove players from the XI
+    - Training focus gives small match bonuses
     """
     # Build player lookup maps
     home_players = {p.id: p for p in home_squad}
     away_players = {p.id: p for p in away_squad}
 
+    # Mutable XIs (red cards will remove players)
+    home_active_xi = list(home_tactics.starting_xi)
+    away_active_xi = list(away_tactics.starting_xi)
+
     # Calculate team strengths
     home_strength = calculate_team_strength(home_squad, home_tactics)
     away_strength = calculate_team_strength(away_squad, away_tactics)
 
-    # Apply home advantage
-    home_attack = home_strength["attack"] * HOME_ADVANTAGE_BONUS
-    home_midfield = home_strength["midfield"] * HOME_ADVANTAGE_BONUS
-    home_defense = home_strength["defense"] * HOME_ADVANTAGE_BONUS
-    home_gk = home_strength["goalkeeper"] * HOME_ADVANTAGE_BONUS
+    # ── Home advantage scales with fan happiness ─────────────────────
+    # Base HOME_ADVANTAGE_BONUS is ~1.05; fan happiness adds up to +0.05 more
+    fan_bonus = 1.0
+    if home_club.fan_happiness >= 70:
+        fan_bonus = HOME_ADVANTAGE_BONUS + 0.03      # electric crowd
+    elif home_club.fan_happiness >= 40:
+        fan_bonus = HOME_ADVANTAGE_BONUS              # normal
+    elif home_club.fan_happiness >= 20:
+        fan_bonus = HOME_ADVANTAGE_BONUS - 0.02       # unhappy crowd
+    else:
+        fan_bonus = 1.0                               # furious fans = no home advantage
+
+    home_attack = home_strength["attack"] * fan_bonus
+    home_midfield = home_strength["midfield"] * fan_bonus
+    home_defense = home_strength["defense"] * fan_bonus
+    home_gk = home_strength["goalkeeper"] * fan_bonus
 
     away_attack = away_strength["attack"]
     away_midfield = away_strength["midfield"]
     away_defense = away_strength["defense"]
     away_gk = away_strength["goalkeeper"]
+
+    # ── Training focus micro-bonuses ──────────────────────────────────
+    # Players with a training focus get a small bump in the relevant area
+    _training_bonus_attack = 0.0
+    _training_bonus_defense = 0.0
+    for pid in home_tactics.starting_xi:
+        p = home_players.get(pid)
+        if p and p.training_focus:
+            if p.training_focus in ("Finishing", "Dribbling", "Crossing"):
+                _training_bonus_attack += 0.15
+            elif p.training_focus in ("Tackling", "Marking", "Positioning"):
+                _training_bonus_defense += 0.15
+    home_attack += _training_bonus_attack
+    home_defense += _training_bonus_defense
 
     # Initialize
     home_goals = 0
@@ -87,6 +124,14 @@ def simulate_match(
     first_half_added = rng.randint(1, 4)
     second_half_added = rng.randint(1, 7)
 
+    # ── Pre-compute average stamina for fatigue calculation ──────────
+    def _avg_stamina(player_map, xi):
+        vals = [player_map[pid].attributes.stamina for pid in xi if pid in player_map]
+        return sum(vals) / max(len(vals), 1) if vals else 10.0
+
+    home_avg_stamina = _avg_stamina(home_players, home_active_xi)
+    away_avg_stamina = _avg_stamina(away_players, away_active_xi)
+
     # Simulate minute by minute
     for minute in range(1, MATCH_DURATION_MINUTES + second_half_added + 1):
         if minute == 46:
@@ -95,27 +140,45 @@ def simulate_match(
                 description="Half time."
             ))
 
-        # Skip added first-half time visualization (events still happen)
-        is_first_half = minute <= 45 + first_half_added
-        is_second_half = minute > 45 + first_half_added
+        is_second_half = minute > 45
+
+        # ── Fatigue: 2nd-half penalty based on average stamina ───────
+        # Low stamina teams tire more; starts at minute 60+
+        fatigue_mult_home = 1.0
+        fatigue_mult_away = 1.0
+        if minute > 60:
+            mins_tired = minute - 60
+            # stamina 20 → up to 15% penalty by 90'; stamina 10 → up to 25%
+            fatigue_mult_home = max(0.75, 1.0 - (mins_tired / 30.0) * (1.0 - home_avg_stamina / 25.0) * 0.15)
+            fatigue_mult_away = max(0.75, 1.0 - (mins_tired / 30.0) * (1.0 - away_avg_stamina / 25.0) * 0.15)
+
+        # ── Red card penalty: fewer players = weaker ─────────────────
+        home_manpower = len(home_active_xi) / 11.0  # 1.0 at full, 0.91 with 10 men
+        away_manpower = len(away_active_xi) / 11.0
+
+        eff_home_attack = home_attack * fatigue_mult_home * home_manpower
+        eff_home_defense = home_defense * fatigue_mult_home * home_manpower
+        eff_away_attack = away_attack * fatigue_mult_away * away_manpower
+        eff_away_defense = away_defense * fatigue_mult_away * away_manpower
+        eff_home_gk = home_gk * fatigue_mult_home
+        eff_away_gk = away_gk * fatigue_mult_away
 
         # ── Chance creation ──────────────────────────────────────────
-        # Base chance scaled by both teams' tempo settings
         home_tempo = getattr(home_tactics, "tempo", 5)
         away_tempo = getattr(away_tactics, "tempo", 5)
         avg_tempo = (home_tempo + away_tempo) / 2.0
-        action_chance = 0.08 + avg_tempo * 0.008  # 0.088 at tempo=1, 0.16 at tempo=10
+        action_chance = 0.08 + avg_tempo * 0.008
 
         # Home attack
         if rng.chance(action_chance * (home_possession / 50.0)):
             event = _simulate_attack(
                 minute=min(minute, 90 + second_half_added),
-                attacking_strength=home_attack,
-                defending_strength=away_defense,
-                gk_strength=away_gk,
+                attacking_strength=eff_home_attack,
+                defending_strength=eff_away_defense,
+                gk_strength=eff_away_gk,
                 attacking_club=home_club,
                 attacking_players=home_players,
-                attacking_xi=home_tactics.starting_xi,
+                attacking_xi=home_active_xi,
                 attacking_formation=home_tactics.formation,
                 is_home=True,
                 attacking_tactics=home_tactics,
@@ -140,12 +203,12 @@ def simulate_match(
         if rng.chance(action_chance * ((100 - home_possession) / 50.0)):
             event = _simulate_attack(
                 minute=min(minute, 90 + second_half_added),
-                attacking_strength=away_attack,
-                defending_strength=home_defense,
-                gk_strength=home_gk,
+                attacking_strength=eff_away_attack,
+                defending_strength=eff_home_defense,
+                gk_strength=eff_home_gk,
                 attacking_club=away_club,
                 attacking_players=away_players,
-                attacking_xi=away_tactics.starting_xi,
+                attacking_xi=away_active_xi,
                 attacking_formation=away_tactics.formation,
                 is_home=False,
                 attacking_tactics=away_tactics,
@@ -167,30 +230,32 @@ def simulate_match(
                     away_corners += 1
 
         # ── Fouls & Cards ────────────────────────────────────────────
-        # Pressing intensity increases foul likelihood
+        # Who fouls more depends on their pressing intensity
         home_press = getattr(home_tactics, "pressing_intensity", 5)
         away_press = getattr(away_tactics, "pressing_intensity", 5)
-        avg_press = (home_press + away_press) / 2.0
-        foul_chance = 0.02 + avg_press * 0.004  # 0.024 at press=1, 0.06 at press=10
+        total_press = home_press + away_press
+        foul_chance = 0.02 + (total_press / 2.0) * 0.004
+
         if rng.chance(foul_chance):
-            is_home_foul = rng.chance(0.5)
+            # Higher pressing team fouls more often (not 50/50)
+            home_foul_prob = home_press / max(total_press, 1)
+            is_home_foul = rng.chance(home_foul_prob)
+
             if is_home_foul:
                 home_fouls += 1
-                foul_player = _pick_random_player(home_players, home_tactics.starting_xi)
+                foul_player = _pick_fouler(home_players, home_active_xi)
             else:
                 away_fouls += 1
-                foul_player = _pick_random_player(away_players, away_tactics.starting_xi)
+                foul_player = _pick_fouler(away_players, away_active_xi)
 
             # Penalty chance (~3% of fouls are in the box)
             if rng.chance(0.03):
                 # Penalty!
                 if is_home_foul:
-                    # Penalty to away team
-                    pen_taker = _pick_scorer(away_players, away_tactics.starting_xi, away_tactics.formation)
+                    pen_taker = _pick_scorer(away_players, away_active_xi, away_tactics.formation)
                     pen_club = away_club
                 else:
-                    # Penalty to home team
-                    pen_taker = _pick_scorer(home_players, home_tactics.starting_xi, home_tactics.formation)
+                    pen_taker = _pick_scorer(home_players, home_active_xi, home_tactics.formation)
                     pen_club = home_club
 
                 if pen_taker:
@@ -249,7 +314,7 @@ def simulate_match(
                         description=f"Yellow card for {foul_player.name}",
                     ))
 
-            # Rare red card (~1% of fouls)
+            # Rare red card (~1% of fouls) — REMOVES PLAYER FROM MATCH
             elif rng.chance(0.01):
                 if is_home_foul:
                     home_reds += 1
@@ -266,15 +331,20 @@ def simulate_match(
                                                          player=foul_player.name,
                                                          club=(home_club.name if is_home_foul else away_club.name)),
                     ))
+                    # Remove from active XI — team plays with fewer players
+                    if is_home_foul and foul_player.id in home_active_xi:
+                        home_active_xi.remove(foul_player.id)
+                    elif not is_home_foul and foul_player.id in away_active_xi:
+                        away_active_xi.remove(foul_player.id)
 
         # ── Injuries (~1.5% chance per team per match, so ~0.017% per minute) ──
         if rng.chance(0.0017):
             inj_home = rng.chance(0.5)
             if inj_home:
-                inj_player = _pick_random_player(home_players, home_tactics.starting_xi)
+                inj_player = _pick_random_player(home_players, home_active_xi)
                 inj_club = home_club
             else:
-                inj_player = _pick_random_player(away_players, away_tactics.starting_xi)
+                inj_player = _pick_random_player(away_players, away_active_xi)
                 inj_club = away_club
             if inj_player:
                 from src.utils.config import INJURY_TYPES
@@ -540,6 +610,33 @@ def _pick_random_player(players: dict[int, Player],
     if not valid:
         return None
     return rng.choice(valid)
+
+
+def _pick_fouler(players: dict[int, Player],
+                  xi: list[int]) -> Player | None:
+    """Pick a player who commits a foul — weighted by aggression (low composure,
+    high work_rate, tackles a lot). Defenders and midfielders foul more."""
+    candidates = []
+    weights = []
+    for pid in xi:
+        p = players.get(pid)
+        if not p:
+            continue
+        # Low composure + high work rate = more fouls
+        aggression = (20 - p.attributes.composure) + p.attributes.work_rate + p.attributes.tackling
+        # Defenders and DMs foul more
+        pos_mult = {
+            Position.GK: 0.1, Position.CB: 1.5, Position.LB: 1.3, Position.RB: 1.3,
+            Position.CDM: 1.4, Position.CM: 1.0, Position.CAM: 0.7,
+            Position.LM: 0.8, Position.RM: 0.8, Position.LW: 0.6, Position.RW: 0.6,
+            Position.ST: 0.5,
+        }.get(p.position, 1.0)
+        candidates.append(p)
+        weights.append(max(aggression * pos_mult, 0.1))
+
+    if not candidates:
+        return None
+    return rng.choices(candidates, k=1, weights=weights)[0]
 
 
 def _rate_players(ratings: dict[int, float], xi: list[int],
