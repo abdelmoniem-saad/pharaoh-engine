@@ -54,6 +54,11 @@ def navigate(page: ft.Page, route: str):
     from src.ui.screens.match_day import build_match_day_screen
     from src.ui.screens.table import build_table_screen
     from src.ui.screens.inbox import build_inbox_screen
+    from src.ui.screens.club_overview import build_club_overview_screen
+    from src.ui.screens.fixtures import build_fixtures_screen
+    from src.ui.screens.transfers import build_transfers_screen
+    from src.ui.screens.pre_match import build_pre_match_screen
+    from src.ui.screens.season_summary import build_season_summary_screen
 
     builders = {
         "/": build_main_menu,
@@ -63,6 +68,11 @@ def navigate(page: ft.Page, route: str):
         "/match_day": build_match_day_screen,
         "/table": build_table_screen,
         "/inbox": build_inbox_screen,
+        "/club": build_club_overview_screen,
+        "/fixtures": build_fixtures_screen,
+        "/transfers": build_transfers_screen,
+        "/pre_match": build_pre_match_screen,
+        "/season_summary": build_season_summary_screen,
     }
 
     builder = builders.get(route, build_main_menu)

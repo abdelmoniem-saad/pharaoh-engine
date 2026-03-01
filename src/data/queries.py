@@ -148,7 +148,7 @@ def insert_player(conn: sqlite3.Connection, player: Player) -> int:
     cursor = conn.execute("""
         INSERT INTO players (name, age, nationality, governorate, position,
             secondary_positions, preferred_foot, current_ability, potential_ability,
-            club_id, morale, fitness, form, is_captain, shirt_number,
+            club_id, morale, fitness, form, is_captain, shirt_number, transfer_listed,
             finishing, passing, dribbling, first_touch, crossing, heading,
             long_shots, tackling, marking, free_kicks,
             pace, stamina, strength, agility, jumping,
@@ -157,7 +157,7 @@ def insert_player(conn: sqlite3.Connection, player: Player) -> int:
             wage_weekly, contract_expiry, release_clause,
             appearances, goals, assists, clean_sheets, yellow_cards, red_cards,
             minutes_played, average_rating, man_of_the_match)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?,
@@ -168,7 +168,7 @@ def insert_player(conn: sqlite3.Connection, player: Player) -> int:
           player.position.value, sec_pos, player.preferred_foot.value,
           player.current_ability, player.potential_ability,
           player.club_id, player.morale, player.fitness, player.form,
-          int(player.is_captain), player.shirt_number,
+          int(player.is_captain), player.shirt_number, int(player.transfer_listed),
           a.finishing, a.passing, a.dribbling, a.first_touch, a.crossing, a.heading,
           a.long_shots, a.tackling, a.marking, a.free_kicks,
           a.pace, a.stamina, a.strength, a.agility, a.jumping,
@@ -241,6 +241,7 @@ def _row_to_player(row: sqlite3.Row) -> Player:
         form=row["form"],
         is_captain=bool(row["is_captain"]),
         shirt_number=row["shirt_number"],
+        transfer_listed=bool(row["transfer_listed"]) if "transfer_listed" in row.keys() else False,
         attributes=PlayerAttributes(
             finishing=row["finishing"], passing=row["passing"],
             dribbling=row["dribbling"], first_touch=row["first_touch"],
@@ -498,5 +499,160 @@ def get_current_matchday(conn: sqlite3.Connection) -> int:
     # All played — return last matchday
     row2 = conn.execute("SELECT MAX(matchday) as md FROM fixtures").fetchone()
     return row2["md"] if row2 and row2["md"] else 1
+
+
+def get_top_scorers(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
+    """Get top scorers across the league."""
+    rows = conn.execute("""
+        SELECT p.name, p.goals, p.assists, p.appearances, p.position,
+               c.name as club_name, c.short_name as club_short
+        FROM players p
+        JOIN clubs c ON p.club_id = c.id
+        WHERE p.goals > 0
+        ORDER BY p.goals DESC, p.assists DESC
+        LIMIT ?
+    """, (limit,)).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_matchday_results(conn: sqlite3.Connection, matchday: int) -> list[Fixture]:
+    """Get all played fixtures for a specific matchday."""
+    rows = conn.execute(
+        "SELECT * FROM fixtures WHERE matchday = ? AND played = 1 ORDER BY id",
+        (matchday,)
+    ).fetchall()
+    return [_row_to_fixture(row) for row in rows]
+
+
+def get_all_matchdays_played(conn: sqlite3.Connection) -> list[int]:
+    """Get all matchday numbers that have at least one played fixture."""
+    rows = conn.execute(
+        "SELECT DISTINCT matchday FROM fixtures WHERE played = 1 ORDER BY matchday DESC"
+    ).fetchall()
+    return [row["matchday"] for row in rows]
+
+
+# ── Player Search & Actions ─────────────────────────────────────────────────
+
+def search_players(conn: sqlite3.Connection, name: str = "",
+                    position: str = "", max_age: int = 99,
+                    min_ability: int = 0, exclude_club_id: int = 0,
+                    limit: int = 50) -> list[Player]:
+    """Search players across all clubs with filters."""
+    sql = "SELECT * FROM players WHERE 1=1"
+    params: list = []
+    if name:
+        sql += " AND name LIKE ?"
+        params.append(f"%{name}%")
+    if position:
+        sql += " AND position = ?"
+        params.append(position)
+    if max_age < 99:
+        sql += " AND age <= ?"
+        params.append(max_age)
+    if min_ability > 0:
+        sql += " AND current_ability >= ?"
+        params.append(min_ability)
+    if exclude_club_id:
+        sql += " AND club_id != ?"
+        params.append(exclude_club_id)
+    sql += " ORDER BY current_ability DESC LIMIT ?"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    return [_row_to_player(row) for row in rows]
+
+
+def set_captain(conn: sqlite3.Connection, club_id: int, player_id: int) -> None:
+    """Set a player as captain, clearing any existing captain on the team."""
+    conn.execute("UPDATE players SET is_captain = 0 WHERE club_id = ?", (club_id,))
+    conn.execute("UPDATE players SET is_captain = 1 WHERE id = ?", (player_id,))
+    conn.commit()
+
+
+def update_player_shirt(conn: sqlite3.Connection, player_id: int,
+                         shirt_number: int) -> None:
+    """Update a player's shirt number."""
+    conn.execute("UPDATE players SET shirt_number = ? WHERE id = ?",
+                 (shirt_number, player_id))
+    conn.commit()
+
+
+def set_transfer_listed(conn: sqlite3.Connection, player_id: int,
+                         listed: bool = True) -> None:
+    """Mark or unmark a player as transfer listed."""
+    conn.execute("UPDATE players SET transfer_listed = ? WHERE id = ?",
+                 (int(listed), player_id))
+    conn.commit()
+
+
+def transfer_player(conn: sqlite3.Connection, player_id: int,
+                      from_club_id: int, to_club_id: int,
+                      fee: int, wage: int, contract_years: int = 3) -> None:
+    """Execute a player transfer between clubs."""
+    from datetime import date, timedelta
+    expiry = date.today() + timedelta(days=365 * contract_years)
+
+    # Move player
+    conn.execute("""
+        UPDATE players SET club_id = ?, wage_weekly = ?, contract_expiry = ?,
+            transfer_listed = 0, morale = 60
+        WHERE id = ?
+    """, (to_club_id, wage, expiry.isoformat(), player_id))
+
+    # Update selling club finances
+    conn.execute("""
+        UPDATE clubs SET transfer_budget = transfer_budget + ?,
+            balance = balance + ? WHERE id = ?
+    """, (fee, fee, from_club_id))
+
+    # Update buying club finances
+    conn.execute("""
+        UPDATE clubs SET transfer_budget = transfer_budget - ?,
+            balance = balance - ? WHERE id = ?
+    """, (fee, fee, to_club_id))
+
+    conn.commit()
+
+
+# ── Season Management ────────────────────────────────────────────────────────
+
+def reset_all_season_stats(conn: sqlite3.Connection) -> None:
+    """Reset all player season stats for a new season."""
+    conn.execute("""
+        UPDATE players SET appearances=0, goals=0, assists=0, clean_sheets=0,
+            yellow_cards=0, red_cards=0, minutes_played=0, average_rating=0.0,
+            man_of_the_match=0
+    """)
+    conn.commit()
+
+
+def age_all_players(conn: sqlite3.Connection) -> None:
+    """Age all players by 1 year."""
+    conn.execute("UPDATE players SET age = age + 1")
+    conn.commit()
+
+
+def delete_all_fixtures(conn: sqlite3.Connection) -> None:
+    """Delete all fixtures for a fresh season."""
+    conn.execute("DELETE FROM fixtures")
+    conn.commit()
+
+
+def reset_standings(conn: sqlite3.Connection) -> None:
+    """Reset all standings to zero."""
+    conn.execute("""
+        UPDATE standings SET played=0, won=0, drawn=0, lost=0,
+            goals_for=0, goals_against=0
+    """)
+    conn.commit()
+
+
+def get_list_save_files() -> list[str]:
+    """List all save file names (without .db extension)."""
+    from src.data.database import _DEFAULT_DB_DIR
+    saves_dir = _DEFAULT_DB_DIR
+    if not saves_dir.exists():
+        return []
+    return [f.stem for f in saves_dir.glob("*.db")]
 
 

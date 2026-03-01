@@ -56,34 +56,22 @@ def build_match_day_screen(page: ft.Page) -> ft.Column:
             controls=[
                 ft.Icon(ft.Icons.EMOJI_EVENTS, size=80, color=trophy_color),
                 ft.Container(height=10),
-                ft.Text(
-                    "Season Complete!",
-                    size=26, weight=ft.FontWeight.BOLD, color=ft.Colors.AMBER_300,
-                    text_align=ft.TextAlign.CENTER,
-                ),
+                ft.Text("Season Complete!", size=26, weight=ft.FontWeight.BOLD,
+                         color=ft.Colors.AMBER_300, text_align=ft.TextAlign.CENTER),
                 ft.Container(height=5),
-                ft.Text(
-                    congrats_text,
-                    size=18, weight=ft.FontWeight.W_500,
-                    text_align=ft.TextAlign.CENTER,
-                ),
-                ft.Text(
-                    f"{champ_pts} points",
-                    size=16, color=ft.Colors.GREY_400,
-                    text_align=ft.TextAlign.CENTER,
-                ),
+                ft.Text(congrats_text, size=18, weight=ft.FontWeight.W_500,
+                         text_align=ft.TextAlign.CENTER),
+                ft.Text(f"{champ_pts} points", size=16, color=ft.Colors.GREY_400,
+                         text_align=ft.TextAlign.CENTER),
                 ft.Container(height=30),
-                ft.ElevatedButton(
-                    "📊 View Final Table",
-                    width=250, height=45,
-                    on_click=lambda e: navigate(page, "/table"),
-                ),
+                ft.ElevatedButton("📊 Season Summary", width=250, height=45,
+                                   on_click=lambda e: navigate(page, "/season_summary")),
                 ft.Container(height=10),
-                ft.OutlinedButton(
-                    "🏠 Main Menu",
-                    width=250, height=45,
-                    on_click=lambda e: navigate(page, "/"),
-                ),
+                ft.OutlinedButton("📊 View Final Table", width=250, height=45,
+                                   on_click=lambda e: navigate(page, "/table")),
+                ft.Container(height=10),
+                ft.OutlinedButton("🏠 Main Menu", width=250, height=45,
+                                   on_click=lambda e: navigate(page, "/")),
             ],
         )
 
@@ -98,7 +86,7 @@ def build_match_day_screen(page: ft.Page) -> ft.Column:
 
 def _build_match_preview(page, conn, gs, fixture):
     """Build the pre-match preview with opponent info and simulate button."""
-    from src.ui.app import navigate
+    from src.ui.app import navigate, show_snackbar
 
     is_home = fixture.home_club_id == gs.user_club_id
     venue_text = "🏟️ HOME" if is_home else "✈️ AWAY"
@@ -114,19 +102,11 @@ def _build_match_preview(page, conn, gs, fixture):
 
     days_until = (match_date - gs.current_date).days if match_date else 0
 
+    # Opponent form
+    opp_form = _build_club_form(conn, opp_id)
+
     def simulate_click(e):
-        from src.ui.app import show_snackbar
-        result = simulate_user_match(conn, gs)
-        if result:
-            _show_result_dialog(page, result)
-        else:
-            page.show_dialog(
-                ft.AlertDialog(
-                    title=ft.Text("Error"),
-                    content=ft.Text("Could not simulate match. Try advancing a day."),
-                    actions=[ft.TextButton("OK", on_click=lambda e: page.pop_dialog())],
-                )
-            )
+        navigate(page, "/pre_match")
 
     def advance_to_match_click(e):
         advance_to_next_match(conn, gs)
@@ -144,17 +124,10 @@ def _build_match_preview(page, conn, gs, fixture):
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=8,
                 controls=[
-                    ft.Text(
-                        fixture.competition,
-                        size=12, color=ft.Colors.AMBER_400,
-                        weight=ft.FontWeight.W_500,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Text(
-                        matchday_str,
-                        size=11, color=ft.Colors.GREY_500,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
+                    ft.Text(fixture.competition, size=12, color=ft.Colors.AMBER_400,
+                             weight=ft.FontWeight.W_500, text_align=ft.TextAlign.CENTER),
+                    ft.Text(matchday_str, size=11, color=ft.Colors.GREY_500,
+                             text_align=ft.TextAlign.CENTER),
                     ft.Divider(height=1),
                     ft.Container(height=5),
                     ft.Row(
@@ -164,22 +137,19 @@ def _build_match_preview(page, conn, gs, fixture):
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=5,
                                 controls=[
-                                    ft.Icon(
-                                        ft.Icons.SPORTS_SOCCER, size=40,
-                                        color=ft.Colors.GREEN_400 if is_home else ft.Colors.GREY_500,
-                                    ),
-                                    ft.Text(
-                                        fixture.home_club_name, size=14,
-                                        weight=ft.FontWeight.BOLD if is_home else ft.FontWeight.NORMAL,
-                                        text_align=ft.TextAlign.CENTER, width=120,
-                                    ),
+                                    ft.Icon(ft.Icons.SPORTS_SOCCER, size=40,
+                                             color=ft.Colors.GREEN_400 if is_home else ft.Colors.GREY_500),
+                                    ft.Text(fixture.home_club_name, size=14,
+                                             weight=ft.FontWeight.BOLD if is_home else ft.FontWeight.NORMAL,
+                                             text_align=ft.TextAlign.CENTER, width=120),
                                 ],
                             ),
                             ft.Column(
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=2,
                                 controls=[
-                                    ft.Text("VS", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.AMBER_300),
+                                    ft.Text("VS", size=22, weight=ft.FontWeight.BOLD,
+                                             color=ft.Colors.AMBER_300),
                                     ft.Text(date_str, size=10, color=ft.Colors.GREY_500),
                                 ],
                             ),
@@ -187,22 +157,19 @@ def _build_match_preview(page, conn, gs, fixture):
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=5,
                                 controls=[
-                                    ft.Icon(
-                                        ft.Icons.SPORTS_SOCCER, size=40,
-                                        color=ft.Colors.GREEN_400 if not is_home else ft.Colors.GREY_500,
-                                    ),
-                                    ft.Text(
-                                        fixture.away_club_name, size=14,
-                                        weight=ft.FontWeight.BOLD if not is_home else ft.FontWeight.NORMAL,
-                                        text_align=ft.TextAlign.CENTER, width=120,
-                                    ),
+                                    ft.Icon(ft.Icons.SPORTS_SOCCER, size=40,
+                                             color=ft.Colors.GREEN_400 if not is_home else ft.Colors.GREY_500),
+                                    ft.Text(fixture.away_club_name, size=14,
+                                             weight=ft.FontWeight.BOLD if not is_home else ft.FontWeight.NORMAL,
+                                             text_align=ft.TextAlign.CENTER, width=120),
                                 ],
                             ),
                         ],
                     ),
                     ft.Container(height=5),
                     ft.Container(
-                        content=ft.Text(venue_text, size=12, weight=ft.FontWeight.BOLD, color=venue_color),
+                        content=ft.Text(venue_text, size=12, weight=ft.FontWeight.BOLD,
+                                         color=venue_color),
                         padding=ft.padding.symmetric(horizontal=12, vertical=4),
                         border_radius=12,
                         border=ft.border.all(1, venue_color),
@@ -217,12 +184,19 @@ def _build_match_preview(page, conn, gs, fixture):
     if user_club and user_club.formation:
         info_items.append(_info_chip("Formation", user_club.formation, ft.Icons.GRID_VIEW))
     if user_club and user_club.mentality:
-        info_items.append(_info_chip("Mentality", user_club.mentality.name.replace("_", " ").title(), ft.Icons.PSYCHOLOGY))
+        info_items.append(_info_chip("Mentality",
+                                      user_club.mentality.name.replace("_", " ").title(),
+                                      ft.Icons.PSYCHOLOGY))
     if opp_club:
         info_items.append(_info_chip("Opp. Rep", str(opp_club.reputation), ft.Icons.STAR))
+    if user_club:
+        from src.core.board import get_confidence_level
+        info_items.append(_info_chip("Board",
+                                      get_confidence_level(user_club.board_confidence).value,
+                                      ft.Icons.ACCOUNT_BALANCE))
 
-    # Recent form (last 5 results)
-    recent_form = _build_recent_form(conn, gs.user_club_id)
+    # Recent form
+    user_form = _build_club_form(conn, gs.user_club_id)
 
     # Action buttons
     action_controls = []
@@ -232,8 +206,7 @@ def _build_match_preview(page, conn, gs, fixture):
                 "⚽ Play Match",
                 width=280, height=55,
                 style=ft.ButtonStyle(
-                    bgcolor=ft.Colors.AMBER_700,
-                    color=ft.Colors.WHITE,
+                    bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
                     text_style=ft.TextStyle(size=18, weight=ft.FontWeight.BOLD),
                 ),
                 on_click=simulate_click,
@@ -244,8 +217,7 @@ def _build_match_preview(page, conn, gs, fixture):
             ft.Container(
                 content=ft.Text(
                     f"⏳ {days_until} day{'s' if days_until != 1 else ''} until match",
-                    size=14, color=ft.Colors.AMBER_300,
-                    weight=ft.FontWeight.W_500,
+                    size=14, color=ft.Colors.AMBER_300, weight=ft.FontWeight.W_500,
                     text_align=ft.TextAlign.CENTER,
                 ),
                 padding=10,
@@ -253,22 +225,17 @@ def _build_match_preview(page, conn, gs, fixture):
         )
         action_controls.append(
             ft.ElevatedButton(
-                "⏩ Skip to Match Day",
-                width=280, height=50,
+                "⏩ Skip to Match Day", width=280, height=50,
                 style=ft.ButtonStyle(
-                    bgcolor=ft.Colors.AMBER_700,
-                    color=ft.Colors.WHITE,
+                    bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
                     text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
                 ),
                 on_click=advance_to_match_click,
             )
         )
         action_controls.append(
-            ft.OutlinedButton(
-                "📅 Advance 1 Day",
-                width=280, height=45,
-                on_click=advance_one_day,
-            )
+            ft.OutlinedButton("📅 Advance 1 Day", width=280, height=45,
+                               on_click=advance_one_day),
         )
 
     return ft.Column(
@@ -283,18 +250,29 @@ def _build_match_preview(page, conn, gs, fixture):
                     spacing=12,
                     controls=[
                         ft.Text("⚽ Match Day", size=22, weight=ft.FontWeight.BOLD),
-                        ft.Text(
-                            f"📅 {gs.current_date.strftime('%d %B %Y')}",
-                            size=13, color=ft.Colors.GREY_500,
-                        ),
+                        ft.Text(f"📅 {gs.current_date.strftime('%d %B %Y')}",
+                                 size=13, color=ft.Colors.GREY_500),
                         ft.Divider(height=1),
                         match_card,
-                        ft.Row(
-                            alignment=ft.MainAxisAlignment.CENTER,
-                            spacing=8, wrap=True,
-                            controls=info_items,
+                        ft.Row(alignment=ft.MainAxisAlignment.CENTER,
+                               spacing=8, wrap=True, controls=info_items
                         ) if info_items else ft.Container(),
-                        recent_form,
+                        # Form rows
+                        ft.Row(
+                            alignment=ft.MainAxisAlignment.CENTER, spacing=15,
+                            controls=[
+                                ft.Column(horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                           spacing=2, controls=[
+                                    ft.Text("Your Form", size=10, color=ft.Colors.GREY_500),
+                                    user_form,
+                                ]),
+                                ft.Column(horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                           spacing=2, controls=[
+                                    ft.Text("Opponent Form", size=10, color=ft.Colors.GREY_500),
+                                    opp_form,
+                                ]),
+                            ],
+                        ),
                         ft.Container(height=5),
                         *action_controls,
                     ],
@@ -323,39 +301,22 @@ def _build_no_match_view(page, conn, gs):
         controls=[
             ft.Icon(ft.Icons.EVENT_BUSY, size=60, color=ft.Colors.GREY_600),
             ft.Container(height=10),
-            ft.Text(
-                "No upcoming match found",
-                size=18, color=ft.Colors.GREY_400, weight=ft.FontWeight.BOLD,
-                text_align=ft.TextAlign.CENTER,
-            ),
-            ft.Text(
-                f"Current date: {gs.current_date.strftime('%d %B %Y')}",
-                size=13, color=ft.Colors.GREY_500,
-                text_align=ft.TextAlign.CENTER,
-            ),
+            ft.Text("No upcoming match found", size=18, color=ft.Colors.GREY_400,
+                      weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
+            ft.Text(f"Current date: {gs.current_date.strftime('%d %B %Y')}",
+                      size=13, color=ft.Colors.GREY_500, text_align=ft.TextAlign.CENTER),
             ft.Container(height=15),
-            ft.Text(
-                "Try advancing the calendar to find your next fixture.",
-                size=14, color=ft.Colors.GREY_500,
-                text_align=ft.TextAlign.CENTER,
-            ),
+            ft.Text("Try advancing the calendar to find your next fixture.",
+                      size=14, color=ft.Colors.GREY_500, text_align=ft.TextAlign.CENTER),
             ft.Container(height=20),
-            ft.ElevatedButton(
-                "⏩ Skip to Next Match",
-                width=260, height=48,
-                style=ft.ButtonStyle(
-                    bgcolor=ft.Colors.AMBER_700,
-                    color=ft.Colors.WHITE,
-                    text_style=ft.TextStyle(size=16),
-                ),
-                on_click=advance_to_match,
-            ),
+            ft.ElevatedButton("⏩ Skip to Next Match", width=260, height=48,
+                               style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
+                                                     color=ft.Colors.WHITE,
+                                                     text_style=ft.TextStyle(size=16)),
+                               on_click=advance_to_match),
             ft.Container(height=8),
-            ft.OutlinedButton(
-                "📅 Advance 1 Day",
-                width=260, height=42,
-                on_click=advance_one,
-            ),
+            ft.OutlinedButton("📅 Advance 1 Day", width=260, height=42,
+                               on_click=advance_one),
         ],
     )
 
@@ -364,17 +325,13 @@ def _info_chip(label: str, value: str, icon) -> ft.Container:
     """Create a small info chip."""
     return ft.Container(
         content=ft.Row(
-            spacing=5,
-            tight=True,
+            spacing=5, tight=True,
             controls=[
                 ft.Icon(icon, size=14, color=ft.Colors.AMBER_300),
-                ft.Column(
-                    spacing=0,
-                    controls=[
-                        ft.Text(label, size=9, color=ft.Colors.GREY_500),
-                        ft.Text(value, size=12, weight=ft.FontWeight.BOLD),
-                    ],
-                ),
+                ft.Column(spacing=0, controls=[
+                    ft.Text(label, size=9, color=ft.Colors.GREY_500),
+                    ft.Text(value, size=12, weight=ft.FontWeight.BOLD),
+                ]),
             ],
         ),
         padding=ft.padding.symmetric(horizontal=10, vertical=6),
@@ -383,62 +340,49 @@ def _info_chip(label: str, value: str, icon) -> ft.Container:
     )
 
 
-def _build_recent_form(conn, user_club_id) -> ft.Container:
-    """Build a recent form display showing last 5 results as W/D/L chips."""
-    recent = queries.get_user_recent_fixtures(conn, user_club_id, limit=5)
-    if not recent:
-        return ft.Container()
-
+def _build_club_form(conn, club_id) -> ft.Row:
+    """Build form display (last 5 W/D/L chips) for any club."""
+    recent = queries.get_user_recent_fixtures(conn, club_id, limit=5)
     chips = []
     for fixture in recent:
         if not fixture.result:
             continue
         r = fixture.result
-        is_home = fixture.home_club_id == user_club_id
-        user_goals = r.home_goals if is_home else r.away_goals
-        opp_goals = r.away_goals if is_home else r.home_goals
+        is_home = fixture.home_club_id == club_id
+        cg = r.home_goals if is_home else r.away_goals
+        og = r.away_goals if is_home else r.home_goals
 
-        if user_goals > opp_goals:
+        if cg > og:
             label, color = "W", ft.Colors.GREEN_400
-        elif user_goals < opp_goals:
+        elif cg < og:
             label, color = "L", ft.Colors.RED_400
         else:
             label, color = "D", ft.Colors.YELLOW_400
 
         chips.append(
             ft.Container(
-                content=ft.Text(label, size=11, weight=ft.FontWeight.BOLD,
-                                color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER),
-                width=26, height=26,
-                border_radius=13,
-                bgcolor=color,
-                alignment=ft.Alignment(0, 0),
+                content=ft.Text(label, size=10, weight=ft.FontWeight.BOLD,
+                                 color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER),
+                width=24, height=24, border_radius=12,
+                bgcolor=color, alignment=ft.Alignment(0, 0),
             )
         )
 
     if not chips:
-        return ft.Container()
+        chips.append(ft.Text("—", size=11, color=ft.Colors.GREY_600))
 
-    return ft.Container(
-        content=ft.Row(
-            alignment=ft.MainAxisAlignment.CENTER,
-            spacing=6,
-            controls=[
-                ft.Text("Form:", size=11, color=ft.Colors.GREY_500),
-                *chips,
-            ],
-        ),
-        padding=ft.padding.symmetric(vertical=4),
-    )
+    return ft.Row(spacing=4, controls=chips)
 
 
-def _show_result_dialog(page, result):
-    """Show match result in a dialog."""
+def _show_result_dialog(page, outcome):
+    """Show match result dialog with user result + all other matchday results."""
     from src.ui.app import navigate
 
+    result = outcome.user_result
+
+    # Goal widgets
     goal_widgets = []
     goals = [e for e in result.events if e.event_type == MatchEventType.GOAL]
-
     if goals:
         for g in goals:
             goal_text = f"⚽ {g.minute}' {g.player_name}"
@@ -449,6 +393,7 @@ def _show_result_dialog(page, result):
     else:
         goal_widgets.append(ft.Text("No goals scored", size=12, color=ft.Colors.GREY_500))
 
+    # Stats rows
     stats_rows = [
         ("Possession", f"{result.home_stats.possession:.0f}%", f"{result.away_stats.possession:.0f}%"),
         ("Shots", str(result.home_stats.shots), str(result.away_stats.shots)),
@@ -459,16 +404,45 @@ def _show_result_dialog(page, result):
     ]
     stat_widgets = []
     for label, home_val, away_val in stats_rows:
-        stat_widgets.append(
-            ft.Row(
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                controls=[
-                    ft.Text(home_val, size=12, width=40, text_align=ft.TextAlign.CENTER),
-                    ft.Text(label, size=11, color=ft.Colors.GREY_400, text_align=ft.TextAlign.CENTER),
-                    ft.Text(away_val, size=12, width=40, text_align=ft.TextAlign.CENTER),
-                ],
+        stat_widgets.append(ft.Row(
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            controls=[
+                ft.Text(home_val, size=12, width=40, text_align=ft.TextAlign.CENTER),
+                ft.Text(label, size=11, color=ft.Colors.GREY_400, text_align=ft.TextAlign.CENTER),
+                ft.Text(away_val, size=12, width=40, text_align=ft.TextAlign.CENTER),
+            ],
+        ))
+
+    # Other results on the same matchday
+    other_results_widgets = []
+    if outcome.other_results:
+        other_results_widgets.append(ft.Divider())
+        other_results_widgets.append(
+            ft.Text(f"📋 Other Matchday {outcome.matchday} Results",
+                     size=14, weight=ft.FontWeight.W_500, color=ft.Colors.AMBER_300))
+        for r in outcome.other_results:
+            other_results_widgets.append(
+                ft.Container(
+                    content=ft.Row(
+                        alignment=ft.MainAxisAlignment.CENTER,
+                        spacing=8,
+                        controls=[
+                            ft.Text(r.home_club_name[:14], size=11,
+                                     text_align=ft.TextAlign.RIGHT, width=100),
+                            ft.Container(
+                                content=ft.Text(f"{r.home_goals}-{r.away_goals}",
+                                                 size=12, weight=ft.FontWeight.BOLD),
+                                bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.WHITE),
+                                padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                                border_radius=4,
+                            ),
+                            ft.Text(r.away_club_name[:14], size=11,
+                                     text_align=ft.TextAlign.LEFT, width=100),
+                        ],
+                    ),
+                    padding=ft.padding.symmetric(vertical=1),
+                )
             )
-        )
 
     def close_and_refresh(e):
         page.pop_dialog()
@@ -476,16 +450,11 @@ def _show_result_dialog(page, result):
 
     dlg = ft.AlertDialog(
         title=ft.Column(
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=2,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2,
             controls=[
                 ft.Text("Full Time", size=12, color=ft.Colors.GREY_500),
-                ft.Text(
-                    result.score_display,
-                    size=20, weight=ft.FontWeight.BOLD,
-                    text_align=ft.TextAlign.CENTER,
-                    color=ft.Colors.AMBER_300,
-                ),
+                ft.Text(result.score_display, size=20, weight=ft.FontWeight.BOLD,
+                         text_align=ft.TextAlign.CENTER, color=ft.Colors.AMBER_300),
             ],
         ),
         content=ft.Container(
@@ -497,21 +466,20 @@ def _show_result_dialog(page, result):
                     ft.Divider(),
                     ft.Text("📊 Match Stats", size=14, weight=ft.FontWeight.W_500),
                     ft.Container(height=5),
-                    ft.Row(
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        controls=[
-                            ft.Text(result.home_club_name, size=11, weight=ft.FontWeight.BOLD, width=80),
-                            ft.Text("", size=11),
-                            ft.Text(result.away_club_name, size=11, weight=ft.FontWeight.BOLD, width=80, text_align=ft.TextAlign.RIGHT),
-                        ],
-                    ),
+                    ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
+                        ft.Text(result.home_club_name, size=11, weight=ft.FontWeight.BOLD, width=80),
+                        ft.Text("", size=11),
+                        ft.Text(result.away_club_name, size=11, weight=ft.FontWeight.BOLD,
+                                 width=80, text_align=ft.TextAlign.RIGHT),
+                    ]),
                     *stat_widgets,
+                    *other_results_widgets,
                 ],
                 spacing=5,
                 scroll=ft.ScrollMode.AUTO,
             ),
-            width=320,
-            height=350,
+            width=330,
+            height=420,
         ),
         actions=[
             ft.TextButton("Continue ➡️", on_click=close_and_refresh),

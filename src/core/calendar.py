@@ -4,16 +4,22 @@ Season calendar and game loop — day-by-day progression, match scheduling.
 from __future__ import annotations
 
 import sqlite3
-from datetime import date, timedelta
+from datetime import timedelta
 
 from src.data.models import (
-    GameState, Club, Player, MatchResult, Fixture, InboxMessage,
+    GameState, Player, MatchResult, Fixture, InboxMessage,
+    MatchdayOutcome,
 )
 from src.data import queries
 from src.core import league, match_engine, club as club_module
 from src.core.player import (
     update_form, update_fitness_after_match, rest_recovery,
 )
+from src.core.media import create_match_report_message
+from src.core.board import update_confidence_after_match
+from src.core.fans import update_fan_happiness
+from src.core.youth import develop_player
+from src.core.finance import process_monthly_finances
 from src.utils.config import MatchEventType
 
 
@@ -42,6 +48,14 @@ def advance_day(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
     if not messages:
         _daily_recovery(conn, game_state)
 
+    # Weekly player development (every 7 days)
+    if game_state.day_count % 7 == 0:
+        messages.extend(_weekly_development(conn, game_state))
+
+    # Monthly finances (every 30 days)
+    if game_state.day_count % 30 == 0:
+        messages.extend(_monthly_finances(conn, game_state))
+
     # Check season completion
     if league.is_season_complete(conn):
         champion = league.get_champion(conn)
@@ -50,7 +64,7 @@ def advance_day(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
             messages.append(msg)
             queries.insert_message(conn, InboxMessage(
                 date=game_state.current_date,
-                subject="Season Over!",
+                subject="🏆 Season Over!",
                 body=msg,
                 category="general",
             ))
@@ -85,7 +99,7 @@ def advance_to_next_match(conn: sqlite3.Connection,
 
 def _simulate_matchday(conn: sqlite3.Connection, game_state: GameState,
                         fixtures: list[Fixture]) -> list[str]:
-    """Simulate all matches for a matchday."""
+    """Simulate all matches for a matchday (excludes user match — handled via UI)."""
     messages: list[str] = []
     results: list[tuple[Fixture, MatchResult]] = []
 
@@ -97,32 +111,10 @@ def _simulate_matchday(conn: sqlite3.Connection, game_state: GameState,
         )
 
         if is_user_match:
-            # Don't auto-simulate user matches
             continue
 
-        # Load clubs and squads
-        home_club, home_squad = club_module.get_club_with_squad(conn, fixture.home_club_id)
-        away_club, away_squad = club_module.get_club_with_squad(conn, fixture.away_club_id)
-
-        # AI prepares tactics
-        home_tactics = club_module.prepare_team_for_match(home_club, home_squad)
-        away_tactics = club_module.prepare_team_for_match(away_club, away_squad)
-
-        # Simulate
-        result = match_engine.simulate_match(
-            home_club, away_club,
-            home_squad, away_squad,
-            home_tactics, away_tactics,
-        )
-        result.matchday = fixture.matchday
-        result.date = fixture.date
-
+        result = _simulate_single_fixture(conn, fixture)
         results.append((fixture, result))
-
-        # Update player stats
-        _update_player_stats_after_match(conn, result, home_squad, away_squad,
-                                          home_tactics, away_tactics)
-
         msg = result.score_display
         messages.append(msg)
 
@@ -130,7 +122,7 @@ def _simulate_matchday(conn: sqlite3.Connection, game_state: GameState,
     if results:
         league.process_matchday_results(conn, results)
 
-        # Add inbox messages
+        # Add inbox messages for all results
         for fixture, result in results:
             queries.insert_message(conn, InboxMessage(
                 date=game_state.current_date,
@@ -142,21 +134,43 @@ def _simulate_matchday(conn: sqlite3.Connection, game_state: GameState,
     return messages
 
 
-def simulate_user_match(conn: sqlite3.Connection, game_state: GameState,
-                         user_tactics: dict | None = None) -> MatchResult | None:
+def _simulate_single_fixture(conn: sqlite3.Connection,
+                               fixture: Fixture) -> MatchResult:
+    """Simulate a single fixture and update player stats."""
+    home_club, home_squad = club_module.get_club_with_squad(conn, fixture.home_club_id)
+    away_club, away_squad = club_module.get_club_with_squad(conn, fixture.away_club_id)
+
+    home_tactics = club_module.prepare_team_for_match(home_club, home_squad)
+    away_tactics = club_module.prepare_team_for_match(away_club, away_squad)
+
+    result = match_engine.simulate_match(
+        home_club, away_club,
+        home_squad, away_squad,
+        home_tactics, away_tactics,
+    )
+    result.matchday = fixture.matchday
+    result.date = fixture.date
+
+    # Update player stats
+    _update_player_stats_after_match(conn, result, home_squad, away_squad,
+                                      home_tactics, away_tactics)
+    return result
+
+
+def simulate_user_match(conn: sqlite3.Connection,
+                         game_state: GameState) -> MatchdayOutcome | None:
     """
-    Simulate the user's next match.
-    If user_tactics is None, auto-selects.
+    Simulate the user's next match AND all other fixtures on the same matchday.
+    Returns a MatchdayOutcome with user result + other results.
     """
     fixture = queries.get_user_next_fixture(conn, game_state.user_club_id)
     if fixture is None:
         return None
 
-    # Load both clubs
+    # ── 1. Simulate user's match ─────────────────────────────────────────
     home_club, home_squad = club_module.get_club_with_squad(conn, fixture.home_club_id)
     away_club, away_squad = club_module.get_club_with_squad(conn, fixture.away_club_id)
 
-    # Determine which is the user
     if fixture.home_club_id == game_state.user_club_id:
         user_club, user_squad = home_club, home_squad
         opp_club, opp_squad = away_club, away_squad
@@ -166,36 +180,93 @@ def simulate_user_match(conn: sqlite3.Connection, game_state: GameState,
         opp_club, opp_squad = home_club, home_squad
         user_is_home = False
 
-    # User tactics
     user_team_tactics = club_module.prepare_team_for_match(user_club, user_squad)
     opp_tactics = club_module.prepare_team_for_match(opp_club, opp_squad)
 
-    # Simulate
     if user_is_home:
-        result = match_engine.simulate_match(
+        user_result = match_engine.simulate_match(
             user_club, opp_club, user_squad, opp_squad,
             user_team_tactics, opp_tactics,
         )
     else:
-        result = match_engine.simulate_match(
+        user_result = match_engine.simulate_match(
             opp_club, user_club, opp_squad, user_squad,
             opp_tactics, user_team_tactics,
         )
 
-    result.matchday = fixture.matchday
-    result.date = fixture.date
+    user_result.matchday = fixture.matchday
+    user_result.date = fixture.date
 
-    # Save result
-    queries.mark_fixture_played(conn, fixture.fixture_id, result)
-    queries.update_standings_for_result(conn, result)
+    # Save user result
+    queries.mark_fixture_played(conn, fixture.fixture_id, user_result)
+    queries.update_standings_for_result(conn, user_result)
 
-    # Update player stats
-    _update_player_stats_after_match(conn, result, home_squad, away_squad,
+    # Update player stats for user match
+    _update_player_stats_after_match(conn, user_result, home_squad, away_squad,
                                       club_module.prepare_team_for_match(home_club, home_squad),
                                       club_module.prepare_team_for_match(away_club, away_squad))
 
+    # ── 2. Determine result type for board/fans/media ────────────────────
+    if user_is_home:
+        user_goals = user_result.home_goals
+        opp_goals = user_result.away_goals
+    else:
+        user_goals = user_result.away_goals
+        opp_goals = user_result.home_goals
+
+    if user_goals > opp_goals:
+        result_type = "win"
+    elif user_goals < opp_goals:
+        result_type = "loss"
+    else:
+        result_type = "draw"
+
+    # Update board confidence
+    update_confidence_after_match(user_club, result_type)
+
+    # Update fan happiness
+    update_fan_happiness(user_club, result_type)
+
+    # Save updated club
+    queries.update_club(conn, user_club)
+
+    # Generate media headline
+    media_msg = create_match_report_message(
+        user_result, game_state.user_club_id, game_state.current_date
+    )
+    queries.insert_message(conn, media_msg)
+
+    # ── 3. Simulate ALL OTHER fixtures on the same matchday ──────────────
+    all_md_fixtures = queries.get_fixtures_by_matchday(conn, fixture.matchday)
+    other_results: list[MatchResult] = []
+
+    for other_fixture in all_md_fixtures:
+        if other_fixture.played:
+            continue
+        # Skip user match (already done)
+        if other_fixture.fixture_id == fixture.fixture_id:
+            continue
+
+        result = _simulate_single_fixture(conn, other_fixture)
+        queries.mark_fixture_played(conn, other_fixture.fixture_id, result)
+        queries.update_standings_for_result(conn, result)
+        other_results.append(result)
+
+        # Inbox message for each result
+        queries.insert_message(conn, InboxMessage(
+            date=game_state.current_date,
+            subject=f"Result: {result.score_display}",
+            body=_format_result_body(result),
+            category="match",
+        ))
+
     conn.commit()
-    return result
+
+    return MatchdayOutcome(
+        user_result=user_result,
+        other_results=other_results,
+        matchday=fixture.matchday,
+    )
 
 
 def _update_player_stats_after_match(
@@ -207,17 +278,15 @@ def _update_player_stats_after_match(
     away_tactics,
 ) -> None:
     """Update individual player statistics after a match."""
-    # Build lookup
     all_players = {p.id: p for p in home_squad + away_squad}
 
-    # Count goals and assists from events
     for event in result.events:
         if event.event_type == MatchEventType.GOAL and event.player_id:
             player = all_players.get(event.player_id)
             if player:
                 player.season_stats.goals += 1
-                player.season_stats.appearances += 1  # Simplified
-                update_form(player, 8.0)  # Goal scorers get a form boost
+                player.season_stats.appearances += 1
+                update_form(player, 8.0)
                 queries.update_player_stats(conn, player)
 
             if event.second_player_id:
@@ -247,7 +316,41 @@ def _daily_recovery(conn: sqlite3.Connection, game_state: GameState) -> None:
         squad = queries.get_players_by_club(conn, c.id)
         for player in squad:
             rest_recovery(player, days=1)
-            # Don't save every day for performance — could batch
+
+
+def _weekly_development(conn: sqlite3.Connection,
+                         game_state: GameState) -> list[str]:
+    """Weekly player development for user club."""
+    messages: list[str] = []
+    club = queries.get_club(conn, game_state.user_club_id)
+    if not club:
+        return messages
+    squad = queries.get_players_by_club(conn, club.id)
+    for player in squad:
+        dev_msgs = develop_player(player, club)
+        if dev_msgs:
+            messages.extend(dev_msgs)
+            queries.update_player_stats(conn, player)
+    return messages
+
+
+def _monthly_finances(conn: sqlite3.Connection,
+                       game_state: GameState) -> list[str]:
+    """Process monthly finances for user club."""
+    messages: list[str] = []
+    club = queries.get_club(conn, game_state.user_club_id)
+    if not club:
+        return messages
+    summary = process_monthly_finances(club)
+    queries.update_club(conn, club)
+    messages.append(summary)
+    queries.insert_message(conn, InboxMessage(
+        date=game_state.current_date,
+        subject="💰 Monthly Financial Report",
+        body=summary,
+        category="board",
+    ))
+    return messages
 
 
 def _format_result_body(result: MatchResult) -> str:

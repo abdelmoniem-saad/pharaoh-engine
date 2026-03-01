@@ -100,6 +100,7 @@ class Player(BaseModel):
     club_id: Optional[int] = None
     is_captain: bool = False
     shirt_number: Optional[int] = None
+    transfer_listed: bool = False
 
 
 # ── Club Models ──────────────────────────────────────────────────────────────
@@ -297,5 +298,12 @@ class InboxMessage(BaseModel):
     body: str
     category: str = "general"     # general, match, transfer, board, media
     is_read: bool = False
+
+
+class MatchdayOutcome(BaseModel):
+    """Result of simulating a full matchday (user match + all others)."""
+    user_result: MatchResult
+    other_results: list[MatchResult] = Field(default_factory=list)
+    matchday: int = 0
 
 

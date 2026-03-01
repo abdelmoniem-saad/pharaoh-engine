@@ -40,6 +40,14 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
         ovr_color = ft.Colors.GREEN_300 if ovr >= 70 else ft.Colors.WHITE
         morale_icon = "😊" if player.morale >= 70 else "😐" if player.morale >= 40 else "😞"
 
+        # Name with badges
+        name_parts = [player.name]
+        if player.is_captain:
+            name_parts.append("©")
+        if player.transfer_listed:
+            name_parts.append("🔴")
+        display_name = " ".join(name_parts)
+
         def make_click_handler(p=player, o=ovr):
             def handler(e):
                 _show_player_detail(page, p, o)
@@ -48,7 +56,7 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
         rows.append(
             ft.DataRow(
                 cells=[
-                    ft.DataCell(ft.Text(player.name, size=12)),
+                    ft.DataCell(ft.Text(display_name, size=12)),
                     ft.DataCell(ft.Text(player.position.value, size=11,
                                         color=ft.Colors.AMBER_300)),
                     ft.DataCell(ft.Text(str(player.age), size=11)),
@@ -91,9 +99,26 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                 content=ft.Column(
                     spacing=8,
                     controls=[
-                        ft.Text(
-                            f"📋 {gs.user_club_name}",
-                            size=22, weight=ft.FontWeight.BOLD,
+                        ft.Row(
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                            controls=[
+                                ft.Text(
+                                    f"📋 {gs.user_club_name}",
+                                    size=22, weight=ft.FontWeight.BOLD,
+                                ),
+                                ft.Row(spacing=4, controls=[
+                                    ft.IconButton(
+                                        icon=ft.Icons.SAVE, tooltip="Save Game",
+                                        icon_size=20,
+                                        on_click=lambda e: _save_game(page, conn, gs),
+                                    ),
+                                    ft.IconButton(
+                                        icon=ft.Icons.STORE, tooltip="Transfer Market",
+                                        icon_size=20,
+                                        on_click=lambda e: navigate(page, "/transfers"),
+                                    ),
+                                ]),
+                            ],
                         ),
                         ft.Row(
                             spacing=15,
@@ -308,8 +333,46 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
             height=420,
         ),
         actions=[
+            ft.TextButton(
+                "© Captain" if not player.is_captain else "✓ Captain",
+                on_click=lambda e, pid=player.id: _set_captain(page, pid),
+            ),
+            ft.TextButton(
+                "🔴 Unlist" if player.transfer_listed else "📤 List",
+                on_click=lambda e, pid=player.id, listed=player.transfer_listed: _toggle_transfer(page, pid, listed),
+            ),
             ft.TextButton("Close", on_click=lambda e: page.pop_dialog()),
         ],
     )
     page.show_dialog(dlg)
+
+
+def _set_captain(page, player_id):
+    """Set a player as captain."""
+    from src.ui.app import app_state, navigate, show_snackbar
+    conn = app_state.db_conn
+    gs = app_state.game_state
+    queries.set_captain(conn, gs.user_club_id, player_id)
+    page.pop_dialog()
+    show_snackbar(page, "Captain updated!")
+    navigate(page, "/squad")
+
+
+def _toggle_transfer(page, player_id, currently_listed):
+    """Toggle transfer list status."""
+    from src.ui.app import app_state, navigate, show_snackbar
+    conn = app_state.db_conn
+    queries.set_transfer_listed(conn, player_id, not currently_listed)
+    page.pop_dialog()
+    msg = "Player removed from transfer list." if currently_listed else "Player listed for transfer!"
+    show_snackbar(page, msg)
+    navigate(page, "/squad")
+
+
+def _save_game(page, conn, gs):
+    """Save the current game state."""
+    from src.ui.app import show_snackbar
+    queries.save_game_state(conn, gs)
+    show_snackbar(page, "💾 Game saved!")
+
 

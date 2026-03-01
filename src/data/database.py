@@ -118,6 +118,7 @@ CREATE TABLE IF NOT EXISTS players (
     form REAL NOT NULL DEFAULT 7.0,
     is_captain INTEGER NOT NULL DEFAULT 0,
     shirt_number INTEGER,
+    transfer_listed INTEGER NOT NULL DEFAULT 0,
 
     -- Technical attributes
     finishing INTEGER NOT NULL DEFAULT 10,

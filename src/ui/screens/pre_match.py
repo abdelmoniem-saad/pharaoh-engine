@@ -1,0 +1,270 @@
+"""
+Pre-Match screen — review and edit starting XI before playing.
+"""
+from __future__ import annotations
+
+import flet as ft
+
+from src.data import queries
+from src.core.tactics import auto_select_xi, get_formation_positions
+from src.core.player import calculate_overall_rating
+from src.core.calendar import simulate_user_match
+from src.ui.widgets.nav_bar import build_nav_bar
+from src.utils.config import Position
+
+
+# Pitch coordinates for position markers
+_POS_COORDS: dict[Position, tuple[float, float]] = {
+    Position.GK:  (50, 90),
+    Position.CB:  (50, 72),
+    Position.LB:  (15, 68),
+    Position.RB:  (85, 68),
+    Position.CDM: (50, 55),
+    Position.CM:  (50, 45),
+    Position.CAM: (50, 32),
+    Position.LM:  (12, 45),
+    Position.RM:  (88, 45),
+    Position.LW:  (18, 25),
+    Position.RW:  (82, 25),
+    Position.ST:  (50, 15),
+}
+_SPREAD = [0, -15, 15, -30, 30]
+
+
+def build_pre_match_screen(page: ft.Page) -> ft.Column:
+    """Build the pre-match starting XI selection screen."""
+    from src.ui.app import app_state, navigate, show_snackbar
+
+    page.navigation_bar = build_nav_bar(page, 2)
+
+    if not app_state.db_conn or not app_state.game_state:
+        return ft.Column(controls=[ft.Text("No game loaded")])
+
+    conn = app_state.db_conn
+    gs = app_state.game_state
+    club = queries.get_club(conn, gs.user_club_id)
+    if not club:
+        return ft.Column(controls=[ft.Text("Club not found")])
+
+    squad = queries.get_players_by_club(conn, club.id)
+    fixture = queries.get_user_next_fixture(conn, gs.user_club_id)
+    if not fixture:
+        return ft.Column(controls=[ft.Text("No upcoming match")])
+
+    is_home = fixture.home_club_id == gs.user_club_id
+    opp_name = fixture.away_club_name if is_home else fixture.home_club_name
+
+    # Auto-select starting XI
+    xi_ids, bench_ids = auto_select_xi(squad, club.formation)
+    player_map = {p.id: p for p in squad}
+
+    # Mutable state for swaps
+    current_xi = list(xi_ids)
+    current_bench = list(bench_ids)
+
+    # Swap logic
+    selected_starter_idx = [None]  # index into current_xi
+    selected_bench_idx = [None]    # index into current_bench
+
+    def _rebuild_ui():
+        """Rebuild the pitch and bench display."""
+        pitch_stack.controls.clear()
+        bench_col.controls.clear()
+
+        # Pitch background
+        pitch_stack.controls.append(
+            ft.Container(
+                width=320, height=280,
+                border_radius=10,
+                gradient=ft.LinearGradient(
+                    colors=[ft.Colors.GREEN_900, ft.Colors.GREEN_800, ft.Colors.GREEN_900],
+                    begin=ft.Alignment(0, -1), end=ft.Alignment(0, 1),
+                ),
+                border=ft.border.all(2, ft.Colors.WHITE24),
+            )
+        )
+
+        # Place player markers
+        positions = get_formation_positions(club.formation)
+        pos_count: dict[Position, int] = {}
+
+        for i, pid in enumerate(current_xi):
+            if i >= len(positions):
+                break
+            pos = positions[i]
+            p = player_map.get(pid)
+            if not p:
+                continue
+
+            count = pos_count.get(pos, 0)
+            pos_count[pos] = count + 1
+            base_x, base_y = _POS_COORDS.get(pos, (50, 50))
+            offset = _SPREAD[count] if count < len(_SPREAD) else 0
+            x = base_x + offset
+
+            ovr = calculate_overall_rating(p)
+            fit_ok = p.fitness >= 70
+            is_selected = selected_starter_idx[0] == i
+
+            border = ft.border.all(2, ft.Colors.AMBER_400) if is_selected else None
+
+            def make_starter_click(idx=i):
+                def handler(e):
+                    if selected_bench_idx[0] is not None:
+                        # Swap starter with bench
+                        bi = selected_bench_idx[0]
+                        current_xi[idx], current_bench[bi] = current_bench[bi], current_xi[idx]
+                        selected_bench_idx[0] = None
+                        selected_starter_idx[0] = None
+                        _rebuild_ui()
+                        page.update()
+                    else:
+                        selected_starter_idx[0] = idx
+                        selected_bench_idx[0] = None
+                        _rebuild_ui()
+                        page.update()
+                return handler
+
+            marker = ft.Container(
+                content=ft.Column(
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=0,
+                    controls=[
+                        ft.Container(
+                            content=ft.Text(str(ovr), size=10, weight=ft.FontWeight.BOLD,
+                                             color=ft.Colors.WHITE),
+                            width=28, height=28, border_radius=14,
+                            bgcolor=ft.Colors.GREEN_700 if fit_ok else ft.Colors.RED_700,
+                            alignment=ft.Alignment(0, 0),
+                            border=border,
+                        ),
+                        ft.Text(p.name.split()[-1][:8], size=8,
+                                 color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER),
+                    ],
+                ),
+                left=x / 100 * 320 - 20,
+                top=base_y / 100 * 280 - 20,
+                on_click=make_starter_click(),
+            )
+            pitch_stack.controls.append(marker)
+
+        # Build bench row
+        for bi, pid in enumerate(current_bench):
+            p = player_map.get(pid)
+            if not p:
+                continue
+            ovr = calculate_overall_rating(p)
+            is_selected = selected_bench_idx[0] == bi
+
+            def make_bench_click(idx=bi):
+                def handler(e):
+                    if selected_starter_idx[0] is not None:
+                        # Swap bench with starter
+                        si = selected_starter_idx[0]
+                        current_xi[si], current_bench[idx] = current_bench[idx], current_xi[si]
+                        selected_starter_idx[0] = None
+                        selected_bench_idx[0] = None
+                        _rebuild_ui()
+                        page.update()
+                    else:
+                        selected_bench_idx[0] = idx
+                        selected_starter_idx[0] = None
+                        _rebuild_ui()
+                        page.update()
+                return handler
+
+            bench_col.controls.append(
+                ft.Container(
+                    content=ft.Row(
+                        spacing=6,
+                        controls=[
+                            ft.Container(
+                                content=ft.Text(str(ovr), size=10,
+                                                 weight=ft.FontWeight.BOLD,
+                                                 color=ft.Colors.WHITE),
+                                width=26, height=26, border_radius=13,
+                                bgcolor=ft.Colors.GREY_700,
+                                alignment=ft.Alignment(0, 0),
+                            ),
+                            ft.Text(p.name, size=11, width=100),
+                            ft.Text(p.position.value, size=10, color=ft.Colors.AMBER_300),
+                            ft.Text(f"{p.fitness}%", size=10,
+                                     color=ft.Colors.GREEN_400 if p.fitness >= 70 else ft.Colors.RED_400),
+                        ],
+                    ),
+                    padding=ft.padding.symmetric(horizontal=6, vertical=3),
+                    border_radius=4,
+                    bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.AMBER) if is_selected else ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+                    on_click=make_bench_click(),
+                )
+            )
+
+    # Mutable containers
+    pitch_stack = ft.Stack(width=320, height=280)
+    bench_col = ft.Column(spacing=2)
+
+    _rebuild_ui()
+
+    # Play match button
+    def play_match(e):
+        # The simulate_user_match will auto-select XI, but we've set the preference
+        # For now, simulate normally (TODO: pass custom XI)
+        outcome = simulate_user_match(conn, gs)
+        if outcome:
+            from src.ui.screens.match_day import _show_result_dialog
+            _show_result_dialog(page, outcome)
+        else:
+            show_snackbar(page, "Could not simulate match!", bgcolor=ft.Colors.RED_800)
+
+    venue = "🏟️ HOME" if is_home else "✈️ AWAY"
+
+    return ft.Column(
+        expand=True,
+        scroll=ft.ScrollMode.AUTO,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=[
+            ft.Container(
+                padding=ft.padding.only(left=12, right=12, top=10, bottom=10),
+                content=ft.Column(
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=8,
+                    controls=[
+                        ft.Row(
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                            controls=[
+                                ft.Text("📋 Starting XI", size=20, weight=ft.FontWeight.BOLD),
+                                ft.IconButton(
+                                    icon=ft.Icons.ARROW_BACK, tooltip="Back",
+                                    on_click=lambda e: navigate(page, "/match_day"),
+                                ),
+                            ],
+                        ),
+                        ft.Text(f"vs {opp_name} {venue}", size=13, color=ft.Colors.GREY_400),
+                        ft.Text(f"Formation: {club.formation}", size=12, color=ft.Colors.AMBER_300),
+                        ft.Text("Tap a starter, then tap a bench player to swap",
+                                 size=10, color=ft.Colors.GREY_600, italic=True),
+                        ft.Divider(height=1),
+                        # Pitch
+                        pitch_stack,
+                        ft.Divider(height=1),
+                        # Bench
+                        ft.Text("🪑 Bench", size=14, weight=ft.FontWeight.W_500),
+                        bench_col,
+                        ft.Container(height=10),
+                        ft.ElevatedButton(
+                            "⚽ Confirm & Play",
+                            width=280, height=55,
+                            style=ft.ButtonStyle(
+                                bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
+                                text_style=ft.TextStyle(size=18, weight=ft.FontWeight.BOLD),
+                            ),
+                            on_click=play_match,
+                        ),
+                        ft.Container(height=10),
+                    ],
+                ),
+            ),
+        ],
+    )
+
+

@@ -11,7 +11,7 @@ from src.ui.widgets.nav_bar import build_nav_bar
 
 def build_table_screen(page: ft.Page) -> ft.Column:
     """Build the league standings content."""
-    from src.ui.app import app_state
+    from src.ui.app import app_state, navigate
 
     page.navigation_bar = build_nav_bar(page, 3)
 
@@ -144,6 +144,20 @@ def build_table_screen(page: ft.Page) -> ft.Column:
                                     f"Matchday {current_md}",
                                     size=12, color=ft.Colors.AMBER_400,
                                     weight=ft.FontWeight.W_500,
+                                ),
+                            ],
+                        ),
+                        # Quick nav buttons
+                        ft.Row(
+                            spacing=8,
+                            controls=[
+                                ft.OutlinedButton(
+                                    "📅 Fixtures",
+                                    on_click=lambda e: navigate(page, "/fixtures"),
+                                ),
+                                ft.OutlinedButton(
+                                    "🏟️ My Club",
+                                    on_click=lambda e: navigate(page, "/club"),
                                 ),
                             ],
                         ),
