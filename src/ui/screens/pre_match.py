@@ -10,6 +10,7 @@ from src.core.tactics import auto_select_xi, get_formation_positions
 from src.core.player import calculate_overall_rating
 from src.core.calendar import simulate_user_match
 from src.ui.widgets.nav_bar import build_nav_bar
+from src.ui.theme import pitch_width as pw_fn, pitch_height as ph_fn, PAGE_PADDING
 from src.utils.config import Position
 
 
@@ -70,6 +71,10 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
     selected_starter_idx = [None]  # index into current_xi
     selected_bench_idx = [None]    # index into current_bench
 
+    # Responsive pitch dimensions
+    _pw = pw_fn(page)
+    _ph = int(_pw * 0.875)  # slightly shorter for pre-match view
+
     def _rebuild_ui():
         """Rebuild the pitch and bench display."""
         pitch_stack.controls.clear()
@@ -78,7 +83,7 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
         # Pitch background
         pitch_stack.controls.append(
             ft.Container(
-                width=320, height=280,
+                width=_pw, height=_ph,
                 border_radius=10,
                 gradient=ft.LinearGradient(
                     colors=[ft.Colors.GREEN_900, ft.Colors.GREEN_800, ft.Colors.GREEN_900],
@@ -157,8 +162,8 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                                  color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER),
                     ],
                 ),
-                left=x / 100 * 320 - 20,
-                top=base_y / 100 * 280 - 20,
+                left=x / 100 * _pw - 20,
+                top=base_y / 100 * _ph - 20,
                 on_click=make_starter_click(),
             )
             pitch_stack.controls.append(marker)
@@ -208,21 +213,22 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                                 bgcolor=ft.Colors.GREY_700,
                                 alignment=ft.Alignment(0, 0),
                             ),
-                            ft.Text(bench_display, size=11, width=110),
+                            ft.Text(bench_display, size=11, expand=True),
                             ft.Text(p.position.value, size=10, color=ft.Colors.AMBER_300),
                             ft.Text(f"{p.fitness}%", size=10,
                                      color=ft.Colors.GREEN_400 if p.fitness >= 70 else ft.Colors.RED_400),
                         ],
                     ),
-                    padding=ft.padding.symmetric(horizontal=6, vertical=3),
+                    padding=ft.padding.symmetric(horizontal=8, vertical=8),
                     border_radius=4,
                     bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.AMBER) if is_selected else ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
                     on_click=make_bench_click(),
+                    ink=True,
                 )
             )
 
     # Mutable containers
-    pitch_stack = ft.Stack(width=320, height=280)
+    pitch_stack = ft.Stack(width=_pw, height=_ph)
     bench_col = ft.Column(spacing=2)
 
     _rebuild_ui()
@@ -317,5 +323,4 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
             ),
         ],
     )
-
 

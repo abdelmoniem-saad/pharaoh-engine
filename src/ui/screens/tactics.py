@@ -85,7 +85,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
         return handler
 
     # Visual pitch
-    pitch = _build_formation_pitch(club.formation)
+    pitch = _build_formation_pitch(club.formation, page)
 
     # Mentality indicator
     mentality_color = {
@@ -150,14 +150,14 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                                     value=club.formation,
                                     options=[ft.dropdown.Option(f) for f in formations],
                                     on_select=on_formation_change,
-                                    width=160,
+                                    expand=True,
                                 ),
                                 ft.Dropdown(
                                     label="Mentality",
                                     value=club.mentality.name.replace("_", " ").title(),
                                     options=mentality_options,
                                     on_select=on_mentality_change,
-                                    width=160,
+                                    expand=True,
                                 ),
                             ],
                         ),
@@ -188,8 +188,12 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
     )
 
 
-def _build_formation_pitch(formation: str) -> ft.Container:
+def _build_formation_pitch(formation: str, page: ft.Page = None) -> ft.Container:
     """Build a visual pitch showing player positions for the given formation."""
+    from src.ui.theme import pitch_width as pw_fn, pitch_height as ph_fn
+    pw = pw_fn(page) if page else 280
+    ph = ph_fn(page) if page else 360
+
     positions = FORMATION_TEMPLATES.get(formation, FORMATION_TEMPLATES["4-2-3-1"])
 
     # Count occurrences of each position to spread duplicates symmetrically
@@ -209,9 +213,6 @@ def _build_formation_pitch(formation: str) -> ft.Container:
 
         base_x, base_y = _POSITION_COORDS.get(pos, (50, 50))
 
-        # Symmetric spreading: distribute N markers evenly around base_x
-        # For count=1: offset=0  For count=2: offsets=[-gap/2, +gap/2]
-        # For count=3: offsets=[-gap, 0, +gap]  etc.
         if count > 1:
             offset = (idx - (count - 1) / 2) * _SPREAD_GAP
             x = base_x + offset
@@ -227,59 +228,63 @@ def _build_formation_pitch(formation: str) -> ft.Container:
         is_gk = pos == Position.GK
         marker_color = ft.Colors.AMBER_400 if is_gk else ft.Colors.WHITE
         marker_bg = ft.Colors.with_opacity(0.9, ft.Colors.AMBER_800 if is_gk else ft.Colors.BLUE_GREY_700)
+        marker_size = 30
 
         markers.append(
             ft.Container(
                 content=ft.Text(pos.value, size=9, weight=ft.FontWeight.BOLD,
                                 color=marker_color, text_align=ft.TextAlign.CENTER),
-                width=32, height=32,
-                border_radius=16,
+                width=marker_size, height=marker_size,
+                border_radius=marker_size // 2,
                 bgcolor=marker_bg,
                 alignment=ft.Alignment(0, 0),
-                left=x / 100 * 280 - 16,  # center the 32px marker
-                top=y / 100 * 360 - 16,
+                left=x / 100 * pw - marker_size // 2,
+                top=y / 100 * ph - marker_size // 2,
             )
         )
+
+    # Center circle size
+    cc_size = max(40, int(pw * 0.2))
 
     # Pitch background with lines
     pitch = ft.Stack(
         controls=[
             # Pitch background
             ft.Container(
-                width=280, height=360,
+                width=pw, height=ph,
                 bgcolor=ft.Colors.GREEN_900,
                 border_radius=8,
                 border=ft.border.all(2, ft.Colors.WHITE24),
             ),
             # Center line
             ft.Container(
-                width=280, height=1, bgcolor=ft.Colors.WHITE24,
-                left=0, top=180,
+                width=pw, height=1, bgcolor=ft.Colors.WHITE24,
+                left=0, top=ph // 2,
             ),
-            # Center circle (approximation)
+            # Center circle
             ft.Container(
-                width=60, height=60,
-                border_radius=30,
+                width=cc_size, height=cc_size,
+                border_radius=cc_size // 2,
                 border=ft.border.all(1, ft.Colors.WHITE24),
-                left=110, top=150,
+                left=(pw - cc_size) // 2, top=(ph - cc_size) // 2,
             ),
             # Penalty area top
             ft.Container(
-                width=140, height=50,
+                width=int(pw * 0.5), height=int(ph * 0.14),
                 border=ft.border.all(1, ft.Colors.WHITE24),
-                left=70, top=0,
+                left=int(pw * 0.25), top=0,
             ),
             # Penalty area bottom
             ft.Container(
-                width=140, height=50,
+                width=int(pw * 0.5), height=int(ph * 0.14),
                 border=ft.border.all(1, ft.Colors.WHITE24),
-                left=70, top=310,
+                left=int(pw * 0.25), top=ph - int(ph * 0.14),
             ),
             # Player markers
             *markers,
         ],
-        width=280,
-        height=360,
+        width=pw,
+        height=ph,
     )
 
     return ft.Container(

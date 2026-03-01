@@ -171,7 +171,7 @@ def _show_club_selection(page: ft.Page, manager_name: str):
                 controls=club_buttons,
                 spacing=2,
             ),
-            width=350,
+            width=300,
             height=450,
         ),
         actions=[

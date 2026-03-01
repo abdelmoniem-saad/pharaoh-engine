@@ -35,14 +35,14 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     shortlist: set = app_state._shortlist
 
     # ── Search controls ──────────────────────────────────────────────
-    name_field = ft.TextField(label="Name", width=140, text_size=13)
+    name_field = ft.TextField(label="Name", expand=True, text_size=13)
     pos_dd = ft.Dropdown(
-        label="Position", width=100,
+        label="Position", width=90,
         options=[ft.dropdown.Option("Any")] + [ft.dropdown.Option(p.value) for p in Position],
         value="Any",
     )
-    max_age_field = ft.TextField(label="Max Age", width=70, value="35", text_size=13)
-    min_ovr_field = ft.TextField(label="Min OVR", width=70, value="", text_size=13)
+    max_age_field = ft.TextField(label="Max Age", width=65, value="35", text_size=13)
+    min_ovr_field = ft.TextField(label="Min OVR", width=65, value="", text_size=13)
 
     results_list = ft.Column(spacing=4)
 
@@ -105,10 +105,11 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                     ]),
                 ],
             ),
-            padding=ft.padding.symmetric(horizontal=8, vertical=6),
+            padding=ft.padding.symmetric(horizontal=10, vertical=10),
             border_radius=6,
             bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
             on_click=make_handler(),
+            ink=True,
         )
 
     def do_search(e):
@@ -635,7 +636,7 @@ def _show_buy_dialog(page, conn, gs, user_club, player, estimated_value, shortli
                     offer_field,
                 ],
             ),
-            width=320, height=380,
+            width=290, height=380,
         ),
         actions=[
             ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),

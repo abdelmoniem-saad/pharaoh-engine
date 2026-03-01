@@ -502,7 +502,7 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
                     training_dd,
                 ],
             ),
-            width=340,
+            width=290,
             height=420,
         ),
         actions=[
@@ -728,7 +728,7 @@ def _start_compare(page, players):
         title=ft.Text("⚖️ Compare Players"),
         content=ft.Container(
             content=ft.Column(controls=[step_text, list_view], spacing=6),
-            width=330, height=400,
+            width=290, height=400,
         ),
         actions=[ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog())],
     )
@@ -782,7 +782,7 @@ def _show_compare_dialog(page, p1, p2):
         ),
         content=ft.Container(
             content=ft.Column(controls=rows, spacing=4, scroll=ft.ScrollMode.AUTO),
-            width=330, height=380,
+            width=290, height=380,
         ),
         actions=[ft.TextButton("Close", on_click=lambda e: page.pop_dialog())],
     )

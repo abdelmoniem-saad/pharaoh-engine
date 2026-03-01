@@ -90,14 +90,18 @@ def navigate(page: ft.Page, route: str):
 def main(page: ft.Page):
     """Flet app entry point — configures the page and sets up routing."""
     page.title = APP_NAME
-    page.window.width = 420
-    page.window.height = 780
+    # Portrait-first: use iPhone 14-like dimensions for desktop testing.
+    # On actual mobile devices the OS controls window size.
+    page.window.width = 390
+    page.window.height = 844
+    page.window.resizable = True
     page.theme_mode = ft.ThemeMode.DARK
     page.theme = ft.Theme(
         color_scheme_seed=ft.Colors.AMBER,
         font_family="Roboto",
     )
     page.padding = 0
+    page.spacing = 0
 
     # Show main menu
     navigate(page, "/")

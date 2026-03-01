@@ -83,7 +83,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         weight=ft.FontWeight.W_500, text_align=ft.TextAlign.CENTER,
     )
     progress_bar = ft.ProgressBar(
-        value=0, width=320, color=ft.Colors.AMBER_600,
+        value=0, color=ft.Colors.AMBER_600,
         bgcolor=ft.Colors.GREY_800,
     )
     status_text = ft.Text(
@@ -303,15 +303,17 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                                         spacing=10,
                                         controls=[
                                             ft.Text(
-                                                result.home_club_name, size=16,
+                                                result.home_club_name, size=14,
                                                 weight=ft.FontWeight.BOLD,
-                                                text_align=ft.TextAlign.RIGHT, width=120,
+                                                text_align=ft.TextAlign.RIGHT, expand=True,
+                                                max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                             ),
                                             score_text,
                                             ft.Text(
-                                                result.away_club_name, size=16,
+                                                result.away_club_name, size=14,
                                                 weight=ft.FontWeight.BOLD,
-                                                text_align=ft.TextAlign.LEFT, width=120,
+                                                text_align=ft.TextAlign.LEFT, expand=True,
+                                                max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                             ),
                                         ],
                                     ),
@@ -371,12 +373,12 @@ def _show_halftime_talk(page: ft.Page, event_list, halftime_choice):
             return handler
 
         btn = ft.Container(
-            content=ft.Row(spacing=8, controls=[
-                ft.Text(emoji_label, size=13, weight=ft.FontWeight.W_500),
-                ft.Text(f"— {desc}", size=10, color=ft.Colors.GREY_400, italic=True),
+            content=ft.Column(spacing=2, controls=[
+                ft.Text(emoji_label, size=14, weight=ft.FontWeight.W_600),
+                ft.Text(desc, size=11, color=ft.Colors.GREY_400, italic=True),
             ]),
-            padding=ft.padding.symmetric(horizontal=10, vertical=8),
-            border_radius=6,
+            padding=ft.padding.symmetric(horizontal=12, vertical=12),
+            border_radius=8,
             bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.BLUE),
             on_click=make_handler(),
             ink=True,

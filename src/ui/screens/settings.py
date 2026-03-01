@@ -16,17 +16,17 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
     difficulty = settings.get("difficulty", "normal")
 
     speed_dd = ft.Dropdown(
-        label="Match Speed", value=str(match_speed), width=250,
+        label="Match Speed", value=str(match_speed), expand=True,
         options=[ft.dropdown.Option(str(i), text=f"{i} - {n}")
                  for i, n in [(1, "Slow"), (2, "Normal"), (3, "Fast"), (4, "Very Fast"), (5, "Instant")]],
     )
     diff_dd = ft.Dropdown(
-        label="Difficulty", value=difficulty, width=250,
+        label="Difficulty", value=difficulty, expand=True,
         options=[ft.dropdown.Option(k, text=k.title()) for k in ("easy", "normal", "hard")],
     )
     auto_save_switch = ft.Switch(label="Auto-Save", value=bool(auto_save))
     interval_dd = ft.Dropdown(
-        label="Auto-Save Interval", value=str(auto_save_interval), width=250,
+        label="Auto-Save Interval", value=str(auto_save_interval), expand=True,
         options=[ft.dropdown.Option(str(d), text=f"Every {d} days") for d in (3, 7, 14, 30)],
     )
 
@@ -77,7 +77,7 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
         auto_save_switch, interval_dd,
         ft.Divider(height=1),
         ft.Text("🌍 Language", size=16, weight=ft.FontWeight.W_500, color=ft.Colors.AMBER_300),
-        ft.Dropdown(label="Language", value="English", width=250,
+        ft.Dropdown(label="Language", value="English", expand=True,
                     options=[ft.dropdown.Option("English")], disabled=True),
         ft.Text("Arabic support coming soon!", size=11, color=ft.Colors.GREY_600, italic=True),
         ft.Divider(height=1),

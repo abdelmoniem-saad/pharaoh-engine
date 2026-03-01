@@ -160,18 +160,19 @@ def form_chips(results: list[str]) -> ft.Row:
 
 def stat_comparison_bar(
     home_val: str, away_val: str, label: str,
-    bar_width: int = 260,
     home_color: str = ft.Colors.GREEN_400,
     away_color: str = ft.Colors.BLUE_400,
 ) -> ft.Container:
-    """Visual stat comparison bar — for post-match / match preview."""
+    """Visual stat comparison bar — for post-match / match preview. Fully responsive."""
     try:
         hv = float(home_val.replace('%', ''))
         av = float(away_val.replace('%', ''))
     except ValueError:
         hv = av = 0
     total = hv + av if (hv + av) > 0 else 1
-    home_pct = hv / total
+    # Use expand (flex) ratio so bars auto-fill available width
+    home_flex = max(1, int(hv / total * 100))
+    away_flex = max(1, int((1 - hv / total) * 100))
 
     return ft.Container(
         content=ft.Column(spacing=2, controls=[
@@ -182,11 +183,11 @@ def stat_comparison_bar(
             ]),
             ft.Row(spacing=2, controls=[
                 ft.Container(
-                    width=max(4, home_pct * bar_width), height=4,
+                    expand=home_flex, height=4,
                     bgcolor=home_color, border_radius=2,
                 ),
                 ft.Container(
-                    width=max(4, (1 - home_pct) * bar_width), height=4,
+                    expand=away_flex, height=4,
                     bgcolor=away_color, border_radius=2,
                 ),
             ]),

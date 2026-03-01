@@ -85,9 +85,10 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
         scorer_rows.append(
             ft.Row(spacing=6, controls=[
                 ft.Text(f"{i}.", size=12, width=20, color=ft.Colors.GREY_500),
-                ft.Text(s["name"], size=12, width=130,
+                ft.Text(s["name"], size=12, expand=True,
                          weight=ft.FontWeight.BOLD if is_mine else ft.FontWeight.NORMAL,
-                         color=ft.Colors.GREEN_300 if is_mine else None),
+                         color=ft.Colors.GREEN_300 if is_mine else None,
+                         max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                 ft.Text(f"⚽ {s['goals']}", size=12, weight=ft.FontWeight.BOLD,
                          color=ft.Colors.AMBER_300),
                 ft.Text(s.get("club_short", ""), size=10, color=ft.Colors.GREY_500),
@@ -102,9 +103,10 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
             ft.Row(spacing=6, controls=[
                 ft.Text(f"{i}.", size=12, width=20,
                          weight=ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL),
-                ft.Text(s.club_name[:16], size=12, width=130,
+                ft.Text(s.club_name, size=12, expand=True,
                          weight=ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL,
-                         color=ft.Colors.GREEN_300 if is_user else None),
+                         color=ft.Colors.GREEN_300 if is_user else None,
+                         max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                 ft.Text(f"{s.points} pts", size=12, weight=ft.FontWeight.BOLD,
                          color=ft.Colors.AMBER_300 if is_user else None),
             ])
@@ -150,7 +152,6 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
                             padding=12,
                             bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.GREEN if is_champ else ft.Colors.WHITE),
                             border_radius=8,
-                            width=320,
                         ),
 
                         # Board & Fans

@@ -2,6 +2,7 @@
 UI Theme constants — centralized colors, spacing, and styling for mobile-first design.
 
 All screens should import from here instead of hardcoding color/padding values.
+Portrait-mode optimized for 360px–430px phone widths.
 """
 from __future__ import annotations
 
@@ -42,12 +43,51 @@ PAGE_PADDING = 12
 SECTION_SPACING = 10
 ITEM_SPACING = 6
 
+# ── Touch targets ───────────────────────────────────────────────────────────
+MIN_TOUCH_TARGET = 44       # minimum height for tappable elements (px)
+TOUCH_ROW_PADDING_V = 10    # vertical padding to reach ~44px touch height
+NAV_BAR_HEIGHT = 60          # bottom nav bar consumes this much
+
 # ── Typography ──────────────────────────────────────────────────────────────
 TITLE_SIZE = 20
 SUBTITLE_SIZE = 14
 BODY_SIZE = 13
 CAPTION_SIZE = 11
 TINY_SIZE = 9
+
+# ── Responsive helpers ──────────────────────────────────────────────────────
+
+def get_page_width(page: ft.Page) -> int:
+    """Get usable page width, defaulting to 390 if not yet known."""
+    try:
+        w = page.width
+        if w and w > 0:
+            return int(w)
+    except Exception:
+        pass
+    return 390  # iPhone 14 default
+
+
+def content_width(page: ft.Page) -> int:
+    """Usable content width = page width minus 2 * PAGE_PADDING."""
+    return get_page_width(page) - 2 * PAGE_PADDING
+
+
+def pitch_width(page: ft.Page) -> int:
+    """Width for pitch visualizations — fits within content area with some margin."""
+    return min(content_width(page) - 8, 320)
+
+
+def pitch_height(page: ft.Page) -> int:
+    """Height for pitch — 4:3 aspect ratio based on pitch_width."""
+    pw = pitch_width(page)
+    return int(pw * 1.28)  # ~360 for 280px width
+
+
+def dialog_width(page: ft.Page) -> int:
+    """Safe dialog content width — always fits even on 360px phones."""
+    return min(get_page_width(page) - 60, 300)
+
 
 # ── Position color helpers ──────────────────────────────────────────────────
 

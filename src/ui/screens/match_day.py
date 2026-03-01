@@ -558,8 +558,9 @@ def _show_result_dialog(page, outcome):
                         alignment=ft.MainAxisAlignment.CENTER,
                         spacing=8,
                         controls=[
-                            ft.Text(r.home_club_name[:14], size=11,
-                                     text_align=ft.TextAlign.RIGHT, width=100),
+                            ft.Text(r.home_club_name, size=11,
+                                     text_align=ft.TextAlign.RIGHT, expand=True,
+                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                             ft.Container(
                                 content=ft.Text(f"{r.home_goals}-{r.away_goals}",
                                                  size=12, weight=ft.FontWeight.BOLD),
@@ -567,11 +568,12 @@ def _show_result_dialog(page, outcome):
                                 padding=ft.padding.symmetric(horizontal=8, vertical=2),
                                 border_radius=4,
                             ),
-                            ft.Text(r.away_club_name[:14], size=11,
-                                     text_align=ft.TextAlign.LEFT, width=100),
+                            ft.Text(r.away_club_name, size=11,
+                                     text_align=ft.TextAlign.LEFT, expand=True,
+                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                         ],
                     ),
-                    padding=ft.padding.symmetric(vertical=1),
+                    padding=ft.padding.symmetric(vertical=2),
                 )
             )
 
@@ -605,7 +607,7 @@ def _show_result_dialog(page, outcome):
             title=ft.Text("📜 Match Commentary", size=16, weight=ft.FontWeight.BOLD),
             content=ft.Container(
                 content=ft.Column(controls=event_rows, spacing=3, scroll=ft.ScrollMode.AUTO),
-                width=330, height=400,
+                width=290, height=400,
             ),
             actions=[ft.TextButton("Close", on_click=lambda e: page.pop_dialog())],
         )
@@ -695,7 +697,7 @@ def _show_result_dialog(page, outcome):
                     spacing=2,
                     scroll=ft.ScrollMode.AUTO,
                 ),
-                width=330, height=420,
+                width=290, height=420,
             ),
             actions=[ft.TextButton("Close", on_click=lambda e: page.pop_dialog())],
         )
@@ -725,10 +727,12 @@ def _show_result_dialog(page, outcome):
                     ft.Text("📊 Match Stats", size=14, weight=ft.FontWeight.W_500),
                     ft.Container(height=5),
                     ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
-                        ft.Text(result.home_club_name, size=11, weight=ft.FontWeight.BOLD, width=80),
+                        ft.Text(result.home_club_name, size=11, weight=ft.FontWeight.BOLD,
+                                expand=True, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                         ft.Text("", size=11),
                         ft.Text(result.away_club_name, size=11, weight=ft.FontWeight.BOLD,
-                                 width=80, text_align=ft.TextAlign.RIGHT),
+                                 expand=True, text_align=ft.TextAlign.RIGHT,
+                                 max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                     ]),
                     *stat_widgets,
                     *(
@@ -742,7 +746,7 @@ def _show_result_dialog(page, outcome):
                 spacing=5,
                 scroll=ft.ScrollMode.AUTO,
             ),
-            width=330,
+            width=290,
             height=420,
         ),
         actions=[

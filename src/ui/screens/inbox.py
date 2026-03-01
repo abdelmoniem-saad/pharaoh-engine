@@ -257,7 +257,7 @@ def _show_message_detail(page: ft.Page, conn, msg):
                 spacing=4,
                 scroll=ft.ScrollMode.AUTO,
             ),
-            width=320,
+            width=290,
             height=250,
         ),
         actions=actions,

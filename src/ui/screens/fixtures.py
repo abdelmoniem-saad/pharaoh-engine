@@ -116,9 +116,10 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
                         spacing=6,
                         controls=[
                             ft.Text(
-                                fixture.home_club_name[:16], size=12,
-                                text_align=ft.TextAlign.RIGHT, width=115,
+                                fixture.home_club_name, size=12,
+                                text_align=ft.TextAlign.RIGHT, expand=True,
                                 weight=ft.FontWeight.BOLD if fixture.home_club_id == gs.user_club_id else ft.FontWeight.NORMAL,
+                                max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                             ),
                             ft.Container(
                                 content=ft.Text(
@@ -130,15 +131,16 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
                                 border_radius=6,
                             ),
                             ft.Text(
-                                fixture.away_club_name[:16], size=12,
-                                text_align=ft.TextAlign.LEFT, width=115,
+                                fixture.away_club_name, size=12,
+                                text_align=ft.TextAlign.LEFT, expand=True,
                                 weight=ft.FontWeight.BOLD if fixture.away_club_id == gs.user_club_id else ft.FontWeight.NORMAL,
+                                max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                             ),
                         ],
                     ),
                     bgcolor=bg,
                     border_radius=6,
-                    padding=ft.padding.symmetric(vertical=4, horizontal=5),
+                    padding=ft.padding.symmetric(vertical=6, horizontal=8),
                 )
             )
 
@@ -155,14 +157,16 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
                         alignment=ft.MainAxisAlignment.CENTER,
                         spacing=6,
                         controls=[
-                            ft.Text(f.home_club_name[:16], size=11,
-                                     text_align=ft.TextAlign.RIGHT, width=115),
+                            ft.Text(f.home_club_name, size=11,
+                                     text_align=ft.TextAlign.RIGHT, expand=True,
+                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                             ft.Text("vs", size=11, color=ft.Colors.GREY_600),
-                            ft.Text(f.away_club_name[:16], size=11,
-                                     text_align=ft.TextAlign.LEFT, width=115),
+                            ft.Text(f.away_club_name, size=11,
+                                     text_align=ft.TextAlign.LEFT, expand=True,
+                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                         ],
                     ),
-                    padding=ft.padding.symmetric(vertical=2, horizontal=5),
+                    padding=ft.padding.symmetric(vertical=4, horizontal=8),
                 )
             )
 

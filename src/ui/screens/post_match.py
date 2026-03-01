@@ -114,14 +114,15 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
     ]
 
     def _stat_bar(home_val_str, away_val_str, label):
-        """Create a visual stat comparison bar."""
+        """Create a visual stat comparison bar — responsive width."""
         try:
             hv = float(home_val_str.replace('%', ''))
             av = float(away_val_str.replace('%', ''))
         except ValueError:
             hv = av = 0
         total = hv + av if (hv + av) > 0 else 1
-        home_pct = hv / total
+        home_flex = max(1, int(hv / total * 100))
+        away_flex = max(1, int((1 - hv / total) * 100))
         return ft.Container(
             content=ft.Column(spacing=2, controls=[
                 ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
@@ -131,12 +132,12 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                 ]),
                 ft.Row(spacing=2, controls=[
                     ft.Container(
-                        width=max(5, home_pct * 280), height=4,
+                        expand=home_flex, height=4,
                         bgcolor=ft.Colors.GREEN_400 if is_home else ft.Colors.BLUE_400,
                         border_radius=2,
                     ),
                     ft.Container(
-                        width=max(5, (1 - home_pct) * 280), height=4,
+                        expand=away_flex, height=4,
                         bgcolor=ft.Colors.BLUE_400 if is_home else ft.Colors.GREEN_400,
                         border_radius=2,
                     ),
@@ -199,8 +200,9 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                     content=ft.Row(
                         alignment=ft.MainAxisAlignment.CENTER, spacing=8,
                         controls=[
-                            ft.Text(r.home_club_name[:14], size=11,
-                                    text_align=ft.TextAlign.RIGHT, width=100),
+                            ft.Text(r.home_club_name, size=11,
+                                    text_align=ft.TextAlign.RIGHT, expand=True,
+                                    max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                             ft.Container(
                                 content=ft.Text(f"{r.home_goals}-{r.away_goals}",
                                                 size=12, weight=ft.FontWeight.BOLD),
@@ -208,11 +210,12 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                                 padding=ft.padding.symmetric(horizontal=8, vertical=2),
                                 border_radius=4,
                             ),
-                            ft.Text(r.away_club_name[:14], size=11,
-                                    text_align=ft.TextAlign.LEFT, width=100),
+                            ft.Text(r.away_club_name, size=11,
+                                    text_align=ft.TextAlign.LEFT, expand=True,
+                                    max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                         ],
                     ),
-                    padding=ft.padding.symmetric(vertical=1),
+                    padding=ft.padding.symmetric(vertical=2),
                 )
             )
 
@@ -312,10 +315,12 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
     sections.extend([
         ft.Text("📊 Match Statistics", size=15, weight=ft.FontWeight.W_500),
         ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
-            ft.Text(result.home_club_name, size=11, weight=ft.FontWeight.BOLD, width=80),
+            ft.Text(result.home_club_name, size=11, weight=ft.FontWeight.BOLD,
+                    expand=True, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
             ft.Text("", size=11),
             ft.Text(result.away_club_name, size=11, weight=ft.FontWeight.BOLD,
-                    width=80, text_align=ft.TextAlign.RIGHT),
+                    expand=True, text_align=ft.TextAlign.RIGHT,
+                    max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
         ]),
         *stat_widgets,
         ft.Divider(height=1),
@@ -508,7 +513,7 @@ def _show_press_conference(page, conn, gs, result, is_home):
                     *answer_buttons,
                 ],
             ),
-            width=340, height=320,
+            width=290, height=320,
         ),
         actions=[
             ft.TextButton("Skip", on_click=lambda e: page.pop_dialog()),
