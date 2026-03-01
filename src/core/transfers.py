@@ -217,12 +217,13 @@ class Negotiation:
 
 # ── Valuation ────────────────────────────────────────────────────────────────
 
-def estimate_player_value(player: Player) -> int:
+def estimate_player_value(player: Player, current_date: date | None = None) -> int:
     """
     Estimate a player's transfer value in EGP.
 
     Factors: current ability, potential, age, contract length.
     """
+    game_date = current_date or date.today()
     base_value = player.current_ability * 50000
 
     if player.age <= 21:
@@ -239,7 +240,7 @@ def estimate_player_value(player: Player) -> int:
     pa_mod = 1.0 + (player.potential_ability - player.current_ability) / 200.0
 
     if player.contract.contract_expiry:
-        days_left = (player.contract.contract_expiry - date.today()).days
+        days_left = (player.contract.contract_expiry - game_date).days
         if days_left <= 180:
             contract_mod = 0.3
         elif days_left <= 365:
@@ -305,7 +306,7 @@ def submit_transfer_offer(conn: sqlite3.Connection, gs: GameState,
     """
     from_club = queries.get_club(conn, player.club_id) if player.club_id else None
     to_club = queries.get_club(conn, gs.user_club_id)
-    asking = estimate_player_value(player)
+    asking = estimate_player_value(player, current_date=gs.current_date)
 
     respond = (gs.current_date + timedelta(days=1)).isoformat()
 
@@ -364,11 +365,13 @@ def submit_wage_offer(conn: sqlite3.Connection, gs: GameState,
     conn.commit()
 
 
-def accept_negotiation(conn: sqlite3.Connection, neg: Negotiation) -> None:
+def accept_negotiation(conn: sqlite3.Connection, neg: Negotiation,
+                        current_date: date | None = None) -> None:
     """Finalize a completed negotiation — execute the actual transfer."""
     queries.transfer_player(
         conn, neg.player_id, neg.from_club_id, neg.to_club_id,
         fee=neg.current_offer, wage=neg.wage_offer,
+        current_date=current_date,
     )
     conn.execute("UPDATE transfer_negotiations SET status='completed' WHERE id=?",
                  (neg.id,))
@@ -535,6 +538,7 @@ def _process_wage_response(conn: sqlite3.Connection, gs: GameState,
         queries.transfer_player(
             conn, neg.player_id, neg.from_club_id, neg.to_club_id,
             fee=neg.current_offer, wage=neg.wage_offer,
+            current_date=gs.current_date,
         )
 
         body = (
@@ -598,7 +602,7 @@ def generate_ai_bids(conn: sqlite3.Connection, game_state: GameState) -> list[st
         if not rng.chance(0.10):
             continue
 
-        value = estimate_player_value(player)
+        value = estimate_player_value(player, current_date=game_state.current_date)
         eligible = [c for c in ai_clubs
                     if c.finances.transfer_budget >= int(value * 0.7)]
         if not eligible:
@@ -736,10 +740,16 @@ def offer_contract_renewal(
         # Apply renewal
         from datetime import timedelta
         new_expiry = gs.current_date + timedelta(days=365 * contract_years)
+        wage_diff = new_wage - current_wage
         conn.execute("""
             UPDATE players SET wage_weekly=?, contract_expiry=?
             WHERE id=?
         """, (new_wage, new_expiry.isoformat(), player_id))
+        # Update the club's wage bill
+        if player.club_id and wage_diff != 0:
+            conn.execute("""
+                UPDATE clubs SET wage_bill_weekly = wage_bill_weekly + ? WHERE id = ?
+            """, (wage_diff, player.club_id))
         conn.commit()
 
         queries.insert_message(conn, InboxMessage(

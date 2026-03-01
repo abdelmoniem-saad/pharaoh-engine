@@ -97,13 +97,13 @@ def update_club(conn: sqlite3.Connection, club: Club) -> None:
         UPDATE clubs SET name=?, short_name=?, formation=?, mentality=?,
             board_confidence=?, fan_happiness=?, is_user_controlled=?,
             balance=?, transfer_budget=?, wage_budget_weekly=?, wage_bill_weekly=?,
-            season_expectation=?
+            season_expectation=?, matchday_income=?
         WHERE id=?
     """, (club.name, club.short_name, club.formation, int(club.mentality),
           club.board_confidence, club.fan_happiness, int(club.is_user_controlled),
           club.finances.balance, club.finances.transfer_budget,
           club.finances.wage_budget_weekly, club.finances.wage_bill_weekly,
-          club.season_expectation,
+          club.season_expectation, club.finances.matchday_income,
           club.id))
     conn.commit()
 
@@ -615,10 +615,17 @@ def set_transfer_listed(conn: sqlite3.Connection, player_id: int,
 
 def transfer_player(conn: sqlite3.Connection, player_id: int,
                       from_club_id: int, to_club_id: int,
-                      fee: int, wage: int, contract_years: int = 3) -> None:
+                      fee: int, wage: int, contract_years: int = 3,
+                      current_date: date | None = None) -> None:
     """Execute a player transfer between clubs."""
-    from datetime import date, timedelta
-    expiry = date.today() + timedelta(days=365 * contract_years)
+    from datetime import timedelta
+    game_date = current_date or date.today()
+    expiry = game_date + timedelta(days=365 * contract_years)
+
+    # Look up the player's current wage so we can adjust wage bills
+    row = conn.execute("SELECT wage_weekly FROM players WHERE id = ?",
+                       (player_id,)).fetchone()
+    old_wage = row["wage_weekly"] if row else 0
 
     # Move player
     conn.execute("""
@@ -627,17 +634,21 @@ def transfer_player(conn: sqlite3.Connection, player_id: int,
         WHERE id = ?
     """, (to_club_id, wage, expiry.isoformat(), player_id))
 
-    # Update selling club finances
+    # Update selling club finances: +fee, -wage from wage bill
     conn.execute("""
         UPDATE clubs SET transfer_budget = transfer_budget + ?,
-            balance = balance + ? WHERE id = ?
-    """, (fee, fee, from_club_id))
+            balance = balance + ?,
+            wage_bill_weekly = MAX(0, wage_bill_weekly - ?)
+        WHERE id = ?
+    """, (fee, fee, old_wage, from_club_id))
 
-    # Update buying club finances
+    # Update buying club finances: -fee, +wage to wage bill
     conn.execute("""
         UPDATE clubs SET transfer_budget = transfer_budget - ?,
-            balance = balance - ? WHERE id = ?
-    """, (fee, fee, to_club_id))
+            balance = balance - ?,
+            wage_bill_weekly = wage_bill_weekly + ?
+        WHERE id = ?
+    """, (fee, fee, wage, to_club_id))
 
     conn.commit()
 
@@ -685,18 +696,26 @@ def get_list_save_files() -> list[str]:
 
 
 def renew_contract(conn: sqlite3.Connection, player_id: int,
-                    years: int = 2, wage_increase_pct: int = 15) -> None:
+                    years: int = 2, wage_increase_pct: int = 15,
+                    current_date: date | None = None) -> None:
     """Renew a player's contract with a wage increase."""
     from datetime import timedelta
     player = get_player(conn, player_id)
     if not player:
         return
-    base_date = player.contract.contract_expiry or date.today()
+    game_date = current_date or date.today()
+    base_date = player.contract.contract_expiry or game_date
     new_expiry = base_date + timedelta(days=365 * years)
     new_wage = int(player.contract.wage_weekly * (1 + wage_increase_pct / 100))
+    wage_diff = new_wage - player.contract.wage_weekly
     conn.execute("""
         UPDATE players SET contract_expiry = ?, wage_weekly = ? WHERE id = ?
     """, (new_expiry.isoformat(), new_wage, player_id))
+    # Update the club's wage bill to reflect the new wage
+    if player.club_id and wage_diff != 0:
+        conn.execute("""
+            UPDATE clubs SET wage_bill_weekly = wage_bill_weekly + ? WHERE id = ?
+        """, (wage_diff, player.club_id))
     conn.commit()
 
 

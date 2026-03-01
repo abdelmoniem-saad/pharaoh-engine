@@ -211,7 +211,8 @@ def _show_message_detail(page: ft.Page, conn, msg):
 
             def accept_offer(e):
                 queries.transfer_player(conn, player_id, from_club_id, to_club_id,
-                                         fee=fee, wage=wage)
+                                         fee=fee, wage=wage,
+                                         current_date=gs.current_date)
                 if not msg.is_read:
                     queries.mark_message_read(conn, msg.id)
                 page.pop_dialog()

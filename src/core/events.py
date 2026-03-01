@@ -256,8 +256,26 @@ def apply_event_choice(conn: sqlite3.Connection, gs: GameState,
     if choice.fan_delta != 0:
         club.fan_happiness = max(0, min(100, club.fan_happiness + choice.fan_delta))
     if choice.finance_delta != 0:
+        # Check the club can actually afford expenses
+        if choice.finance_delta < 0 and club.finances.balance + choice.finance_delta < -500_000:
+            # Can't afford it — abort the financial part, still apply other deltas
+            queries.update_club(conn, club)
+            queries.insert_message(conn, InboxMessage(
+                date=gs.current_date,
+                subject=event.title,
+                body=f"{event.body}\n\n📌 Your decision: {choice.text}\n\n"
+                     f"❌ The club couldn't afford the cost of {abs(choice.finance_delta):,} EGP. "
+                     f"The decision was reversed.",
+                category=event.category,
+            ))
+            return f"❌ Not enough funds! Need {abs(choice.finance_delta):,} EGP but balance is {club.finances.balance:,} EGP."
+
         club.finances.balance += choice.finance_delta
-        club.finances.transfer_budget = max(0, club.finances.transfer_budget + max(0, choice.finance_delta))
+        # Income → increase transfer budget; Expense → decrease transfer budget
+        if choice.finance_delta > 0:
+            club.finances.transfer_budget += choice.finance_delta
+        else:
+            club.finances.transfer_budget = max(0, club.finances.transfer_budget + choice.finance_delta)
 
     queries.update_club(conn, club)
 

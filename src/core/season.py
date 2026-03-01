@@ -281,8 +281,21 @@ def _simulate_ai_transfers(conn: sqlite3.Connection, game_state: GameState) -> l
                 if not buyer_clubs:
                     continue
                 buyer = rng.choice(buyer_clubs)
-                fee = estimate_player_value(sell_player)
-                conn.execute("UPDATE players SET club_id = ? WHERE id = ?", (buyer.id, sell_player.id))
+                fee = estimate_player_value(sell_player, current_date=game_state.current_date)
+                if buyer.finances.transfer_budget >= fee:
+                    queries.transfer_player(
+                        conn, sell_player.id, club.id, buyer.id,
+                        fee=fee, wage=sell_player.contract.wage_weekly,
+                        current_date=game_state.current_date,
+                    )
+                else:
+                    # Buyer can't afford full fee — discount transfer
+                    discounted = int(fee * 0.5)
+                    queries.transfer_player(
+                        conn, sell_player.id, club.id, buyer.id,
+                        fee=discounted, wage=sell_player.contract.wage_weekly,
+                        current_date=game_state.current_date,
+                    )
                 transfers_made.append(f"{sell_player.name}: {club.short_name} → {buyer.short_name} ({fee:,} EGP)")
                 squad = [p for p in squad if p.id != sell_player.id]
                 squad_size -= 1
@@ -299,9 +312,13 @@ def _simulate_ai_transfers(conn: sqlite3.Connection, game_state: GameState) -> l
                 if not buyable:
                     continue
                 buy_player = rng.choice(buyable)
-                fee = estimate_player_value(buy_player)
+                fee = estimate_player_value(buy_player, current_date=game_state.current_date)
                 if club.finances.transfer_budget >= fee:
-                    conn.execute("UPDATE players SET club_id = ? WHERE id = ?", (club.id, buy_player.id))
+                    queries.transfer_player(
+                        conn, buy_player.id, seller.id, club.id,
+                        fee=fee, wage=buy_player.contract.wage_weekly,
+                        current_date=game_state.current_date,
+                    )
                     transfers_made.append(f"{buy_player.name}: {seller.short_name} → {club.short_name} ({fee:,} EGP)")
                     squad_size += 1
 

@@ -37,6 +37,7 @@ def advance_day(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
     game_state.day_count += 1
 
     # Check if today is a match day
+    is_match_day = False
     next_matchday = queries.get_next_unplayed_matchday(conn)
     if next_matchday is not None:
         fixtures = queries.get_fixtures_by_matchday(conn, next_matchday)
@@ -45,11 +46,11 @@ def advance_day(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
         todays_fixtures = [f for f in fixtures if f.date == game_state.current_date]
 
         if todays_fixtures:
+            is_match_day = True
             messages.extend(_simulate_matchday(conn, game_state, todays_fixtures))
 
-    # Rest recovery for all players on non-match days
-    if not messages:
-        _daily_recovery(conn, game_state)
+    # Daily fitness recovery and injury healing for ALL clubs (every day)
+    _daily_recovery(conn, game_state)
 
     # Process pending transfer negotiations (responses arrive)
     messages.extend(process_pending_negotiations(conn, game_state))
@@ -240,10 +241,24 @@ def simulate_user_match(conn: sqlite3.Connection,
             position_before = i
             break
 
-    # Calculate attendance
+    # Calculate attendance and generate real matchday income
     opp_rep = opp_club.reputation if opp_club else 100
     is_home_match = fixture.home_club_id == game_state.user_club_id
     attendance = calculate_attendance(user_club, is_home_match, opp_rep)
+
+    # Ticket revenue: only for home matches (average ticket ~50 EGP)
+    if is_home_match and attendance > 0:
+        ticket_price = 50  # EGP per ticket (base)
+        # Bigger matches charge more
+        if opp_rep >= 170:
+            ticket_price = 80
+        elif opp_rep >= 140:
+            ticket_price = 65
+        ticket_revenue = attendance * ticket_price
+        user_club.finances.balance += ticket_revenue
+        # Update the dynamic matchday_income for future monthly calculations
+        user_club.finances.matchday_income = ticket_revenue
+        queries.update_club(conn, user_club)
 
     # Save user result
     queries.mark_fixture_played(conn, fixture.fixture_id, user_result)
@@ -511,31 +526,37 @@ def _update_player_stats_after_match(
 
 
 def _daily_recovery(conn: sqlite3.Connection, game_state: GameState) -> None:
-    """Apply daily fitness recovery and injury recovery to user club players."""
-    squad = queries.get_players_by_club(conn, game_state.user_club_id)
-    for player in squad:
-        changed = False
-        old_fitness = player.fitness
-        rest_recovery(player, days=1)
-        if player.fitness != old_fitness:
-            changed = True
+    """Apply daily fitness recovery and injury recovery to ALL players (all clubs).
+    Previously only user club players recovered, causing AI teams to degrade."""
+    # Get all players across all clubs
+    all_clubs = queries.get_all_clubs(conn)
+    for club in all_clubs:
+        squad = queries.get_players_by_club(conn, club.id)
+        for player in squad:
+            changed = False
+            old_fitness = player.fitness
+            rest_recovery(player, days=1)
+            if player.fitness != old_fitness:
+                changed = True
 
-        # Injury recovery countdown
-        if player.injury_days_remaining > 0:
-            player.injury_days_remaining -= 1
-            changed = True
-            if player.injury_days_remaining == 0:
-                player.injury_type = ""
-                player.fitness = max(player.fitness, 60)  # minimum fitness on return
-                queries.insert_message(conn, InboxMessage(
-                    date=game_state.current_date,
-                    subject=f"🏥 {player.name} Recovered!",
-                    body=f"{player.name} has recovered from injury and is available for selection.",
-                    category="general",
-                ))
+            # Injury recovery countdown
+            if player.injury_days_remaining > 0:
+                player.injury_days_remaining -= 1
+                changed = True
+                if player.injury_days_remaining == 0:
+                    player.injury_type = ""
+                    player.fitness = max(player.fitness, 60)
+                    # Only notify user about their own players
+                    if club.id == game_state.user_club_id:
+                        queries.insert_message(conn, InboxMessage(
+                            date=game_state.current_date,
+                            subject=f"🏥 {player.name} Recovered!",
+                            body=f"{player.name} has recovered from injury and is available for selection.",
+                            category="general",
+                        ))
 
-        if changed:
-            queries.update_player_stats(conn, player)
+            if changed:
+                queries.update_player_stats(conn, player)
 
 
 def _weekly_development(conn: sqlite3.Connection,

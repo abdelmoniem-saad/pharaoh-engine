@@ -128,7 +128,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                 ft.Text(f"Top {len(players)} available players", size=11,
                          color=ft.Colors.GREY_500))
             for p in players:
-                value = estimate_player_value(p)
+                value = estimate_player_value(p, current_date=gs.current_date)
                 p_club = queries.get_club(conn, p.club_id) if p.club_id else None
                 club_name = p_club.short_name if p_club else "Free Agent"
                 results_list.controls.append(
@@ -161,7 +161,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
             results_list.controls.append(
                 ft.Text(f"Found {len(players)} players", size=11, color=ft.Colors.GREY_500))
             for p in players:
-                value = estimate_player_value(p)
+                value = estimate_player_value(p, current_date=gs.current_date)
                 p_club = queries.get_club(conn, p.club_id) if p.club_id else None
                 club_name = p_club.short_name if p_club else "Free Agent"
                 results_list.controls.append(
@@ -184,7 +184,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                         continue
                     from src.data.queries import _row_to_player
                     p = _row_to_player(row)
-                    value = estimate_player_value(p)
+                    value = estimate_player_value(p, current_date=gs.current_date)
                     p_club = queries.get_club(conn, p.club_id) if p.club_id else None
                     club_name = p_club.short_name if p_club else "Free Agent"
                     items.append(_player_row(p, value, club_name, True))
@@ -201,7 +201,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
 
     for p in my_players:
         ovr = calculate_overall_rating(p)
-        value = estimate_player_value(p)
+        value = estimate_player_value(p, current_date=gs.current_date)
         listed = p.transfer_listed
 
         badges_parts = []
@@ -269,7 +269,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                 ft.Text(f"{len(frees)} free agent(s)", size=11, color=ft.Colors.GREY_500))
             for p in frees[:20]:
                 ovr = calculate_overall_rating(p)
-                value = estimate_player_value(p)
+                value = estimate_player_value(p, current_date=gs.current_date)
 
                 def make_free_handler(player=p):
                     def handler(e):
@@ -782,7 +782,8 @@ def _show_free_agent_dialog(page, conn, gs, user_club, player):
             show_snackbar(page, f"❌ Player wants at least {min_acceptable:,} EGP/wk")
             return
 
-        queries.transfer_player(conn, player.id, 0, gs.user_club_id, fee=0, wage=wage)
+        queries.transfer_player(conn, player.id, 0, gs.user_club_id, fee=0, wage=wage,
+                               current_date=gs.current_date)
         page.pop_dialog()
         queries.insert_message(conn, InboxMessage(
             date=gs.current_date,
