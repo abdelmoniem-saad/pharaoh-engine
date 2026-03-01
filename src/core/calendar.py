@@ -155,14 +155,6 @@ def _simulate_matchday(conn: sqlite3.Connection, game_state: GameState,
     if results:
         league.process_matchday_results(conn, results)
 
-        # Add inbox messages for all results
-        for fixture, result in results:
-            queries.insert_message(conn, InboxMessage(
-                date=game_state.current_date,
-                subject=f"Result: {result.score_display}",
-                body=_format_result_body(result),
-                category="match",
-            ))
 
     return messages
 
@@ -330,13 +322,6 @@ def simulate_user_match(conn: sqlite3.Connection,
                                     result.home_goals, result.away_goals)
         other_results.append(result)
 
-        # Inbox message for each result
-        queries.insert_message(conn, InboxMessage(
-            date=game_state.current_date,
-            subject=f"Result: {result.score_display}",
-            body=_format_result_body(result),
-            category="match",
-        ))
 
     conn.commit()
 

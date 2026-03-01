@@ -676,7 +676,10 @@ def _talk_to_player(page, player_id, player_name):
             ft.TextButton("Done", on_click=lambda e: (page.pop_dialog(), navigate(page, "/squad"))),
         ],
     )
-    page.show_dialog(dlg)def _renew_contract(page, player_id):
+    page.show_dialog(dlg)
+
+
+def _renew_contract(page, player_id):
     """Show a contract renewal negotiation dialog."""
     from src.ui.app import app_state, navigate, show_snackbar
     conn = app_state.db_conn
