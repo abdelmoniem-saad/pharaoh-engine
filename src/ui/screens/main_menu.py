@@ -50,13 +50,13 @@ def build_main_menu(page: ft.Page) -> ft.Column:
                 text_align=ft.TextAlign.CENTER,
             ),
             ft.Container(expand=1),
-            ft.Button(
+            ft.ElevatedButton(
                 "New Game",
                 width=280, height=55,
                 style=ft.ButtonStyle(text_style=ft.TextStyle(size=18)),
                 on_click=new_game_click,
             ),
-            ft.Button(
+            ft.ElevatedButton(
                 "Continue",
                 width=280, height=55,
                 style=ft.ButtonStyle(text_style=ft.TextStyle(size=18)),
@@ -142,8 +142,10 @@ def _select_club(page: ft.Page, conn, game_state, club_id: int,
     app_state.db_conn = conn
     app_state.game_state = game_state
 
+    print(f"DEBUG: Club selected: user_club_id={game_state.user_club_id}, user_club_name={game_state.user_club_name}")
+
     page.pop_dialog()
-    navigate(page, "/squad")
+    navigate(page, "/match_day")
 
 
 def _continue_game(page: ft.Page):

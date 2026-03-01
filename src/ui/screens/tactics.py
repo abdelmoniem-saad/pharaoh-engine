@@ -37,6 +37,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
         if club_obj:
             club_obj.formation = e.control.value
             queries.update_club(conn, club_obj)
+            navigate(page, "/tactics")
 
     def on_mentality_change(e):
         club_obj = queries.get_club(conn, gs.user_club_id)
@@ -45,6 +46,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
             try:
                 club_obj.mentality = Mentality[key]
                 queries.update_club(conn, club_obj)
+                navigate(page, "/tactics")
             except KeyError:
                 pass
 

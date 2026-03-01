@@ -40,7 +40,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                     text_align=ft.TextAlign.CENTER,
                 ),
                 padding=40,
-                alignment="center",
+                alignment=ft.Alignment(0, 0),
             )
         )
     else:
@@ -70,7 +70,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                     leading=ft.Icon(icon, color=icon_color, size=22),
                     title=title_row,
                     subtitle=ft.Text(
-                        f"{msg.date.strftime('%d %b')} — {msg.body[:70]}",
+                        f"{msg.date.strftime('%d %b')} — {msg.body}",
                         size=11, color=ft.Colors.GREY_400,
                         max_lines=2,
                         overflow=ft.TextOverflow.ELLIPSIS,
@@ -84,11 +84,11 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
         scroll=ft.ScrollMode.AUTO,
         controls=[
             ft.Container(
-                padding=10,
+                padding=15,
                 content=ft.Column(
-                    spacing=5,
+                    spacing=10,
                     controls=[
-                        ft.Text("📧 Inbox", size=22, weight=ft.FontWeight.BOLD),
+                        ft.Text("📥 Inbox", size=22, weight=ft.FontWeight.BOLD),
                         ft.Divider(height=1),
                         *msg_tiles,
                     ],

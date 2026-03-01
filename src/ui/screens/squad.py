@@ -12,7 +12,7 @@ from src.ui.widgets.nav_bar import build_nav_bar
 
 def build_squad_screen(page: ft.Page) -> ft.Column:
     """Build the squad management content."""
-    from src.ui.app import app_state
+    from src.ui.app import app_state, navigate
 
     # Set the navigation bar
     page.navigation_bar = build_nav_bar(page, 0)
@@ -22,11 +22,17 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
 
     conn = app_state.db_conn
     gs = app_state.game_state
-    squad = queries.get_players_by_club(conn, gs.user_club_id)
+    club = queries.get_club(conn, gs.user_club_id)
+    if not club:
+        return ft.Column(controls=[ft.Text("Club not found")])
+
+    players = queries.get_players_by_club(conn, club.id)
+    # Remove unresolved player_card reference, just show a simple list for now
+    player_tiles = [ft.ListTile(title=ft.Text(p.name), subtitle=ft.Text(p.position.value)) for p in players]
 
     # Build player rows for the DataTable
     rows = []
-    for player in squad:
+    for player in players:
         ovr = calculate_overall_rating(player)
         fit_color = (
             ft.Colors.GREEN_400 if player.fitness >= 80
@@ -50,12 +56,12 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
 
     data_table = ft.DataTable(
         columns=[
-            ft.DataColumn(ft.Text("Name", size=12, weight=ft.FontWeight.BOLD)),
-            ft.DataColumn(ft.Text("Pos", size=12, weight=ft.FontWeight.BOLD)),
-            ft.DataColumn(ft.Text("Age", size=12, weight=ft.FontWeight.BOLD), numeric=True),
-            ft.DataColumn(ft.Text("OVR", size=12, weight=ft.FontWeight.BOLD), numeric=True),
-            ft.DataColumn(ft.Text("Fit", size=12, weight=ft.FontWeight.BOLD)),
-            ft.DataColumn(ft.Text("Form", size=12, weight=ft.FontWeight.BOLD), numeric=True),
+            ft.DataColumn(label=ft.Text("Name", size=12, weight=ft.FontWeight.BOLD)),
+            ft.DataColumn(label=ft.Text("Pos", size=12, weight=ft.FontWeight.BOLD)),
+            ft.DataColumn(label=ft.Text("Age", size=12, weight=ft.FontWeight.BOLD), numeric=True),
+            ft.DataColumn(label=ft.Text("OVR", size=12, weight=ft.FontWeight.BOLD), numeric=True),
+            ft.DataColumn(label=ft.Text("Fit", size=12, weight=ft.FontWeight.BOLD)),
+            ft.DataColumn(label=ft.Text("Form", size=12, weight=ft.FontWeight.BOLD), numeric=True),
         ],
         rows=rows,
         column_spacing=12,

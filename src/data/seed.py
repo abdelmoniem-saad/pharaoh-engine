@@ -355,13 +355,24 @@ def seed_database(conn: sqlite3.Connection, game_seed: int = 42) -> GameState:
     queries.init_standings(conn, clubs)
 
     # 4. Generate fixtures (done in league module, but create initial state)
+    season_start = date(2025, 8, 15)
     game_state = GameState(
         save_name="default",
         season_year=2025,
-        current_date=date(2025, 8, 15),
+        current_date=season_start,
         rng_seed=game_seed,
     )
     queries.save_game_state(conn, game_state)
+
+    # 5. Insert a welcome inbox message
+    from src.data.models import InboxMessage
+    queries.insert_message(conn, InboxMessage(
+        date=date(2025, 8, 15),
+        subject="Welcome to Pharaoh Engine!",
+        body="Your journey as a manager in the Egyptian Premier League begins now. Good luck!",
+        category="general",
+        is_read=False,
+    ))
 
     return game_state
 
@@ -371,4 +382,3 @@ def _load_json(filename: str) -> list | dict:
     filepath = DATA_DIR / filename
     with open(filepath, "r", encoding="utf-8") as f:
         return json.load(f)
-
