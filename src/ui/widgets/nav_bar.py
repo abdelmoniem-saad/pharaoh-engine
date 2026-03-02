@@ -44,23 +44,38 @@ def build_nav_bar(page: ft.Page, selected_index: int = 0) -> ft.NavigationBar:
     # Inbox destination — add badge if unread messages
     if unread_count > 0:
         inbox_dest = ft.NavigationBarDestination(
-            icon=ft.Icons.MAIL,
+            icon=ft.Icons.MAIL_OUTLINED,
+            selected_icon=ft.Icons.MAIL,
             label="Inbox",
             badge=ft.Badge(label=str(unread_count)),
         )
     else:
         inbox_dest = ft.NavigationBarDestination(
-            icon=ft.Icons.MAIL, label="Inbox",
+            icon=ft.Icons.MAIL_OUTLINED,
+            selected_icon=ft.Icons.MAIL,
+            label="Inbox",
         )
 
     return ft.NavigationBar(
         selected_index=selected_index,
         on_change=on_nav,
+        bgcolor="#0f1729",
+        indicator_color=ft.Colors.with_opacity(0.15, ft.Colors.AMBER),
+        shadow_color=ft.Colors.with_opacity(0.3, ft.Colors.BLACK),
+        elevation=8,
         destinations=[
-            ft.NavigationBarDestination(icon=ft.Icons.PEOPLE, label="Squad"),
-            ft.NavigationBarDestination(icon=ft.Icons.SETTINGS, label="Tactics"),
-            ft.NavigationBarDestination(icon=ft.Icons.SPORTS_SOCCER, label="Match"),
-            ft.NavigationBarDestination(icon=ft.Icons.TABLE_CHART, label="Table"),
+            ft.NavigationBarDestination(icon=ft.Icons.PEOPLE_OUTLINED,
+                                        selected_icon=ft.Icons.PEOPLE,
+                                        label="Squad"),
+            ft.NavigationBarDestination(icon=ft.Icons.TUNE_OUTLINED,
+                                        selected_icon=ft.Icons.TUNE,
+                                        label="Tactics"),
+            ft.NavigationBarDestination(icon=ft.Icons.SPORTS_SOCCER_OUTLINED,
+                                        selected_icon=ft.Icons.SPORTS_SOCCER,
+                                        label="Match"),
+            ft.NavigationBarDestination(icon=ft.Icons.LEADERBOARD_OUTLINED,
+                                        selected_icon=ft.Icons.LEADERBOARD,
+                                        label="Table"),
             inbox_dest,
         ],
     )

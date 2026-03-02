@@ -15,6 +15,12 @@ from src.utils.config import APP_VERSION, expectation_display
 
 def build_main_menu(page: ft.Page) -> ft.Column:
     """Build the main menu content."""
+    from src.ui.theme import (
+        gradient_bg, BG_DARK, BG_MID, BG_TEAL, BG_SURFACE,
+        GOLD, GOLD_GLOW, GOLD_BORDER, GOLD_BORDER_STRONG,
+        TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
+        PRIMARY_BTN_STYLE, SECONDARY_BTN_STYLE,
+    )
 
     def new_game_click(e):
         _show_manager_name_dialog(page)
@@ -29,54 +35,105 @@ def build_main_menu(page: ft.Page) -> ft.Column:
     # No navigation bar on main menu
     page.navigation_bar = None
 
-    return ft.Column(
-        alignment=ft.MainAxisAlignment.CENTER,
+    # Title block
+    title_block = ft.Column(
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        expand=True,
+        spacing=4,
         controls=[
-            ft.Container(expand=2),
-            ft.Icon(ft.Icons.SPORTS_SOCCER, size=48, color=ft.Colors.AMBER_400),
-            ft.Container(height=5),
+            ft.Container(
+                content=ft.Icon(ft.Icons.SHIELD, size=56, color=GOLD),
+                width=80, height=80, border_radius=40,
+                bgcolor=ft.Colors.with_opacity(0.10, GOLD),
+                alignment=ft.Alignment(0, 0),
+                shadow=ft.BoxShadow(
+                    spread_radius=2, blur_radius=20,
+                    color=ft.Colors.with_opacity(0.15, GOLD),
+                ),
+            ),
+            ft.Container(height=8),
             ft.Text(
                 "PHARAOH ENGINE",
-                size=30, weight=ft.FontWeight.BOLD,
+                size=34, weight=ft.FontWeight.BOLD,
                 text_align=ft.TextAlign.CENTER,
-                color=ft.Colors.AMBER_300,
+                color=GOLD,
+            ),
+            ft.Container(
+                content=ft.Row(
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    spacing=8,
+                    controls=[
+                        ft.Container(width=30, height=1, bgcolor=GOLD_BORDER_STRONG),
+                        ft.Text("⚽", size=12),
+                        ft.Container(width=30, height=1, bgcolor=GOLD_BORDER_STRONG),
+                    ],
+                ),
             ),
             ft.Text(
                 "Egyptian Football Manager",
                 size=15,
-                color=ft.Colors.GREY_400,
+                color=TEXT_SECONDARY,
                 text_align=ft.TextAlign.CENTER,
+                italic=True,
             ),
-            ft.Container(expand=1),
+        ],
+    )
+
+    # Buttons
+    button_block = ft.Column(
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        spacing=10,
+        controls=[
             ft.ElevatedButton(
-                "⚽ New Game",
-                width=280, height=55,
-                style=ft.ButtonStyle(
-                    text_style=ft.TextStyle(size=18, weight=ft.FontWeight.BOLD),
-                    bgcolor=ft.Colors.AMBER_700,
-                    color=ft.Colors.WHITE,
-                ),
+                "⚽  New Game",
+                width=280, height=56,
+                style=PRIMARY_BTN_STYLE,
                 on_click=new_game_click,
             ),
-            ft.Container(height=8),
             ft.ElevatedButton(
-                "📂 Continue",
-                width=280, height=55,
-                style=ft.ButtonStyle(text_style=ft.TextStyle(size=18)),
+                "📂  Continue",
+                width=280, height=52,
+                style=SECONDARY_BTN_STYLE,
                 on_click=continue_click,
             ),
-            ft.Container(height=8),
             ft.OutlinedButton(
-                "⚙️ Settings",
-                width=280, height=50,
+                "⚙️  Settings",
+                width=280, height=48,
+                style=ft.ButtonStyle(
+                    color=TEXT_SECONDARY,
+                    shape=ft.RoundedRectangleBorder(radius=12),
+                    side=ft.BorderSide(1, GOLD_BORDER),
+                ),
                 on_click=settings_click,
             ),
-            ft.Container(expand=2),
-            ft.Text(
-                f"v{APP_VERSION}",
-                size=12, color=ft.Colors.GREY_600,
+        ],
+    )
+
+    return ft.Column(
+        expand=True,
+        controls=[
+            ft.Container(
+                expand=True,
+                gradient=gradient_bg(
+                    colors=[BG_DARK, BG_MID, "#0b1a2d", BG_TEAL],
+                ),
+                padding=0,
+                content=ft.Column(
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    expand=True,
+                    controls=[
+                        ft.Container(expand=2),
+                        title_block,
+                        ft.Container(expand=1),
+                        button_block,
+                        ft.Container(expand=2),
+                        ft.Text(
+                            f"v{APP_VERSION}",
+                            size=11, color=TEXT_MUTED,
+                        ),
+                        ft.Container(height=16),
+                    ],
+                ),
             ),
         ],
     )
@@ -84,6 +141,8 @@ def build_main_menu(page: ft.Page) -> ft.Column:
 
 def _show_manager_name_dialog(page: ft.Page):
     """Show a dialog to enter the manager name before club selection."""
+    from src.ui.theme import GOLD, GOLD_BORDER, TEXT_SECONDARY
+
     name_field = ft.TextField(
         label="Manager Name",
         value="",
@@ -101,12 +160,12 @@ def _show_manager_name_dialog(page: ft.Page):
         _show_club_selection(page, manager_name)
 
     dlg = ft.AlertDialog(
-        title=ft.Text("👤 Your Identity"),
+        title=ft.Text("👤 Your Identity", color=GOLD),
         content=ft.Container(
             content=ft.Column(
                 controls=[
                     ft.Text("What should the board call you?",
-                            size=13, color=ft.Colors.GREY_400),
+                            size=13, color=TEXT_SECONDARY),
                     ft.Container(height=10),
                     name_field,
                 ],
@@ -118,7 +177,10 @@ def _show_manager_name_dialog(page: ft.Page):
         ),
         actions=[
             ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),
-            ft.ElevatedButton("Continue ➡️", on_click=on_confirm),
+            ft.ElevatedButton("Continue ➡️", on_click=on_confirm,
+                              style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
+                                                    color=ft.Colors.WHITE,
+                                                    shape=ft.RoundedRectangleBorder(radius=10))),
         ],
     )
     page.show_dialog(dlg)
@@ -165,7 +227,8 @@ def _show_club_selection(page: ft.Page, manager_name: str):
         )
 
     dlg = ft.AlertDialog(
-        title=ft.Text("🏟️ Choose Your Club"),
+        title=ft.Text("🏟️ Choose Your Club",
+                       color="#FFD54F", weight=ft.FontWeight.BOLD),
         content=ft.Container(
             content=ft.ListView(
                 controls=club_buttons,

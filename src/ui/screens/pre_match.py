@@ -10,7 +10,10 @@ from src.core.tactics import auto_select_xi, get_formation_positions
 from src.core.player import calculate_overall_rating
 from src.core.calendar import simulate_user_match
 from src.ui.widgets.nav_bar import build_nav_bar
-from src.ui.theme import pitch_width as pw_fn, pitch_height as ph_fn, PAGE_PADDING
+from src.ui.theme import (
+    pitch_width as pw_fn, pitch_height as ph_fn, PAGE_PADDING,
+    header_bar, GOLD_BORDER, CARD_GLASS, PRIMARY_BTN_STYLE,
+)
 from src.utils.config import Position
 
 
@@ -86,10 +89,14 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                 width=_pw, height=_ph,
                 border_radius=10,
                 gradient=ft.LinearGradient(
-                    colors=[ft.Colors.GREEN_900, ft.Colors.GREEN_800, ft.Colors.GREEN_900],
+                    colors=["#1B5E20", "#2E7D32", "#1B5E20", "#2E7D32", "#1B5E20"],
                     begin=ft.Alignment(0, -1), end=ft.Alignment(0, 1),
                 ),
-                border=ft.border.all(2, ft.Colors.WHITE24),
+                border=ft.border.all(2, ft.Colors.with_opacity(0.35, ft.Colors.WHITE)),
+                shadow=ft.BoxShadow(
+                    spread_radius=0, blur_radius=10,
+                    color=ft.Colors.with_opacity(0.12, ft.Colors.GREEN),
+                ),
             )
         )
 
@@ -220,8 +227,9 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                         ],
                     ),
                     padding=ft.padding.symmetric(horizontal=8, vertical=8),
-                    border_radius=4,
-                    bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.AMBER) if is_selected else ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+                    border_radius=8,
+                    bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.AMBER) if is_selected else CARD_GLASS,
+                    border=ft.border.all(1, ft.Colors.AMBER_400 if is_selected else GOLD_BORDER),
                     on_click=make_bench_click(),
                     ink=True,
                 )
@@ -260,18 +268,13 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=8,
                     controls=[
-                        ft.Row(
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                            controls=[
-                                ft.Text("📋 Starting XI", size=20, weight=ft.FontWeight.BOLD),
-                                ft.IconButton(
-                                    icon=ft.Icons.ARROW_BACK, tooltip="Back",
-                                    on_click=lambda e: navigate(page, "/match_day"),
-                                ),
-                            ],
+                        header_bar(
+                            title="Starting XI",
+                            subtitle=f"vs {opp_name} {venue}  •  {club.formation}",
+                            icon=ft.Icons.FORMAT_LIST_NUMBERED,
+                            page=page,
+                            back_route="/match_day",
                         ),
-                        ft.Text(f"vs {opp_name} {venue}", size=13, color=ft.Colors.GREY_400),
-                        ft.Text(f"Formation: {club.formation}", size=12, color=ft.Colors.AMBER_300),
                         # Unavailable warning
                         *(
                             [ft.Container(
@@ -310,11 +313,8 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                         ft.Container(height=10),
                         ft.ElevatedButton(
                             "⚽ Confirm & Play",
-                            width=280, height=55,
-                            style=ft.ButtonStyle(
-                                bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
-                                text_style=ft.TextStyle(size=18, weight=ft.FontWeight.BOLD),
-                            ),
+                            width=280, height=56,
+                            style=PRIMARY_BTN_STYLE,
                             on_click=play_match,
                         ),
                         ft.Container(height=10),

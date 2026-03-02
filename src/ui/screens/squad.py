@@ -15,8 +15,10 @@ from src.ui.widgets.cards import (
 )
 from src.ui.theme import (
     ACCENT, TEXT_SECONDARY, TEXT_MUTED,
-    CARD_BG, CARD_RADIUS, PAGE_PADDING, SECTION_SPACING,
+    CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS, PAGE_PADDING, SECTION_SPACING,
     TITLE_SIZE, BODY_SIZE, CAPTION_SIZE,
+    GOLD_BORDER, header_bar, golden_divider,
+    PRIMARY_BTN_STYLE, SECONDARY_BTN_STYLE,
 )
 
 
@@ -147,23 +149,20 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                     spacing=SECTION_SPACING,
                     controls=[
                         # ── Header ──────────────────────────────────────
-                        ft.Row(
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                            controls=[
-                                ft.Column(spacing=0, controls=[
-                                    ft.Text(gs.user_club_name, size=TITLE_SIZE,
-                                            weight=ft.FontWeight.BOLD),
-                                    ft.Text(f"👤 {gs.manager_name}  •  📅 {gs.current_date.strftime('%d %b %Y')}",
-                                            size=CAPTION_SIZE, color=TEXT_SECONDARY),
-                                ]),
-                                ft.Row(spacing=0, controls=[
-                                    ft.IconButton(icon=ft.Icons.SAVE, icon_size=18,
-                                                  tooltip="Save",
-                                                  on_click=lambda e: _save_game(page, conn, gs)),
-                                    ft.IconButton(icon=ft.Icons.SETTINGS, icon_size=18,
-                                                  tooltip="Settings",
-                                                  on_click=lambda e: navigate(page, "/settings")),
-                                ]),
+                        header_bar(
+                            title=gs.user_club_name,
+                            subtitle=f"👤 {gs.manager_name}  •  📅 {gs.current_date.strftime('%d %b %Y')}",
+                            icon=ft.Icons.SHIELD,
+                            page=page,
+                            extra_controls=[
+                                ft.IconButton(icon=ft.Icons.SAVE_OUTLINED, icon_size=18,
+                                              icon_color=TEXT_SECONDARY,
+                                              tooltip="Save",
+                                              on_click=lambda e: _save_game(page, conn, gs)),
+                                ft.IconButton(icon=ft.Icons.SETTINGS_OUTLINED, icon_size=18,
+                                              icon_color=TEXT_SECONDARY,
+                                              tooltip="Settings",
+                                              on_click=lambda e: navigate(page, "/settings")),
                             ],
                         ),
 
@@ -205,20 +204,33 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                             ),
                             padding=ft.padding.symmetric(horizontal=8, vertical=6),
                             border_radius=8,
-                            bgcolor=CARD_BG,
+                            bgcolor=CARD_GLASS,
+                            border=ft.border.all(1, GOLD_BORDER),
                         ),
 
                         # ── Quick Actions ───────────────────────────────
                         ft.Row(spacing=6, controls=[
                             ft.OutlinedButton("🏟️ Club", height=34,
                                               on_click=lambda e: navigate(page, "/club"),
-                                              style=ft.ButtonStyle(padding=ft.padding.symmetric(horizontal=12))),
+                                              style=ft.ButtonStyle(
+                                                  padding=ft.padding.symmetric(horizontal=12),
+                                                  shape=ft.RoundedRectangleBorder(radius=10),
+                                                  side=ft.BorderSide(1, GOLD_BORDER),
+                                              )),
                             ft.OutlinedButton("🏪 Transfers", height=34,
                                               on_click=lambda e: navigate(page, "/transfers"),
-                                              style=ft.ButtonStyle(padding=ft.padding.symmetric(horizontal=12))),
+                                              style=ft.ButtonStyle(
+                                                  padding=ft.padding.symmetric(horizontal=12),
+                                                  shape=ft.RoundedRectangleBorder(radius=10),
+                                                  side=ft.BorderSide(1, GOLD_BORDER),
+                                              )),
                             ft.OutlinedButton("🔄 Compare", height=34,
                                               on_click=lambda e: _start_compare(page, players),
-                                              style=ft.ButtonStyle(padding=ft.padding.symmetric(horizontal=12))),
+                                              style=ft.ButtonStyle(
+                                                  padding=ft.padding.symmetric(horizontal=12),
+                                                  shape=ft.RoundedRectangleBorder(radius=10),
+                                                  side=ft.BorderSide(1, GOLD_BORDER),
+                                              )),
                         ]),
 
                         # ── Sort + Player List ──────────────────────────
@@ -409,13 +421,15 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
     dlg = ft.AlertDialog(
         title=ft.Row(
             controls=[
-                ft.Text(player.name, size=18, weight=ft.FontWeight.BOLD, expand=True),
+                ft.Text(player.name, size=18, weight=ft.FontWeight.BOLD,
+                        color="#FFD54F", expand=True),
                 ft.Container(
                     content=ft.Text(str(ovr), size=18, weight=ft.FontWeight.BOLD,
                                     color=ft.Colors.GREEN_300 if ovr >= 70 else ft.Colors.WHITE),
                     bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.GREEN),
                     padding=ft.padding.symmetric(horizontal=10, vertical=4),
-                    border_radius=8,
+                    border_radius=10,
+                    border=ft.border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.GREEN)),
                 ),
             ],
         ),
@@ -515,6 +529,7 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
             ft.TextButton(
                 "© Captain" if not player.is_captain else "✓ Captain",
                 on_click=lambda e, pid=player.id: _set_captain(page, pid),
+                style=ft.ButtonStyle(color="#FFD54F"),
             ),
             ft.TextButton(
                 "🗣️ Talk",
@@ -523,6 +538,7 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
             ft.TextButton(
                 "📤 List" if not player.transfer_listed else "🔴 Unlist",
                 on_click=lambda e, pid=player.id, listed=player.transfer_listed: _toggle_transfer(page, pid, listed),
+                style=ft.ButtonStyle(color=ft.Colors.RED_400) if player.transfer_listed else None,
             ),
             ft.TextButton(
                 "📝 Renew",
@@ -655,15 +671,17 @@ def _talk_to_player(page, player_id, player_name):
                     ft.Text(msg, size=10, color=ft.Colors.GREY_500, italic=True),
                 ]),
                 padding=ft.padding.symmetric(horizontal=10, vertical=10),
-                border_radius=8,
-                bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
+                border_radius=10,
+                bgcolor=CARD_GLASS,
+                border=ft.border.all(1, GOLD_BORDER),
                 on_click=make_handler(talk_type, resp),
                 ink=True,
             )
         )
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"🗣️ Talk to {player_name}", size=15, weight=ft.FontWeight.BOLD),
+        title=ft.Text(f"🗣️ Talk to {player_name}", size=15,
+                       weight=ft.FontWeight.BOLD, color="#FFD54F"),
         content=ft.Container(
             content=ft.Column(spacing=6, controls=[
                 ft.Text(f"Current mood: {morale_desc}", size=12, color=ft.Colors.GREY_400),
@@ -763,7 +781,8 @@ def _renew_contract(page, player_id):
             page.update()
 
     renewal_dlg = ft.AlertDialog(
-        title=ft.Text(f"📝 Renew: {player.name}", size=16, weight=ft.FontWeight.BOLD),
+        title=ft.Text(f"📝 Renew: {player.name}", size=16,
+                       weight=ft.FontWeight.BOLD, color="#FFD54F"),
         content=ft.Container(
             content=ft.Column(spacing=8, controls=[
                 ft.Row(spacing=10, controls=[
@@ -859,7 +878,7 @@ def _start_compare(page, players):
         )
 
     dlg = ft.AlertDialog(
-        title=ft.Text("⚖️ Compare Players"),
+        title=ft.Text("⚖️ Compare Players", color="#FFD54F"),
         content=ft.Container(
             content=ft.Column(controls=[step_text, list_view], spacing=6),
             width=290, height=400,
@@ -1000,8 +1019,9 @@ def _build_career_bar(conn, page) -> list:
             ),
         ]),
         padding=ft.padding.symmetric(horizontal=10, vertical=8),
-        border_radius=8,
-        bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+        border_radius=10,
+        bgcolor=CARD_GLASS,
+        border=ft.border.all(1, GOLD_BORDER),
     )
     return [career_row]
 
@@ -1026,8 +1046,9 @@ def _show_achievements_dialog(page, conn):
                             size=9, color=ft.Colors.GREY_600),
                 ]),
                 padding=ft.padding.symmetric(horizontal=8, vertical=6),
-                border_radius=6,
+                border_radius=10,
                 bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.AMBER),
+                border=ft.border.all(1, ft.Colors.with_opacity(0.15, ft.Colors.AMBER)),
             ))
         else:
             rows.append(ft.Container(
@@ -1039,12 +1060,14 @@ def _show_achievements_dialog(page, conn):
                     ]),
                 ]),
                 padding=ft.padding.symmetric(horizontal=8, vertical=6),
-                border_radius=6,
-                bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.WHITE),
+                border_radius=10,
+                bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
+                border=ft.border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.WHITE)),
             ))
 
     dlg = ft.AlertDialog(
-        title=ft.Text("🏆 Achievements", size=16, weight=ft.FontWeight.BOLD),
+        title=ft.Text("🏆 Achievements", size=16,
+                       weight=ft.FontWeight.BOLD, color="#FFD54F"),
         content=ft.Container(
             content=ft.Column(spacing=4, controls=rows, scroll=ft.ScrollMode.AUTO),
             width=300, height=400,

@@ -11,9 +11,10 @@ from src.ui.widgets.cards import section_card, info_tile, action_card
 from src.ui.theme import (
     ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
     TEXT_SUCCESS, TEXT_WARNING, TEXT_DANGER,
-    CARD_BG, CARD_BG_HIGHLIGHT, CARD_RADIUS_SM,
+    CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_BG_HIGHLIGHT, CARD_RADIUS_SM,
     PAGE_PADDING, SECTION_SPACING,
     TITLE_SIZE, BODY_SIZE, CAPTION_SIZE, TINY_SIZE,
+    GOLD_BORDER, header_bar,
 )
 
 
@@ -62,6 +63,8 @@ def build_table_screen(page: ft.Page) -> ft.Column:
             ],
         ),
         padding=ft.padding.symmetric(horizontal=10, vertical=4),
+        bgcolor=CARD_GLASS,
+        border_radius=CARD_RADIUS_SM,
     )
 
     # ── Table Rows ──────────────────────────────────────────────────
@@ -72,19 +75,24 @@ def build_table_screen(page: ft.Page) -> ft.Column:
         # Zone coloring
         if is_user:
             bg = CARD_BG_HIGHLIGHT
-            left_border = ft.border.only(left=ft.BorderSide(3, TEXT_SUCCESS))
+            left_border = ft.border.only(
+                left=ft.BorderSide(3, TEXT_SUCCESS),
+                top=ft.BorderSide(1, ft.Colors.with_opacity(0.2, ft.Colors.GREEN)),
+                right=ft.BorderSide(1, ft.Colors.with_opacity(0.2, ft.Colors.GREEN)),
+                bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.2, ft.Colors.GREEN)),
+            )
         elif pos <= 2:
-            bg = ft.Colors.with_opacity(0.06, ft.Colors.BLUE)
+            bg = ft.Colors.with_opacity(0.08, ft.Colors.BLUE)
             left_border = ft.border.only(left=ft.BorderSide(3, ft.Colors.BLUE_400))
         elif pos == 3:
-            bg = ft.Colors.with_opacity(0.06, ft.Colors.ORANGE)
+            bg = ft.Colors.with_opacity(0.08, ft.Colors.ORANGE)
             left_border = ft.border.only(left=ft.BorderSide(3, ft.Colors.ORANGE_400))
         elif pos >= len(standings) - 2:
-            bg = ft.Colors.with_opacity(0.06, ft.Colors.RED)
+            bg = ft.Colors.with_opacity(0.08, ft.Colors.RED)
             left_border = ft.border.only(left=ft.BorderSide(3, ft.Colors.RED_400))
         else:
-            bg = CARD_BG
-            left_border = None
+            bg = CARD_GLASS
+            left_border = ft.border.all(1, GOLD_BORDER)
 
         name_weight = ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL
         pts_color = ACCENT if is_user else TEXT_PRIMARY
@@ -164,14 +172,12 @@ def build_table_screen(page: ft.Page) -> ft.Column:
                     spacing=SECTION_SPACING,
                     controls=[
                         # Header
-                        ft.Text("📊 Egyptian Premier League", size=TITLE_SIZE,
-                                weight=ft.FontWeight.BOLD),
-                        ft.Row(spacing=6, controls=[
-                            info_tile("Season", f"{gs.season_year}/{gs.season_year + 1}",
-                                      icon=ft.Icons.CALENDAR_MONTH),
-                            info_tile("Matchday", str(current_md),
-                                      icon=ft.Icons.SPORTS_SOCCER, color=ACCENT),
-                        ]),
+                        header_bar(
+                            title="Egyptian Premier League",
+                            subtitle=f"Season {gs.season_year}/{gs.season_year + 1}  •  Matchday {current_md}",
+                            icon=ft.Icons.LEADERBOARD,
+                            page=page,
+                        ),
 
                         # User position callout
                         *([ ft.Container(
@@ -181,19 +187,36 @@ def build_table_screen(page: ft.Page) -> ft.Column:
                                 ft.Text(user_pts_text, size=CAPTION_SIZE, color=TEXT_SECONDARY),
                             ]),
                             padding=ft.padding.symmetric(horizontal=12, vertical=8),
-                            bgcolor=CARD_BG_HIGHLIGHT,
+                            bgcolor=CARD_GLASS_STRONG,
                             border_radius=CARD_RADIUS_SM,
-                            border=ft.border.only(left=ft.BorderSide(3, TEXT_SUCCESS)),
+                            border=ft.border.only(
+                                left=ft.BorderSide(3, TEXT_SUCCESS),
+                                top=ft.BorderSide(1, GOLD_BORDER),
+                                right=ft.BorderSide(1, GOLD_BORDER),
+                                bottom=ft.BorderSide(1, GOLD_BORDER),
+                            ),
+                            shadow=ft.BoxShadow(
+                                spread_radius=0, blur_radius=6,
+                                color=ft.Colors.with_opacity(0.08, ft.Colors.GREEN),
+                            ),
                         )] if user_pos else []),
 
                         # Quick nav
                         ft.Row(spacing=6, controls=[
                             ft.OutlinedButton("📅 Fixtures", height=32,
                                               on_click=lambda e: navigate(page, "/fixtures"),
-                                              style=ft.ButtonStyle(padding=ft.padding.symmetric(horizontal=12))),
+                                              style=ft.ButtonStyle(
+                                                  padding=ft.padding.symmetric(horizontal=12),
+                                                  shape=ft.RoundedRectangleBorder(radius=10),
+                                                  side=ft.BorderSide(1, GOLD_BORDER),
+                                              )),
                             ft.OutlinedButton("🏟️ My Club", height=32,
                                               on_click=lambda e: navigate(page, "/club"),
-                                              style=ft.ButtonStyle(padding=ft.padding.symmetric(horizontal=12))),
+                                              style=ft.ButtonStyle(
+                                                  padding=ft.padding.symmetric(horizontal=12),
+                                                  shape=ft.RoundedRectangleBorder(radius=10),
+                                                  side=ft.BorderSide(1, GOLD_BORDER),
+                                              )),
                         ]),
 
                         # Table

@@ -9,12 +9,13 @@ from __future__ import annotations
 import flet as ft
 from src.ui.theme import (
     ACCENT, ACCENT_DARK, ACCENT_BG,
-    CARD_BG, CARD_BG_HIGHLIGHT, CARD_BG_DANGER,
+    CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_BG_HIGHLIGHT, CARD_BG_DANGER,
     CARD_RADIUS, CARD_RADIUS_SM, CARD_PADDING, CARD_PADDING_SM,
     TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
     TEXT_SUCCESS, TEXT_WARNING, TEXT_DANGER,
     SECTION_SPACING, ITEM_SPACING,
     BODY_SIZE, CAPTION_SIZE, TINY_SIZE,
+    GOLD_BORDER, GOLD_GLOW,
 )
 
 
@@ -29,10 +30,7 @@ def section_card(
     extra_action: ft.Control | None = None,
 ) -> ft.Container:
     """
-    A titled card section — the fundamental building block.
-
-    Usage:
-        section_card("⚽ Goals", [goal_row_1, goal_row_2])
+    A titled card section — frosted glass style with golden accent border.
     """
     header_controls = []
     if icon:
@@ -53,8 +51,17 @@ def section_card(
         ),
         padding=CARD_PADDING,
         border_radius=CARD_RADIUS,
-        bgcolor=CARD_BG,
-        border=ft.border.only(left=ft.BorderSide(3, title_color)),
+        bgcolor=CARD_GLASS_STRONG,
+        border=ft.border.only(
+            left=ft.BorderSide(3, title_color),
+            top=ft.BorderSide(1, GOLD_BORDER),
+            right=ft.BorderSide(1, GOLD_BORDER),
+            bottom=ft.BorderSide(1, GOLD_BORDER),
+        ),
+        shadow=ft.BoxShadow(
+            spread_radius=0, blur_radius=6,
+            color=ft.Colors.with_opacity(0.08, title_color),
+        ),
     )
 
 
@@ -86,7 +93,8 @@ def info_tile(
         content=inner,
         padding=ft.padding.symmetric(horizontal=10, vertical=5),
         border_radius=CARD_RADIUS_SM,
-        bgcolor=CARD_BG,
+        bgcolor=CARD_GLASS_STRONG,
+        border=ft.border.all(1, GOLD_BORDER),
         width=width,
     )
 
@@ -220,12 +228,13 @@ def action_card(
                           if subtitle else []),
                     ]),
                 ]),
-                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=18, color=TEXT_MUTED),
+                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=18, color=ACCENT),
             ],
         ),
         padding=ft.padding.symmetric(horizontal=14, vertical=12),
         border_radius=CARD_RADIUS,
-        bgcolor=CARD_BG,
+        bgcolor=CARD_GLASS_STRONG,
+        border=ft.border.all(1, GOLD_BORDER),
         on_click=on_click,
         ink=True,
     )
@@ -255,12 +264,24 @@ def match_score_card(
     return ft.Card(
         content=ft.Container(
             padding=ft.padding.symmetric(horizontal=16, vertical=16),
+            bgcolor=CARD_GLASS_STRONG,
+            border_radius=CARD_RADIUS,
+            border=ft.border.all(1, GOLD_BORDER),
+            shadow=ft.BoxShadow(
+                spread_radius=0, blur_radius=8,
+                color=ft.Colors.with_opacity(0.10, ACCENT),
+            ),
             content=ft.Column(
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=6,
                 controls=[
-                    *([ ft.Text(competition, size=CAPTION_SIZE, color=ACCENT,
-                                weight=ft.FontWeight.W_500) ] if competition else []),
+                    *([ ft.Container(
+                        content=ft.Text(competition, size=CAPTION_SIZE, color=ACCENT,
+                                        weight=ft.FontWeight.W_600),
+                        padding=ft.padding.symmetric(horizontal=10, vertical=3),
+                        border_radius=8,
+                        bgcolor=ft.Colors.with_opacity(0.10, ACCENT),
+                    )] if competition else []),
                     *([ ft.Text(matchday, size=TINY_SIZE, color=TEXT_MUTED) ] if matchday else []),
                     ft.Container(height=4),
                     ft.Row(
@@ -415,7 +436,13 @@ def player_card_h(
         ),
         padding=ft.padding.symmetric(horizontal=12, vertical=8),
         border_radius=CARD_RADIUS_SM,
-        bgcolor=CARD_BG_HIGHLIGHT if highlight else CARD_BG,
+        bgcolor=CARD_BG_HIGHLIGHT if highlight else CARD_GLASS,
+        border=ft.border.only(
+            left=ft.BorderSide(3, pos_clr),
+            top=ft.BorderSide(1, GOLD_BORDER),
+            right=ft.BorderSide(1, GOLD_BORDER),
+            bottom=ft.BorderSide(1, GOLD_BORDER),
+        ),
         on_click=on_click,
         ink=True,
     )
@@ -477,7 +504,8 @@ def player_card_compact(
         ),
         padding=ft.padding.symmetric(horizontal=10, vertical=7),
         border_radius=CARD_RADIUS_SM,
-        bgcolor=CARD_BG,
+        bgcolor=CARD_GLASS,
+        border=ft.border.all(1, GOLD_BORDER),
         on_click=on_click,
         ink=True,
     )

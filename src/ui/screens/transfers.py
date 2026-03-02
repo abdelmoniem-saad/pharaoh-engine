@@ -12,6 +12,11 @@ from src.core.player import calculate_overall_rating
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.widgets.stat_bar import stat_bar
 from src.utils.config import Position
+from src.ui.theme import (
+    header_bar, GOLD_BORDER, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS_SM,
+    TEXT_SECONDARY, TEXT_MUTED, ACCENT,
+    PRIMARY_BTN_STYLE, SECONDARY_BTN_STYLE,
+)
 
 
 def build_transfers_screen(page: ft.Page) -> ft.Column:
@@ -107,8 +112,9 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                 ],
             ),
             padding=ft.padding.symmetric(horizontal=10, vertical=10),
-            border_radius=6,
-            bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+            border_radius=CARD_RADIUS_SM,
+            bgcolor=CARD_GLASS,
+            border=ft.border.all(1, GOLD_BORDER),
             on_click=make_handler(),
             ink=True,
         )
@@ -248,7 +254,8 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                 padding=ft.padding.symmetric(horizontal=8, vertical=6),
                 border_radius=6,
                 bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.RED) if listed
-                else ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+                else CARD_GLASS,
+                border=ft.border.all(1, GOLD_BORDER),
                 on_click=make_sell_handler(),
             )
         )
@@ -294,8 +301,9 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                             ],
                         ),
                         padding=ft.padding.symmetric(horizontal=8, vertical=6),
-                        border_radius=6,
-                        bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+                        border_radius=CARD_RADIUS_SM,
+                        bgcolor=CARD_GLASS,
+                        border=ft.border.all(1, GOLD_BORDER),
                         on_click=make_free_handler(),
                     )
                 )
@@ -339,8 +347,9 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
             ),
         ]),
         padding=ft.padding.symmetric(horizontal=10, vertical=8),
-        bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.GREEN),
-        border_radius=6,
+        bgcolor=CARD_GLASS_STRONG,
+        border_radius=CARD_RADIUS_SM,
+        border=ft.border.all(1, GOLD_BORDER),
     )
 
     # ── Negotiations tab ───────────────────────────────────────────────
@@ -441,9 +450,9 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                         ]),
                     ]),
                     padding=ft.padding.all(10),
-                    border_radius=8,
-                    bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
-                    border=ft.border.all(1, ft.Colors.with_opacity(0.1, ft.Colors.AMBER)),
+                    border_radius=CARD_RADIUS_SM,
+                    bgcolor=CARD_GLASS_STRONG,
+                    border=ft.border.all(1, ft.Colors.with_opacity(0.15, ft.Colors.AMBER)),
                 )
             )
 
@@ -512,11 +521,20 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     neg_label = f"📋 ({len(active_negs)})" if active_negs else "📋"
     tab_row = ft.Row(spacing=4, scroll=ft.ScrollMode.AUTO, controls=[
         ft.ElevatedButton("🔍 Search", on_click=switch_tab(0), width=90,
-                           style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_800, color=ft.Colors.WHITE)),
-        ft.OutlinedButton("💰 Sell", on_click=switch_tab(1), width=75),
-        ft.OutlinedButton(f"⭐ ({len(shortlist)})", on_click=switch_tab(2), width=65),
-        ft.OutlinedButton("🆓 Free", on_click=switch_tab(3), width=70),
-        ft.OutlinedButton(neg_label, on_click=switch_tab(4), width=70),
+                           style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_800, color=ft.Colors.WHITE,
+                                                shape=ft.RoundedRectangleBorder(radius=10))),
+        ft.OutlinedButton("💰 Sell", on_click=switch_tab(1), width=75,
+                           style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10),
+                                                side=ft.BorderSide(1, GOLD_BORDER))),
+        ft.OutlinedButton(f"⭐ ({len(shortlist)})", on_click=switch_tab(2), width=65,
+                           style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10),
+                                                side=ft.BorderSide(1, GOLD_BORDER))),
+        ft.OutlinedButton("🆓 Free", on_click=switch_tab(3), width=70,
+                           style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10),
+                                                side=ft.BorderSide(1, GOLD_BORDER))),
+        ft.OutlinedButton(neg_label, on_click=switch_tab(4), width=70,
+                           style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10),
+                                                side=ft.BorderSide(1, GOLD_BORDER))),
     ])
 
     return ft.Column(
@@ -528,16 +546,11 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                 content=ft.Column(
                     spacing=8,
                     controls=[
-                        ft.Row(
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                            controls=[
-                                ft.Text("🏪 Transfer Market", size=22,
-                                         weight=ft.FontWeight.BOLD),
-                                ft.IconButton(
-                                    icon=ft.Icons.ARROW_BACK, tooltip="Back to Squad",
-                                    on_click=lambda e: navigate(page, "/squad"),
-                                ),
-                            ],
+                        header_bar(
+                            title="Transfer Market",
+                            icon=ft.Icons.STORE,
+                            page=page,
+                            back_route="/squad",
                         ),
                         budget_bar,
                         tab_row,
@@ -632,7 +645,7 @@ def _show_buy_dialog(page, conn, gs, user_club, player, estimated_value, shortli
     expiry_str = expiry.strftime("%b %Y") if expiry else "N/A"
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"📝 Sign {player.name}"),
+        title=ft.Text(f"📝 Sign {player.name}", color="#FFD54F"),
         content=ft.Container(
             content=ft.Column(
                 spacing=6, scroll=ft.ScrollMode.AUTO,
@@ -670,7 +683,10 @@ def _show_buy_dialog(page, conn, gs, user_club, player, estimated_value, shortli
         ),
         actions=[
             ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),
-            ft.ElevatedButton("📨 Submit Offer", on_click=submit_offer),
+            ft.ElevatedButton("📨 Submit Offer", on_click=submit_offer,
+                              style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
+                                                    color=ft.Colors.WHITE,
+                                                    shape=ft.RoundedRectangleBorder(radius=10))),
         ],
     )
     page.show_dialog(dlg)
@@ -685,7 +701,7 @@ def _show_sell_dialog(page, conn, gs, user_club, player, estimated_value):
     if player.transfer_listed:
         # Already listed — offer to unlist
         dlg = ft.AlertDialog(
-            title=ft.Text(f"📤 {player.name}"),
+            title=ft.Text(f"📤 {player.name}", color="#FFD54F"),
             content=ft.Container(
                 content=ft.Column(spacing=6, controls=[
                     ft.Row(spacing=8, controls=[
@@ -723,7 +739,7 @@ def _show_sell_dialog(page, conn, gs, user_club, player, estimated_value):
             navigate(page, "/transfers")
 
         dlg = ft.AlertDialog(
-            title=ft.Text(f"💰 Sell {player.name}?"),
+            title=ft.Text(f"💰 Sell {player.name}?", color="#FFD54F"),
             content=ft.Container(
                 content=ft.Column(spacing=6, controls=[
                     ft.Row(spacing=8, controls=[
@@ -745,7 +761,10 @@ def _show_sell_dialog(page, conn, gs, user_club, player, estimated_value):
             ),
             actions=[
                 ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),
-                ft.ElevatedButton("📤 List for Transfer", on_click=list_player),
+                ft.ElevatedButton("📤 List for Transfer", on_click=list_player,
+                                  style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
+                                                        color=ft.Colors.WHITE,
+                                                        shape=ft.RoundedRectangleBorder(radius=10))),
             ],
         )
 
@@ -795,7 +814,7 @@ def _show_free_agent_dialog(page, conn, gs, user_club, player):
         navigate(page, "/transfers")
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"🆓 Sign {player.name}"),
+        title=ft.Text(f"🆓 Sign {player.name}", color="#FFD54F"),
         content=ft.Container(
             content=ft.Column(spacing=6, controls=[
                 ft.Row(spacing=8, controls=[
@@ -813,7 +832,10 @@ def _show_free_agent_dialog(page, conn, gs, user_club, player):
         ),
         actions=[
             ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),
-            ft.ElevatedButton("✅ Sign Player", on_click=sign_free),
+            ft.ElevatedButton("✅ Sign Player", on_click=sign_free,
+                              style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_800,
+                                                    color=ft.Colors.WHITE,
+                                                    shape=ft.RoundedRectangleBorder(radius=10))),
         ],
     )
     page.show_dialog(dlg)
@@ -859,7 +881,7 @@ def _show_counter_dialog(page, conn, gs, neg):
         navigate(page, "/transfers")
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"↩️ Counter-Offer: {neg.player_name}"),
+        title=ft.Text(f"↩️ Counter-Offer: {neg.player_name}", color="#FFD54F"),
         content=ft.Container(
             content=ft.Column(spacing=6, controls=[
                 ft.Text(f"From: {neg.from_club_name}", size=12, color=ft.Colors.GREY_400),
@@ -879,7 +901,10 @@ def _show_counter_dialog(page, conn, gs, neg):
         actions=[
             ft.TextButton("❌ Walk Away", on_click=walk_away),
             ft.OutlinedButton("✅ Accept Counter", on_click=accept_counter),
-            ft.ElevatedButton("📨 New Offer", on_click=submit_revised),
+            ft.ElevatedButton("📨 New Offer", on_click=submit_revised,
+                              style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
+                                                    color=ft.Colors.WHITE,
+                                                    shape=ft.RoundedRectangleBorder(radius=10))),
         ],
     )
     page.show_dialog(dlg)
@@ -920,7 +945,7 @@ def _show_wage_dialog(page, conn, gs, neg):
         navigate(page, "/transfers")
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"💰 Personal Terms: {neg.player_name}"),
+        title=ft.Text(f"💰 Personal Terms: {neg.player_name}", color="#FFD54F"),
         content=ft.Container(
             content=ft.Column(spacing=6, controls=[
                 ft.Text(f"✅ Transfer fee agreed: {neg.current_offer:,} EGP", size=12,
@@ -947,7 +972,10 @@ def _show_wage_dialog(page, conn, gs, neg):
         ),
         actions=[
             ft.TextButton("❌ Walk Away", on_click=walk_away),
-            ft.ElevatedButton("📨 Offer Wage", on_click=submit_wage),
+            ft.ElevatedButton("📨 Offer Wage", on_click=submit_wage,
+                              style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
+                                                    color=ft.Colors.WHITE,
+                                                    shape=ft.RoundedRectangleBorder(radius=10))),
         ],
     )
     page.show_dialog(dlg)

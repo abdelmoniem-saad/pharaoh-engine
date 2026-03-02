@@ -9,8 +9,10 @@ from src.data import queries
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.theme import (
     ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
-    CARD_BG, CARD_RADIUS, CARD_RADIUS_SM, PAGE_PADDING, SECTION_SPACING,
+    CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS, CARD_RADIUS_SM,
+    PAGE_PADDING, SECTION_SPACING,
     TITLE_SIZE, BODY_SIZE, CAPTION_SIZE, TINY_SIZE, ACCENT_BG,
+    GOLD_BORDER, header_bar,
 )
 
 
@@ -98,7 +100,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                             ft.Container(
                                 content=ft.Icon(cat_icon, size=18, color=icon_color),
                                 width=36, height=36, border_radius=18,
-                                bgcolor=ft.Colors.with_opacity(0.1, cat_color),
+                                bgcolor=ft.Colors.with_opacity(0.12, cat_color),
                                 alignment=ft.Alignment(0, 0),
                             ),
                             # Content
@@ -116,22 +118,25 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                                 ),
                             ]),
                             # Chevron
-                            ft.Icon(ft.Icons.CHEVRON_RIGHT, size=16, color=TEXT_MUTED),
+                            ft.Icon(ft.Icons.CHEVRON_RIGHT, size=16, color=ACCENT),
                         ],
                     ),
                     padding=ft.padding.symmetric(horizontal=12, vertical=10),
                     border_radius=CARD_RADIUS_SM,
-                    bgcolor=bg,
-                    border=ft.border.only(left=ft.BorderSide(3, cat_color)),
+                    bgcolor=CARD_GLASS_STRONG if not msg.is_read else CARD_GLASS,
+                    border=ft.border.only(
+                        left=ft.BorderSide(3, cat_color),
+                        top=ft.BorderSide(1, GOLD_BORDER),
+                        right=ft.BorderSide(1, GOLD_BORDER),
+                        bottom=ft.BorderSide(1, GOLD_BORDER),
+                    ),
                     on_click=make_handler(),
                     ink=True,
                 )
             )
 
     # Header controls
-    header_controls = [
-        ft.Text("📥 Inbox", size=TITLE_SIZE, weight=ft.FontWeight.BOLD, expand=True),
-    ]
+    header_extra = []
     if unread > 0:
         def mark_all_read(e):
             from src.ui.app import show_snackbar
@@ -139,7 +144,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
             show_snackbar(page, f"✅ {count} message(s) marked as read")
             navigate(page, "/inbox")
 
-        header_controls.append(
+        header_extra.append(
             ft.TextButton("Mark all read", icon=ft.Icons.DONE_ALL,
                           on_click=mark_all_read)
         )
@@ -166,7 +171,13 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                 content=ft.Column(
                     spacing=SECTION_SPACING,
                     controls=[
-                        ft.Row(controls=header_controls),
+                        header_bar(
+                            title="Inbox",
+                            subtitle=f"{unread} unread" if unread > 0 else "All caught up",
+                            icon=ft.Icons.MAIL,
+                            page=page,
+                            extra_controls=header_extra,
+                        ),
                         *unread_pill,
                         ft.Column(spacing=4, controls=msg_tiles),
                     ],
@@ -199,6 +210,8 @@ def _show_message_detail(page: ft.Page, conn, msg):
     if msg.category == "transfer" and "TRANSFER_OFFER|" in msg.body:
         # Parse transfer offer: TRANSFER_OFFER|player_id|from_club|to_club|fee|wage
         try:
+            from src.ui.app import app_state
+            gs = app_state.game_state
             parts = msg.body.split("TRANSFER_OFFER|")[1].split("|")
             player_id = int(parts[0])
             from_club_id = int(parts[1])
@@ -235,21 +248,37 @@ def _show_message_detail(page: ft.Page, conn, msg):
 
     dlg = ft.AlertDialog(
         title=ft.Text(f"{cat_emoji} {msg.subject}", size=16,
-                      weight=ft.FontWeight.BOLD),
+                      weight=ft.FontWeight.BOLD, color="#FFD54F"),
         content=ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Text(
-                        msg.date.strftime("%A, %d %B %Y"),
-                        size=11, color=ft.Colors.GREY_500,
+                    ft.Container(
+                        content=ft.Row(
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                            controls=[
+                                ft.Text(
+                                    msg.date.strftime("%A, %d %B %Y"),
+                                    size=11, color=ft.Colors.GREY_500,
+                                ),
+                                ft.Container(
+                                    content=ft.Text(
+                                        msg.category.title(),
+                                        size=9, color=ft.Colors.AMBER_400,
+                                        weight=ft.FontWeight.W_500,
+                                    ),
+                                    padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                                    border_radius=6,
+                                    bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.AMBER),
+                                ),
+                            ],
+                        ),
                     ),
-                    ft.Text(
-                        msg.category.title(),
-                        size=10, color=ft.Colors.AMBER_400,
-                        weight=ft.FontWeight.W_500,
+                    ft.Container(
+                        height=1,
+                        bgcolor=ft.Colors.with_opacity(0.18, "#FFD54F"),
+                        margin=ft.margin.symmetric(vertical=4),
                     ),
-                    ft.Divider(height=1),
-                    ft.Container(height=5),
+                    ft.Container(height=3),
                     ft.Text(
                         display_body,
                         size=14,

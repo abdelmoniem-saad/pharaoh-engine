@@ -1,56 +1,79 @@
 """
 UI Theme constants — centralized colors, spacing, and styling for mobile-first design.
 
-All screens should import from here instead of hardcoding color/padding values.
+Premium Egyptian pharaoh-themed visual language: rich dark gradients,
+golden amber accents, frosted glass cards with glow borders.
 Portrait-mode optimized for 360px–430px phone widths.
 """
 from __future__ import annotations
 
 import flet as ft
 
-# ── Colors ──────────────────────────────────────────────────────────────────
+# ── Brand Palette ───────────────────────────────────────────────────────────
+# Deep navy → teal gradient background inspired by Egyptian night sky
+BG_DARK = "#0a0e1a"        # deepest background
+BG_MID = "#0f1729"          # mid-tone panels
+BG_SURFACE = "#141e33"      # card surfaces
+BG_TEAL = "#0d2137"         # teal accent tone
+
+# Golden / Amber — the pharaoh accent
+GOLD = "#FFD54F"
+GOLD_DARK = "#F9A825"
+GOLD_GLOW = ft.Colors.with_opacity(0.25, "#FFD54F")
+GOLD_BORDER = ft.Colors.with_opacity(0.18, "#FFD54F")
+GOLD_BORDER_STRONG = ft.Colors.with_opacity(0.35, "#FFD54F")
+
 ACCENT = ft.Colors.AMBER_400
 ACCENT_DARK = ft.Colors.AMBER_700
-ACCENT_BG = ft.Colors.with_opacity(0.08, ft.Colors.AMBER)
+ACCENT_BG = ft.Colors.with_opacity(0.10, ft.Colors.AMBER)
 
-CARD_BG = ft.Colors.with_opacity(0.07, ft.Colors.WHITE)
-CARD_BG_HOVER = ft.Colors.with_opacity(0.12, ft.Colors.WHITE)
-CARD_BG_HIGHLIGHT = ft.Colors.with_opacity(0.15, ft.Colors.GREEN)
+# ── Card / Glass surfaces ──────────────────────────────────────────────────
+CARD_BG = ft.Colors.with_opacity(0.10, ft.Colors.WHITE)
+CARD_GLASS = ft.Colors.with_opacity(0.08, ft.Colors.WHITE)       # frosted glass
+CARD_GLASS_STRONG = ft.Colors.with_opacity(0.14, ft.Colors.WHITE) # elevated glass
+CARD_BG_HOVER = ft.Colors.with_opacity(0.16, ft.Colors.WHITE)
+CARD_BG_HIGHLIGHT = ft.Colors.with_opacity(0.12, ft.Colors.GREEN)
 CARD_BG_DANGER = ft.Colors.with_opacity(0.12, ft.Colors.RED)
 
-SECTION_BG = ft.Colors.with_opacity(0.04, ft.Colors.WHITE)
+SECTION_BG = ft.Colors.with_opacity(0.05, ft.Colors.WHITE)
 
-TEXT_PRIMARY = ft.Colors.WHITE
-TEXT_SECONDARY = ft.Colors.GREY_400
-TEXT_MUTED = ft.Colors.GREY_600
-TEXT_SUCCESS = ft.Colors.GREEN_400
-TEXT_WARNING = ft.Colors.YELLOW_400
-TEXT_DANGER = ft.Colors.RED_400
-TEXT_INFO = ft.Colors.BLUE_400
+# ── Text ────────────────────────────────────────────────────────────────────
+TEXT_PRIMARY = "#EAEAEA"
+TEXT_SECONDARY = "#9E9E9E"
+TEXT_MUTED = "#616161"
+TEXT_SUCCESS = "#66BB6A"
+TEXT_WARNING = "#FFCA28"
+TEXT_DANGER = "#EF5350"
+TEXT_INFO = "#42A5F5"
 
 # Position colors
-POS_GK = ft.Colors.AMBER_600
-POS_DEF = ft.Colors.BLUE_400
-POS_MID = ft.Colors.GREEN_400
-POS_FWD = ft.Colors.RED_400
+POS_GK = "#FFB300"
+POS_DEF = "#42A5F5"
+POS_MID = "#66BB6A"
+POS_FWD = "#EF5350"
+
+# ── Pitch ───────────────────────────────────────────────────────────────────
+PITCH_DARK = "#1B5E20"
+PITCH_LIGHT = "#2E7D32"
+PITCH_LINE = ft.Colors.with_opacity(0.35, ft.Colors.WHITE)
 
 # ── Spacing ─────────────────────────────────────────────────────────────────
-CARD_RADIUS = 12
-CARD_RADIUS_SM = 8
+CARD_RADIUS = 14
+CARD_RADIUS_SM = 10
 CARD_PADDING = 14
 CARD_PADDING_SM = 10
-PAGE_PADDING = 12
-SECTION_SPACING = 10
+PAGE_PADDING = 14
+SECTION_SPACING = 12
 ITEM_SPACING = 6
 
 # ── Touch targets ───────────────────────────────────────────────────────────
-MIN_TOUCH_TARGET = 44       # minimum height for tappable elements (px)
-TOUCH_ROW_PADDING_V = 10    # vertical padding to reach ~44px touch height
-NAV_BAR_HEIGHT = 60          # bottom nav bar consumes this much
+MIN_TOUCH_TARGET = 44
+TOUCH_ROW_PADDING_V = 10
+NAV_BAR_HEIGHT = 60
 
 # ── Typography ──────────────────────────────────────────────────────────────
-TITLE_SIZE = 20
-SUBTITLE_SIZE = 14
+TITLE_SIZE = 22
+SUBTITLE_SIZE = 15
 BODY_SIZE = 13
 CAPTION_SIZE = 11
 TINY_SIZE = 9
@@ -124,4 +147,147 @@ def fitness_color(fitness: int) -> str:
     elif fitness >= 50:
         return TEXT_WARNING
     return TEXT_DANGER
+
+
+# ── Premium Visual Helpers ──────────────────────────────────────────────────
+
+def gradient_bg(
+    colors: list[str] | None = None,
+    begin=ft.Alignment(0, -1),
+    end=ft.Alignment(0, 1),
+) -> ft.LinearGradient:
+    """Dark-to-teal vertical gradient for screen backgrounds."""
+    return ft.LinearGradient(
+        colors=colors or [BG_DARK, BG_MID, BG_TEAL],
+        begin=begin,
+        end=end,
+    )
+
+
+def screen_container(content: ft.Control, page: ft.Page | None = None) -> ft.Container:
+    """Full-screen container with the signature dark gradient background."""
+    return ft.Container(
+        content=content,
+        gradient=gradient_bg(),
+        expand=True,
+        padding=0,
+    )
+
+
+def glass_card(
+    content: ft.Control,
+    padding: int | ft.Padding = CARD_PADDING,
+    border_color: str = GOLD_BORDER,
+    border_radius: int = CARD_RADIUS,
+    glow: bool = False,
+    on_click=None,
+) -> ft.Container:
+    """Frosted-glass styled card with optional golden glow border."""
+    shadow = None
+    if glow:
+        shadow = ft.BoxShadow(
+            spread_radius=0, blur_radius=8,
+            color=GOLD_GLOW, offset=ft.Offset(0, 0),
+        )
+    return ft.Container(
+        content=content,
+        padding=padding,
+        border_radius=border_radius,
+        bgcolor=CARD_GLASS_STRONG,
+        border=ft.border.all(1, border_color),
+        shadow=shadow,
+        on_click=on_click,
+        ink=True if on_click else False,
+    )
+
+
+def header_bar(
+    title: str,
+    subtitle: str = "",
+    icon: str | None = None,
+    back_route: str | None = None,
+    page: ft.Page | None = None,
+    extra_controls: list | None = None,
+) -> ft.Container:
+    """
+    Premium gradient header bar for screens.
+    Provides visual weight at the top of every game screen.
+    """
+    left = []
+    if icon:
+        left.append(ft.Icon(icon, size=22, color=GOLD))
+    left.append(
+        ft.Column(spacing=0, expand=True, controls=[
+            ft.Text(title, size=TITLE_SIZE, weight=ft.FontWeight.BOLD,
+                    color=TEXT_PRIMARY),
+            *([ ft.Text(subtitle, size=CAPTION_SIZE, color=TEXT_SECONDARY) ]
+              if subtitle else []),
+        ])
+    )
+
+    right = list(extra_controls or [])
+    if back_route and page:
+        from src.ui.app import navigate
+
+        def go_back(e):
+            navigate(page, back_route)
+        right.append(ft.IconButton(
+            icon=ft.Icons.ARROW_BACK, icon_size=20,
+            icon_color=TEXT_SECONDARY, tooltip="Back",
+            on_click=go_back,
+        ))
+
+    return ft.Container(
+        content=ft.Row(
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                ft.Row(spacing=10, expand=True, controls=left),
+                ft.Row(spacing=0, controls=right) if right else ft.Container(),
+            ],
+        ),
+        padding=ft.padding.only(left=PAGE_PADDING, right=8, top=12, bottom=10),
+        gradient=ft.LinearGradient(
+            colors=[BG_SURFACE, ft.Colors.with_opacity(0, BG_SURFACE)],
+            begin=ft.Alignment(0, -1), end=ft.Alignment(0, 1),
+        ),
+        border=ft.border.only(bottom=ft.BorderSide(1, GOLD_BORDER)),
+    )
+
+
+def golden_divider() -> ft.Container:
+    """A subtle golden horizontal rule."""
+    return ft.Container(
+        height=1,
+        bgcolor=GOLD_BORDER,
+        margin=ft.margin.symmetric(vertical=4),
+    )
+
+
+# ── Button Style Presets ────────────────────────────────────────────────────
+
+PRIMARY_BTN_STYLE = ft.ButtonStyle(
+    bgcolor=ACCENT_DARK,
+    color=ft.Colors.WHITE,
+    text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
+    shape=ft.RoundedRectangleBorder(radius=12),
+    elevation=4,
+    shadow_color=GOLD_GLOW,
+)
+
+SECONDARY_BTN_STYLE = ft.ButtonStyle(
+    bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.WHITE),
+    color=TEXT_PRIMARY,
+    text_style=ft.TextStyle(size=15),
+    shape=ft.RoundedRectangleBorder(radius=12),
+    side=ft.BorderSide(1, GOLD_BORDER),
+)
+
+DANGER_BTN_STYLE = ft.ButtonStyle(
+    bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.RED),
+    color=TEXT_DANGER,
+    shape=ft.RoundedRectangleBorder(radius=12),
+    side=ft.BorderSide(1, ft.Colors.with_opacity(0.3, ft.Colors.RED)),
+)
+
 

@@ -7,6 +7,10 @@ import flet as ft
 
 from src.data import queries
 from src.ui.widgets.nav_bar import build_nav_bar
+from src.ui.theme import (
+    header_bar, GOLD_BORDER, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS_SM,
+    TEXT_SECONDARY, TEXT_MUTED, ACCENT, PAGE_PADDING,
+)
 
 
 def build_fixtures_screen(page: ft.Page) -> ft.Column:
@@ -29,12 +33,17 @@ def build_fixtures_screen(page: ft.Page) -> ft.Column:
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Icon(ft.Icons.CALENDAR_MONTH, size=48, color=ft.Colors.GREY_600),
+                ft.Icon(ft.Icons.CALENDAR_MONTH, size=48, color=ft.Colors.GREY_700),
                 ft.Container(height=10),
                 ft.Text("No matches played yet", size=16, color=ft.Colors.GREY_400),
                 ft.Container(height=20),
                 ft.ElevatedButton("← Back to Table", width=200,
-                                   on_click=lambda e: navigate(page, "/table")),
+                                   on_click=lambda e: navigate(page, "/table"),
+                                   style=ft.ButtonStyle(
+                                       shape=ft.RoundedRectangleBorder(radius=12),
+                                       bgcolor=ft.Colors.AMBER_700,
+                                       color=ft.Colors.WHITE,
+                                   )),
             ],
         )
 
@@ -63,7 +72,12 @@ def build_fixtures_screen(page: ft.Page) -> ft.Column:
                 content=ft.Column(
                     spacing=8,
                     controls=[
-                        ft.Text("📅 Fixture Results", size=22, weight=ft.FontWeight.BOLD),
+                        header_bar(
+                            title="Fixture Results",
+                            icon=ft.Icons.CALENDAR_MONTH,
+                            page=page,
+                            back_route="/table",
+                        ),
                         ft.Row(
                             spacing=10,
                             controls=[
@@ -77,6 +91,10 @@ def build_fixtures_screen(page: ft.Page) -> ft.Column:
                                 ft.ElevatedButton(
                                     "← Table",
                                     on_click=lambda e: navigate(page, "/table"),
+                                    style=ft.ButtonStyle(
+                                        shape=ft.RoundedRectangleBorder(radius=10),
+                                        side=ft.BorderSide(1, GOLD_BORDER),
+                                    ),
                                 ),
                             ],
                         ),
@@ -107,7 +125,9 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
 
             is_user = (fixture.home_club_id == gs.user_club_id or
                        fixture.away_club_id == gs.user_club_id)
-            bg = ft.Colors.with_opacity(0.1, ft.Colors.GREEN) if is_user else None
+            bg = CARD_GLASS_STRONG if is_user else CARD_GLASS
+            border = (ft.border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.GREEN))
+                      if is_user else ft.border.all(1, GOLD_BORDER))
 
             column.controls.append(
                 ft.Container(
@@ -129,6 +149,7 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
                                 bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
                                 padding=ft.padding.symmetric(horizontal=10, vertical=4),
                                 border_radius=6,
+                                border=ft.border.all(1, ft.Colors.with_opacity(0.12, "#FFD54F")),
                             ),
                             ft.Text(
                                 fixture.away_club_name, size=12,
@@ -139,7 +160,8 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
                         ],
                     ),
                     bgcolor=bg,
-                    border_radius=6,
+                    border=border,
+                    border_radius=CARD_RADIUS_SM,
                     padding=ft.padding.symmetric(vertical=6, horizontal=8),
                 )
             )

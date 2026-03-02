@@ -81,16 +81,16 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
 
     # ── UI Controls ──────────────────────────────────────────────────
     score_text = ft.Text(
-        "0 - 0", size=32, weight=ft.FontWeight.BOLD,
-        color=ft.Colors.AMBER_300, text_align=ft.TextAlign.CENTER,
+        "0 - 0", size=36, weight=ft.FontWeight.BOLD,
+        color="#FFD54F", text_align=ft.TextAlign.CENTER,
     )
     minute_text = ft.Text(
-        "0'", size=18, color=ft.Colors.GREY_400,
+        "0'", size=20, color=ft.Colors.GREY_400,
         weight=ft.FontWeight.W_500, text_align=ft.TextAlign.CENTER,
     )
     progress_bar = ft.ProgressBar(
         value=0, color=ft.Colors.AMBER_600,
-        bgcolor=ft.Colors.GREY_800,
+        bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
     )
     status_text = ft.Text(
         "⏳ Pre-Match", size=13, color=ft.Colors.GREY_500,
@@ -101,15 +101,21 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
     skip_btn = ft.ElevatedButton(
         "⏩ Skip to End", width=140, height=42,
         style=ft.ButtonStyle(
-            bgcolor=ft.Colors.GREY_800, color=ft.Colors.WHITE,
+            bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
+            color=ft.Colors.WHITE,
             text_style=ft.TextStyle(size=13),
+            shape=ft.RoundedRectangleBorder(radius=10),
+            side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, "#FFD54F")),
         ),
     )
     subs_btn = ft.ElevatedButton(
         f"🔄 Subs ({subs_remaining[0]})", width=120, height=42, visible=False,
         style=ft.ButtonStyle(
-            bgcolor=ft.Colors.BLUE_800, color=ft.Colors.WHITE,
+            bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.BLUE),
+            color=ft.Colors.WHITE,
             text_style=ft.TextStyle(size=13),
+            shape=ft.RoundedRectangleBorder(radius=10),
+            side=ft.BorderSide(1, ft.Colors.with_opacity(0.25, ft.Colors.BLUE)),
         ),
     )
     continue_btn = ft.ElevatedButton(
@@ -117,6 +123,9 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         style=ft.ButtonStyle(
             bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
             text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
+            shape=ft.RoundedRectangleBorder(radius=12),
+            elevation=4,
+            shadow_color=ft.Colors.with_opacity(0.25, "#FFD54F"),
         ),
     )
 
@@ -174,9 +183,15 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                     ),
                 ],
             ),
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
-            border_radius=6,
+            padding=ft.padding.symmetric(horizontal=8, vertical=5),
+            border_radius=8,
             bgcolor=bg,
+            border=ft.border.only(
+                left=ft.BorderSide(2,
+                    ft.Colors.GREEN_400 if is_goal else
+                    ft.Colors.RED_400 if ev.event_type == MatchEventType.RED_CARD else
+                    ft.Colors.with_opacity(0.15, ft.Colors.WHITE)),
+            ),
         )
 
     # ── Async simulation (runs on the Flet event loop) ───────────────
@@ -320,11 +335,16 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                     spacing=8,
                     controls=[
                         # Header
-                        ft.Text(comp_text, size=12, color=ft.Colors.AMBER_400,
-                                 weight=ft.FontWeight.W_500),
+                        ft.Container(
+                            content=ft.Text(comp_text, size=12, color="#FFD54F",
+                                             weight=ft.FontWeight.W_600),
+                            padding=ft.padding.symmetric(horizontal=12, vertical=4),
+                            border_radius=8,
+                            bgcolor=ft.Colors.with_opacity(0.10, "#FFD54F"),
+                        ),
                         ft.Text(matchday_label, size=11, color=ft.Colors.GREY_600),
 
-                        # Scoreboard
+                        # Scoreboard — glass card
                         ft.Container(
                             content=ft.Column(
                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -354,15 +374,22 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                                     status_text,
                                 ],
                             ),
-                            padding=ft.padding.symmetric(horizontal=10, vertical=12),
-                            border_radius=12,
-                            bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
+                            padding=ft.padding.symmetric(horizontal=12, vertical=14),
+                            border_radius=14,
+                            bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.WHITE),
+                            border=ft.border.all(1, ft.Colors.with_opacity(0.18, "#FFD54F")),
+                            shadow=ft.BoxShadow(
+                                spread_radius=0, blur_radius=8,
+                                color=ft.Colors.with_opacity(0.08, "#FFD54F"),
+                            ),
                         ),
-                        ft.Divider(height=1),
 
                         # Event feed
-                        ft.Text("📜 Match Events", size=14,
-                                 weight=ft.FontWeight.W_500, color=ft.Colors.GREY_400),
+                        ft.Container(
+                            content=ft.Text("📜 Match Events", size=14,
+                                             weight=ft.FontWeight.W_500, color=ft.Colors.GREY_400),
+                            padding=ft.padding.only(top=4),
+                        ),
                         event_list,
 
                         # Buttons
@@ -410,8 +437,9 @@ def _show_halftime_talk(page: ft.Page, event_list, halftime_choice):
                 ft.Text(desc, size=11, color=ft.Colors.GREY_400, italic=True),
             ]),
             padding=ft.padding.symmetric(horizontal=12, vertical=12),
-            border_radius=8,
-            bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.BLUE),
+            border_radius=10,
+            bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.BLUE),
+            border=ft.border.all(1, ft.Colors.with_opacity(0.20, ft.Colors.BLUE_300)),
             on_click=make_handler(),
             ink=True,
         )
@@ -477,7 +505,10 @@ def _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made,
     on_list = ft.Column(spacing=2)
     confirm_btn = ft.ElevatedButton(
         "✅ Confirm Sub", disabled=True, width=200, height=40,
-        style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_800, color=ft.Colors.WHITE),
+        style=ft.ButtonStyle(
+            bgcolor=ft.Colors.GREEN_800, color=ft.Colors.WHITE,
+            shape=ft.RoundedRectangleBorder(radius=10),
+        ),
     )
     summary = ft.Text("", size=11, color=ft.Colors.GREY_400)
 
@@ -507,8 +538,9 @@ def _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made,
                          size=10),
             ]),
             padding=ft.padding.symmetric(horizontal=8, vertical=8),
-            border_radius=6,
-            bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+            border_radius=8,
+            bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
+            border=ft.border.all(1, ft.Colors.with_opacity(0.12, color)),
             on_click=handler,
             ink=True,
         )
@@ -593,7 +625,7 @@ def _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made,
 
     dlg = ft.AlertDialog(
         title=ft.Text(f"🔄 Substitution ({subs_remaining[0]} remaining)",
-                       size=15, weight=ft.FontWeight.BOLD),
+                       size=15, weight=ft.FontWeight.BOLD, color="#FFD54F"),
         content=ft.Container(
             content=ft.Column(
                 scroll=ft.ScrollMode.AUTO, spacing=6,

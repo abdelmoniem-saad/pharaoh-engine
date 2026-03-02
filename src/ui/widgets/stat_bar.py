@@ -24,13 +24,13 @@ def stat_bar(label: str, value: int, max_value: int = 20) -> ft.Row:
     return ft.Row(
         spacing=8,
         controls=[
-            ft.Text(label, size=11, width=90),
+            ft.Text(label, size=11, width=90, color="#9E9E9E"),
             ft.ProgressBar(
                 value=ratio,
                 color=bar_color,
-                bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.WHITE),
+                bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
                 width=130,
-                bar_height=8,
+                bar_height=6,
             ),
             ft.Text(str(value), size=11, weight=ft.FontWeight.BOLD, color=bar_color, width=25),
         ],

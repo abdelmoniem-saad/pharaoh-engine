@@ -15,9 +15,14 @@ from src.ui.widgets.cards import (
 from src.ui.theme import (
     ACCENT, ACCENT_DARK, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
     TEXT_SUCCESS, TEXT_WARNING, TEXT_DANGER,
-    CARD_BG, CARD_BG_HIGHLIGHT, CARD_RADIUS, CARD_RADIUS_SM,
+    CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_BG_HIGHLIGHT,
+    CARD_RADIUS, CARD_RADIUS_SM,
     PAGE_PADDING, SECTION_SPACING,
     TITLE_SIZE, BODY_SIZE, CAPTION_SIZE, TINY_SIZE,
+    GOLD, GOLD_BORDER, GOLD_BORDER_STRONG, GOLD_GLOW,
+    BG_DARK, BG_MID, BG_TEAL, BG_SURFACE,
+    header_bar, gradient_bg, glass_card, golden_divider,
+    PRIMARY_BTN_STYLE, SECONDARY_BTN_STYLE,
 )
 from src.utils.config import MatchEventType, expectation_display
 
@@ -33,14 +38,15 @@ def build_match_day_screen(page: ft.Page) -> ft.Column:
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Icon(ft.Icons.SPORTS_SOCCER, size=60, color=ft.Colors.GREY_600),
+                ft.Icon(ft.Icons.SPORTS_SOCCER, size=60, color=ft.Colors.GREY_700),
                 ft.Container(height=10),
                 ft.Text("No game loaded", size=18, color=ft.Colors.GREY_400),
                 ft.Text("Start a new game from the main menu.", size=14, color=ft.Colors.GREY_600),
                 ft.Container(height=20),
                 ft.ElevatedButton(
                     "🏠 Main Menu",
-                    width=250, height=45,
+                    width=250, height=48,
+                    style=PRIMARY_BTN_STYLE,
                     on_click=lambda e: navigate(page, "/"),
                 ),
             ],
@@ -71,29 +77,29 @@ def build_match_day_screen(page: ft.Page) -> ft.Column:
             controls=[
                 ft.Icon(ft.Icons.EMOJI_EVENTS, size=80, color=trophy_color),
                 ft.Container(height=10),
-                ft.Text("Season Complete!", size=26, weight=ft.FontWeight.BOLD,
-                         color=ft.Colors.AMBER_300, text_align=ft.TextAlign.CENTER),
+                ft.Text("Season Complete!", size=28, weight=ft.FontWeight.BOLD,
+                         color=GOLD, text_align=ft.TextAlign.CENTER),
                 ft.Container(height=5),
                 ft.Text(congrats_text, size=18, weight=ft.FontWeight.W_500,
                          text_align=ft.TextAlign.CENTER),
                 ft.Text(f"{champ_pts} points", size=16, color=ft.Colors.GREY_400,
                          text_align=ft.TextAlign.CENTER),
                 ft.Container(height=30),
-                ft.ElevatedButton("📊 Season Summary", width=250, height=45,
-                                   style=ft.ButtonStyle(
-                                       bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
-                                       text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
-                                   ),
+                ft.ElevatedButton("📊 Season Summary", width=250, height=48,
+                                   style=PRIMARY_BTN_STYLE,
                                    on_click=lambda e: navigate(page, "/season_summary")),
                 ft.Container(height=10),
                 ft.OutlinedButton("📊 View Final Table", width=250, height=45,
-                                   on_click=lambda e: navigate(page, "/table")),
+                                   on_click=lambda e: navigate(page, "/table"),
+                                   style=SECONDARY_BTN_STYLE),
                 ft.Container(height=10),
                 ft.OutlinedButton("💾 Save Game", width=250, height=45,
-                                   on_click=lambda e: _save_and_notify(page, conn, gs)),
+                                   on_click=lambda e: _save_and_notify(page, conn, gs),
+                                   style=SECONDARY_BTN_STYLE),
                 ft.Container(height=10),
                 ft.OutlinedButton("🏠 Main Menu", width=250, height=45,
-                                   on_click=lambda e: navigate(page, "/")),
+                                   on_click=lambda e: navigate(page, "/"),
+                                   style=SECONDARY_BTN_STYLE),
             ],
         )
 
@@ -204,11 +210,8 @@ def _build_match_preview(page, conn, gs, fixture):
         action_controls.append(
             ft.ElevatedButton(
                 "⚽ Play Match",
-                width=280, height=55,
-                style=ft.ButtonStyle(
-                    bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
-                    text_style=ft.TextStyle(size=18, weight=ft.FontWeight.BOLD),
-                ),
+                width=280, height=56,
+                style=PRIMARY_BTN_STYLE,
                 on_click=simulate_click,
             )
         )
@@ -217,24 +220,25 @@ def _build_match_preview(page, conn, gs, fixture):
             ft.Container(
                 content=ft.Text(
                     f"⏳ {days_until} day{'s' if days_until != 1 else ''} until match",
-                    size=14, color=ft.Colors.AMBER_300, weight=ft.FontWeight.W_500,
+                    size=14, color=GOLD, weight=ft.FontWeight.W_500,
                     text_align=ft.TextAlign.CENTER,
                 ),
-                padding=10,
+                padding=ft.padding.symmetric(horizontal=16, vertical=10),
+                border_radius=10,
+                bgcolor=ft.Colors.with_opacity(0.08, GOLD),
+                border=ft.border.all(1, GOLD_BORDER),
             )
         )
         action_controls.append(
             ft.ElevatedButton(
                 "⏩ Skip to Match Day", width=280, height=50,
-                style=ft.ButtonStyle(
-                    bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
-                    text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
-                ),
+                style=PRIMARY_BTN_STYLE,
                 on_click=advance_to_match_click,
             )
         )
         action_controls.append(
             ft.OutlinedButton("📅 Advance 1 Day", width=280, height=45,
+                               style=SECONDARY_BTN_STYLE,
                                on_click=advance_one_day),
         )
 
@@ -249,10 +253,12 @@ def _build_match_preview(page, conn, gs, fixture):
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=12,
                     controls=[
-                        ft.Text("⚽ Match Day", size=22, weight=ft.FontWeight.BOLD),
-                        ft.Text(f"📅 {gs.current_date.strftime('%d %B %Y')}",
-                                 size=13, color=ft.Colors.GREY_500),
-                        ft.Divider(height=1),
+                        header_bar(
+                            title="Match Day",
+                            subtitle=f"📅 {gs.current_date.strftime('%d %B %Y')}",
+                            icon=ft.Icons.SPORTS_SOCCER,
+                            page=page,
+                        ),
                         match_card,
                         ft.Row(alignment=ft.MainAxisAlignment.CENTER,
                                spacing=8, wrap=True, controls=info_items
@@ -302,8 +308,9 @@ def _build_match_preview(page, conn, gs, fixture):
                                     ],
                                 ),
                                 padding=ft.padding.symmetric(horizontal=10, vertical=4),
-                                border_radius=6,
-                                bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
+                                border_radius=8,
+                                bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
+                                border=ft.border.all(1, ft.Colors.with_opacity(0.12, "#FFD54F")),
                             )] if h2h['total'] > 0 else []
                         ),
                         # Transfer window status
@@ -319,11 +326,23 @@ def _build_match_preview(page, conn, gs, fixture):
                             spacing=6, wrap=True,
                             controls=[
                                 ft.OutlinedButton("📋 Tactics", height=36,
-                                                   on_click=lambda e: navigate(page, "/tactics")),
+                                                   on_click=lambda e: navigate(page, "/tactics"),
+                                                   style=ft.ButtonStyle(
+                                                       shape=ft.RoundedRectangleBorder(radius=10),
+                                                       side=ft.BorderSide(1, GOLD_BORDER),
+                                                   )),
                                 ft.OutlinedButton("💰 Transfers", height=36,
-                                                   on_click=lambda e: navigate(page, "/transfers")),
+                                                   on_click=lambda e: navigate(page, "/transfers"),
+                                                   style=ft.ButtonStyle(
+                                                       shape=ft.RoundedRectangleBorder(radius=10),
+                                                       side=ft.BorderSide(1, GOLD_BORDER),
+                                                   )),
                                 ft.OutlinedButton("🏟️ Club", height=36,
-                                                   on_click=lambda e: navigate(page, "/club")),
+                                                   on_click=lambda e: navigate(page, "/club"),
+                                                   style=ft.ButtonStyle(
+                                                       shape=ft.RoundedRectangleBorder(radius=10),
+                                                       side=ft.BorderSide(1, GOLD_BORDER),
+                                                   )),
                                 *(
                                     [ft.OutlinedButton(
                                         f"🏥 {injured_count + suspended_count}",
@@ -639,7 +658,8 @@ def _show_result_dialog(page, outcome):
             event_rows.append(ft.Text("No notable events.", size=12, color=ft.Colors.GREY_500))
 
         commentary_dlg = ft.AlertDialog(
-            title=ft.Text("📜 Match Commentary", size=16, weight=ft.FontWeight.BOLD),
+            title=ft.Text("📜 Match Commentary", size=16,
+                           weight=ft.FontWeight.BOLD, color="#FFD54F"),
             content=ft.Container(
                 content=ft.Column(controls=event_rows, spacing=3, scroll=ft.ScrollMode.AUTO),
                 width=290, height=400,
@@ -725,7 +745,8 @@ def _show_result_dialog(page, outcome):
             rating_controls.append(ft.Text("No ratings", size=11, color=ft.Colors.GREY_500))
 
         ratings_dlg = ft.AlertDialog(
-            title=ft.Text("📊 Player Ratings", size=16, weight=ft.FontWeight.BOLD),
+            title=ft.Text("📊 Player Ratings", size=16,
+                           weight=ft.FontWeight.BOLD, color="#FFD54F"),
             content=ft.Container(
                 content=ft.Column(
                     controls=rating_controls,
@@ -837,22 +858,24 @@ def _show_event_dialog(page, event):
                     ft.Text(hint_text, size=9, color=ft.Colors.GREY_500) if hint_text else ft.Container(),
                 ]),
                 padding=ft.padding.symmetric(horizontal=12, vertical=12),
-                border_radius=8,
+                border_radius=10,
                 bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
+                border=ft.border.all(1, ft.Colors.with_opacity(0.12, "#FFD54F")),
                 on_click=make_handler(),
                 ink=True,
             )
         )
 
     dlg = ft.AlertDialog(
-        title=ft.Text(event.title, size=16, weight=ft.FontWeight.BOLD),
+        title=ft.Text(event.title, size=16, weight=ft.FontWeight.BOLD, color="#FFD54F"),
         content=ft.Container(
             content=ft.Column(spacing=8, controls=[
                 ft.Container(
                     content=ft.Text(event.body, size=13),
                     padding=10,
-                    border_radius=6,
+                    border_radius=8,
                     bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.BLUE),
+                    border=ft.border.all(1, ft.Colors.with_opacity(0.12, ft.Colors.BLUE_300)),
                 ),
                 ft.Text("Choose your response:", size=12, color=ft.Colors.GREY_400),
                 *choice_buttons,
@@ -887,7 +910,7 @@ def _build_mini_table(conn, user_club_id) -> list:
     for i, s in enumerate(subset):
         pos = start + i + 1
         is_user = s.club_id == user_club_id
-        bg = ft.Colors.with_opacity(0.15, ft.Colors.AMBER) if is_user else None
+        bg = ft.Colors.with_opacity(0.15, ft.Colors.AMBER) if is_user else ft.Colors.with_opacity(0.04, ft.Colors.WHITE)
         weight = ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL
         rows.append(
             ft.Container(
@@ -940,8 +963,9 @@ def _build_mini_table(conn, user_club_id) -> list:
                 ),
             ]),
             padding=ft.padding.symmetric(vertical=6, horizontal=4),
-            border_radius=8,
-            bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
+            border_radius=10,
+            bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
+            border=ft.border.all(1, ft.Colors.with_opacity(0.12, "#FFD54F")),
         ),
     ]
 
@@ -1001,8 +1025,9 @@ def _build_matchday_fixtures(conn, current_fixture, user_club_id) -> list:
                 *fixture_rows,
             ]),
             padding=ft.padding.symmetric(vertical=6, horizontal=4),
-            border_radius=8,
-            bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
+            border_radius=10,
+            bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
+            border=ft.border.all(1, ft.Colors.with_opacity(0.12, "#FFD54F")),
         ),
     ]
 
@@ -1049,7 +1074,8 @@ def _show_availability_dialog(page, squad):
         rows.append(ft.Text("All players available! ✅", size=13, color=ft.Colors.GREEN_400))
 
     dlg = ft.AlertDialog(
-        title=ft.Text("🏥 Squad Availability", size=16, weight=ft.FontWeight.BOLD),
+        title=ft.Text("🏥 Squad Availability", size=16,
+                       weight=ft.FontWeight.BOLD, color="#FFD54F"),
         content=ft.Container(
             content=ft.Column(spacing=4, controls=rows, scroll=ft.ScrollMode.AUTO),
             width=290, height=300,

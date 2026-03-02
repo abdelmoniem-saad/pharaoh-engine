@@ -154,8 +154,9 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
                                 ],
                             ),
                             padding=12,
-                            bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.GREEN if is_champ else ft.Colors.WHITE),
-                            border_radius=8,
+                            bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.GREEN if is_champ else ft.Colors.WHITE),
+                            border_radius=10,
+                            border=ft.border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.AMBER)),
                         ),
 
                         # Board & Fans
@@ -235,6 +236,9 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
                             style=ft.ButtonStyle(
                                 bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
                                 text_style=ft.TextStyle(size=18, weight=ft.FontWeight.BOLD),
+                                shape=ft.RoundedRectangleBorder(radius=12),
+                                elevation=4,
+                                shadow_color=ft.Colors.with_opacity(0.25, "#FFD54F"),
                             ),
                             on_click=start_next,
                         ),
@@ -243,11 +247,19 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
                             "📊 View Full Table",
                             width=280, height=45,
                             on_click=lambda e: navigate(page, "/table"),
+                            style=ft.ButtonStyle(
+                                shape=ft.RoundedRectangleBorder(radius=12),
+                                side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, "#FFD54F")),
+                            ),
                         ),
                         ft.OutlinedButton(
                             "🏠 Main Menu",
                             width=280, height=45,
                             on_click=lambda e: navigate(page, "/"),
+                            style=ft.ButtonStyle(
+                                shape=ft.RoundedRectangleBorder(radius=12),
+                                side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, "#FFD54F")),
+                            ),
                         ),
                     ],
                 ),
@@ -275,6 +287,11 @@ def _award_card(award_name: str, player_name: str, detail: str, club: str) -> ft
             ],
         ),
         padding=ft.padding.symmetric(horizontal=12, vertical=8),
-        bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.AMBER),
-        border_radius=8,
+        bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.AMBER),
+        border_radius=10,
+        border=ft.border.all(1, ft.Colors.with_opacity(0.18, ft.Colors.AMBER)),
+        shadow=ft.BoxShadow(
+            spread_radius=0, blur_radius=6,
+            color=ft.Colors.with_opacity(0.06, ft.Colors.AMBER),
+        ),
     )

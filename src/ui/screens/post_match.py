@@ -187,7 +187,13 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                         ),
                     ],
                 ),
-                padding=ft.padding.symmetric(vertical=2, horizontal=4),
+                padding=ft.padding.symmetric(vertical=3, horizontal=6),
+                border_radius=6,
+                bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
+                border=ft.border.only(
+                    left=ft.BorderSide(2,
+                        ft.Colors.AMBER_400 if is_mine else ft.Colors.with_opacity(0.1, ft.Colors.WHITE)),
+                ),
             )
         )
 
@@ -266,25 +272,27 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                     bgcolor=ft.Colors.AMBER_800)
 
     sections = [
-        # Header
+        # Header — glass card scoreboard
         ft.Container(
             content=ft.Column(
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=4,
                 controls=[
                     ft.Icon(result_icon, size=50, color=result_color),
-                    ft.Text(result_text, size=26, weight=ft.FontWeight.BOLD,
+                    ft.Text(result_text, size=28, weight=ft.FontWeight.BOLD,
                             color=result_color),
-                    ft.Text(result.score_display, size=18, weight=ft.FontWeight.W_500,
+                    ft.Text(result.score_display, size=20, weight=ft.FontWeight.W_500,
                             text_align=ft.TextAlign.CENTER),
                     pos_widget,
                     ft.Text(f"🏟️ Attendance: {outcome.attendance:,}" if outcome.attendance > 0 else "",
                             size=11, color=ft.Colors.GREY_500),
                 ],
             ),
-            padding=ft.padding.only(top=15, bottom=10),
+            padding=ft.padding.only(top=15, bottom=12),
+            border_radius=14,
+            bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.WHITE),
+            border=ft.border.all(1, ft.Colors.with_opacity(0.18, "#FFD54F")),
         ),
-        ft.Divider(height=1),
 
         # MOTM
     ]
@@ -308,9 +316,14 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                         ),
                     ],
                 ),
-                padding=10,
-                bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.AMBER),
-                border_radius=8,
+                padding=ft.padding.symmetric(horizontal=12, vertical=10),
+                bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.AMBER),
+                border_radius=10,
+                border=ft.border.all(1, ft.Colors.with_opacity(0.20, ft.Colors.AMBER)),
+                shadow=ft.BoxShadow(
+                    spread_radius=0, blur_radius=8,
+                    color=ft.Colors.with_opacity(0.10, ft.Colors.AMBER),
+                ),
             )
         )
         sections.append(ft.Divider(height=1))
@@ -399,8 +412,11 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
             "🎤 Press Conference",
             width=280, height=48,
             style=ft.ButtonStyle(
-                bgcolor=ft.Colors.BLUE_GREY_700, color=ft.Colors.WHITE,
+                bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.WHITE),
+                color=ft.Colors.WHITE,
                 text_style=ft.TextStyle(size=15),
+                shape=ft.RoundedRectangleBorder(radius=12),
+                side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, "#FFD54F")),
             ),
             on_click=_press_conference,
         ),
@@ -411,12 +427,20 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
             style=ft.ButtonStyle(
                 bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
                 text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
+                shape=ft.RoundedRectangleBorder(radius=12),
+                elevation=4,
+                shadow_color=ft.Colors.with_opacity(0.25, "#FFD54F"),
             ),
             on_click=go_match_day,
         ),
         ft.Container(height=4),
         ft.OutlinedButton("📊 View Table", width=280, height=42,
-                          on_click=go_table),
+                          on_click=go_table,
+                          style=ft.ButtonStyle(
+                              shape=ft.RoundedRectangleBorder(radius=12),
+                              side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, "#FFD54F")),
+                              color=ft.Colors.GREY_400,
+                          )),
         ft.Container(height=15),
     ])
 
@@ -531,14 +555,16 @@ def _show_press_conference(page, conn, gs, result, is_home):
                     subtitle=ft.Text(f"({tone})", size=10, color=ft.Colors.GREY_500),
                     on_click=make_answer_handler(answer_text, tone, board_change, fan_change),
                 ),
-                bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.WHITE),
-                border_radius=6,
+                bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
+                border_radius=10,
+                border=ft.border.all(1, ft.Colors.with_opacity(0.10, "#FFD54F")),
             )
         )
 
     dlg = ft.AlertDialog(
         title=ft.Column(spacing=4, controls=[
-            ft.Text("🎤 Press Conference", size=16, weight=ft.FontWeight.BOLD),
+            ft.Text("🎤 Press Conference", size=16,
+                     weight=ft.FontWeight.BOLD, color="#FFD54F"),
             ft.Text("A journalist asks:", size=11, color=ft.Colors.GREY_400),
         ]),
         content=ft.Container(
@@ -549,7 +575,8 @@ def _show_press_conference(page, conn, gs, result, is_home):
                         content=ft.Text(f'"{question_text}"', size=14, italic=True),
                         padding=10,
                         bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.BLUE),
-                        border_radius=6,
+                        border_radius=8,
+                        border=ft.border.all(1, ft.Colors.with_opacity(0.15, ft.Colors.BLUE_300)),
                     ),
                     ft.Text("Choose your response:", size=12, color=ft.Colors.GREY_400),
                     *answer_buttons,

@@ -31,7 +31,7 @@ app_state = AppState()
 
 def show_snackbar(page: ft.Page, message: str,
                   color: str = ft.Colors.WHITE,
-                  bgcolor: str = ft.Colors.GREY_800) -> None:
+                  bgcolor: str = "#141e33") -> None:
     """Show a brief snackbar notification at the bottom of the screen."""
     sb = ft.SnackBar(
         content=ft.Text(message, color=color, size=14),
@@ -91,12 +91,11 @@ def navigate(page: ft.Page, route: str):
 def main(page: ft.Page):
     """Flet app entry point — configures the page and sets up routing."""
     page.title = APP_NAME
-    # Portrait-first: use iPhone 14-like dimensions for desktop testing.
-    # On actual mobile devices the OS controls window size.
     page.window.width = 390
     page.window.height = 844
     page.window.resizable = True
     page.theme_mode = ft.ThemeMode.DARK
+    page.bgcolor = "#0a0e1a"
     page.theme = ft.Theme(
         color_scheme_seed=ft.Colors.AMBER,
         font_family="Roboto",

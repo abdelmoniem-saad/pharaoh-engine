@@ -15,6 +15,7 @@ from src.ui.widgets.cards import section_card, info_tile, kv_row, action_card
 from src.ui.theme import (
     ACCENT, TEXT_SECONDARY, TEXT_MUTED, TEXT_SUCCESS, TEXT_WARNING, TEXT_DANGER,
     PAGE_PADDING, SECTION_SPACING, TITLE_SIZE, CAPTION_SIZE,
+    GOLD_BORDER, header_bar, CARD_GLASS, CARD_GLASS_STRONG,
 )
 from src.utils.config import expectation_display, expectation_description
 
@@ -78,9 +79,13 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
 
     # Build sections
     sections = [
-        ft.Text(f"🏟️ {club.name}", size=TITLE_SIZE, weight=ft.FontWeight.BOLD),
-        ft.Text(f"👤 {gs.manager_name}  •  📅 {gs.current_date.strftime('%d %b %Y')}",
-                 size=CAPTION_SIZE, color=TEXT_SECONDARY),
+        header_bar(
+            title=club.name,
+            subtitle=f"👤 {gs.manager_name}  •  📅 {gs.current_date.strftime('%d %b %Y')}",
+            icon=ft.Icons.STADIUM,
+            page=page,
+            back_route="/squad",
+        ),
 
         # ── Dashboard: Next Match Card ───────────────
         *_build_next_match_card(conn, gs, club),
@@ -269,6 +274,9 @@ def _build_next_match_card(conn, gs, club) -> list:
         ft.Card(
             content=ft.Container(
                 padding=15,
+                bgcolor=CARD_GLASS_STRONG,
+                border_radius=14,
+                border=ft.border.all(1, GOLD_BORDER),
                 content=ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=6,
@@ -371,8 +379,9 @@ def _build_mini_table(conn, gs) -> list:
                 *rows,
             ]),
             padding=ft.padding.symmetric(horizontal=4, vertical=4),
-            border_radius=6,
-            bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.WHITE),
+            border_radius=10,
+            bgcolor=CARD_GLASS,
+            border=ft.border.all(1, GOLD_BORDER),
         ),
     ]
 

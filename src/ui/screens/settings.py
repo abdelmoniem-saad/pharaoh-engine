@@ -3,6 +3,14 @@ Settings screen -- match speed, difficulty, auto-save, language.
 """
 from __future__ import annotations
 import flet as ft
+from src.ui.theme import (
+    header_bar, golden_divider, glass_card,
+    GOLD, GOLD_BORDER, TEXT_SECONDARY, TEXT_MUTED,
+    TEXT_DANGER, ACCENT, ACCENT_DARK,
+    PRIMARY_BTN_STYLE, SECONDARY_BTN_STYLE, DANGER_BTN_STYLE,
+    CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS, CARD_RADIUS_SM,
+    PAGE_PADDING,
+)
 
 
 def build_settings_screen(page: ft.Page) -> ft.Column:
@@ -60,43 +68,68 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
             actions=[
                 ft.TextButton("Cancel", on_click=lambda e2: page.pop_dialog()),
                 ft.ElevatedButton("Delete", on_click=confirm_delete,
-                    style=ft.ButtonStyle(bgcolor=ft.Colors.RED_700, color=ft.Colors.WHITE)),
+                    style=DANGER_BTN_STYLE),
             ],
         ))
 
     controls_list = [
-        ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
-            ft.Text("⚙️ Settings", size=24, weight=ft.FontWeight.BOLD),
-            ft.IconButton(icon=ft.Icons.ARROW_BACK, tooltip="Back", on_click=go_back),
-        ]),
-        ft.Divider(height=1),
-        ft.Text("🎮 Gameplay", size=16, weight=ft.FontWeight.W_500, color=ft.Colors.AMBER_300),
-        speed_dd, diff_dd,
-        ft.Divider(height=1),
-        ft.Text("💾 Save Settings", size=16, weight=ft.FontWeight.W_500, color=ft.Colors.AMBER_300),
-        auto_save_switch, interval_dd,
-        ft.Divider(height=1),
-        ft.Text("🌍 Language", size=16, weight=ft.FontWeight.W_500, color=ft.Colors.AMBER_300),
-        ft.Dropdown(label="Language", value="English", expand=True,
-                    options=[ft.dropdown.Option("English")], disabled=True),
-        ft.Text("Arabic support coming soon!", size=11, color=ft.Colors.GREY_600, italic=True),
-        ft.Divider(height=1),
+        header_bar(
+            title="Settings",
+            icon=ft.Icons.SETTINGS,
+            page=page,
+            back_route="/squad" if app_state.game_state else "/",
+        ),
+
+        # Gameplay section
+        glass_card(
+            content=ft.Column(spacing=10, controls=[
+                ft.Text("🎮 Gameplay", size=16, weight=ft.FontWeight.W_600, color=GOLD),
+                speed_dd,
+                diff_dd,
+            ]),
+        ),
+
+        # Save section
+        glass_card(
+            content=ft.Column(spacing=10, controls=[
+                ft.Text("💾 Save Settings", size=16, weight=ft.FontWeight.W_600, color=GOLD),
+                auto_save_switch,
+                interval_dd,
+            ]),
+        ),
+
+        # Language section
+        glass_card(
+            content=ft.Column(spacing=10, controls=[
+                ft.Text("🌍 Language", size=16, weight=ft.FontWeight.W_600, color=GOLD),
+                ft.Dropdown(label="Language", value="English", expand=True,
+                            options=[ft.dropdown.Option("English")], disabled=True),
+                ft.Text("Arabic support coming soon!", size=11, color=TEXT_MUTED, italic=True),
+            ]),
+        ),
+
         ft.Container(height=10),
-        ft.ElevatedButton("💾 Save Settings", width=250, height=45,
-            style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
-                text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD)),
+        ft.ElevatedButton("💾 Save Settings", width=280, height=48,
+            style=PRIMARY_BTN_STYLE,
             on_click=save_click),
-        ft.Container(height=8),
-        ft.Text("⚠️ Danger Zone", size=16, weight=ft.FontWeight.W_500, color=ft.Colors.RED_400),
-        ft.OutlinedButton("🗑️ Delete Save Game", width=250, height=42,
-            style=ft.ButtonStyle(color=ft.Colors.RED_400),
-            on_click=delete_save_click),
+        ft.Container(height=16),
+
+        # Danger zone
+        glass_card(
+            content=ft.Column(spacing=10, controls=[
+                ft.Text("⚠️ Danger Zone", size=16, weight=ft.FontWeight.W_600, color=TEXT_DANGER),
+                ft.OutlinedButton("🗑️ Delete Save Game", width=250, height=42,
+                    style=DANGER_BTN_STYLE,
+                    on_click=delete_save_click),
+            ]),
+            border_color=ft.Colors.with_opacity(0.2, ft.Colors.RED),
+        ),
     ]
 
     return ft.Column(
         expand=True, scroll=ft.ScrollMode.AUTO,
         controls=[ft.Container(
-            padding=ft.padding.all(16),
+            padding=ft.padding.all(PAGE_PADDING),
             content=ft.Column(spacing=14, controls=controls_list),
         )],
     )

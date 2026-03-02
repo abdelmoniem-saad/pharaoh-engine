@@ -9,6 +9,7 @@ from src.data import queries
 from src.core.tactics import get_available_formations, PRESETS
 from src.utils.config import Mentality, Position, FORMATION_TEMPLATES
 from src.ui.widgets.nav_bar import build_nav_bar
+from src.ui.theme import header_bar, GOLD_BORDER, CARD_GLASS_STRONG
 
 
 # Position display coordinates on a pitch (x%, y%) from top-left
@@ -120,7 +121,9 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                         on_click=make_preset_handler(key),
                     ),
                     padding=ft.padding.symmetric(vertical=0),
-                    bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.GREEN) if is_active else None,
+                    bgcolor=CARD_GLASS_STRONG if is_active else ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
+                    border=ft.border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.GREEN) if is_active else GOLD_BORDER),
+                    border_radius=10,
                 ),
             )
         )
@@ -134,13 +137,15 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                 content=ft.Column(
                     spacing=10,
                     controls=[
-                        ft.Text("⚙️ Tactics", size=22, weight=ft.FontWeight.BOLD),
-                        ft.Text(
-                            f"{gs.user_club_name} — {club.formation} | "
-                            f"{club.mentality.name.replace('_', ' ').title()}",
-                            size=13, color=ft.Colors.GREY_400,
+                        header_bar(
+                            title="Tactics",
+                            subtitle=(
+                                f"{gs.user_club_name} — {club.formation} | "
+                                f"{club.mentality.name.replace('_', ' ').title()}"
+                            ),
+                            icon=ft.Icons.TUNE,
+                            page=page,
                         ),
-                        ft.Divider(height=1),
                         # Dropdowns
                         ft.Row(
                             spacing=10,
@@ -228,7 +233,7 @@ def _build_formation_pitch(formation: str, page: ft.Page = None) -> ft.Container
         is_gk = pos == Position.GK
         marker_color = ft.Colors.AMBER_400 if is_gk else ft.Colors.WHITE
         marker_bg = ft.Colors.with_opacity(0.9, ft.Colors.AMBER_800 if is_gk else ft.Colors.BLUE_GREY_700)
-        marker_size = 30
+        marker_size = 32
 
         markers.append(
             ft.Container(
@@ -238,6 +243,11 @@ def _build_formation_pitch(formation: str, page: ft.Page = None) -> ft.Container
                 border_radius=marker_size // 2,
                 bgcolor=marker_bg,
                 alignment=ft.Alignment(0, 0),
+                border=ft.border.all(2, ft.Colors.with_opacity(0.5, ft.Colors.AMBER_400)),
+                shadow=ft.BoxShadow(
+                    spread_radius=0, blur_radius=6,
+                    color=ft.Colors.with_opacity(0.25, ft.Colors.AMBER_400 if is_gk else ft.Colors.WHITE),
+                ),
                 left=x / 100 * pw - marker_size // 2,
                 top=y / 100 * ph - marker_size // 2,
             )
@@ -249,35 +259,43 @@ def _build_formation_pitch(formation: str, page: ft.Page = None) -> ft.Container
     # Pitch background with lines
     pitch = ft.Stack(
         controls=[
-            # Pitch background
+            # Pitch background with grass gradient
             ft.Container(
                 width=pw, height=ph,
-                bgcolor=ft.Colors.GREEN_900,
-                border_radius=8,
-                border=ft.border.all(2, ft.Colors.WHITE24),
+                gradient=ft.LinearGradient(
+                    colors=["#1B5E20", "#2E7D32", "#1B5E20", "#2E7D32", "#1B5E20"],
+                    begin=ft.Alignment(0, -1), end=ft.Alignment(0, 1),
+                ),
+                border_radius=10,
+                border=ft.border.all(2, ft.Colors.with_opacity(0.35, ft.Colors.WHITE)),
+                shadow=ft.BoxShadow(
+                    spread_radius=0, blur_radius=12,
+                    color=ft.Colors.with_opacity(0.15, ft.Colors.GREEN),
+                ),
             ),
             # Center line
             ft.Container(
-                width=pw, height=1, bgcolor=ft.Colors.WHITE24,
+                width=pw, height=1,
+                bgcolor=ft.Colors.with_opacity(0.35, ft.Colors.WHITE),
                 left=0, top=ph // 2,
             ),
             # Center circle
             ft.Container(
                 width=cc_size, height=cc_size,
                 border_radius=cc_size // 2,
-                border=ft.border.all(1, ft.Colors.WHITE24),
+                border=ft.border.all(1, ft.Colors.with_opacity(0.35, ft.Colors.WHITE)),
                 left=(pw - cc_size) // 2, top=(ph - cc_size) // 2,
             ),
             # Penalty area top
             ft.Container(
                 width=int(pw * 0.5), height=int(ph * 0.14),
-                border=ft.border.all(1, ft.Colors.WHITE24),
+                border=ft.border.all(1, ft.Colors.with_opacity(0.35, ft.Colors.WHITE)),
                 left=int(pw * 0.25), top=0,
             ),
             # Penalty area bottom
             ft.Container(
                 width=int(pw * 0.5), height=int(ph * 0.14),
-                border=ft.border.all(1, ft.Colors.WHITE24),
+                border=ft.border.all(1, ft.Colors.with_opacity(0.35, ft.Colors.WHITE)),
                 left=int(pw * 0.25), top=ph - int(ph * 0.14),
             ),
             # Player markers
