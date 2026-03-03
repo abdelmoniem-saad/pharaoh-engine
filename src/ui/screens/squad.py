@@ -866,7 +866,7 @@ def _start_compare(page, players):
             rebuild_for_p2()
         return handler
 
-    list_view = ft.ListView(spacing=2, controls=[])
+    list_view = ft.ListView(spacing=2, height=340, controls=[])
     for p in players:
         ovr = calculate_overall_rating(p)
         list_view.controls.append(
@@ -880,8 +880,9 @@ def _start_compare(page, players):
     dlg = ft.AlertDialog(
         title=ft.Text("⚖️ Compare Players", color="#FFD54F"),
         content=ft.Container(
-            content=ft.Column(controls=[step_text, list_view], spacing=6),
+            content=ft.Column(controls=[step_text, list_view], spacing=6, tight=True),
             width=290, height=400,
+            clip_behavior=ft.ClipBehavior.HARD_EDGE,
         ),
         actions=[ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog())],
     )
@@ -936,6 +937,7 @@ def _show_compare_dialog(page, p1, p2):
         content=ft.Container(
             content=ft.Column(controls=rows, spacing=4, scroll=ft.ScrollMode.AUTO),
             width=290, height=380,
+            clip_behavior=ft.ClipBehavior.HARD_EDGE,
         ),
         actions=[ft.TextButton("Close", on_click=lambda e: page.pop_dialog())],
     )

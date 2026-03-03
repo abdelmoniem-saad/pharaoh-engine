@@ -32,3 +32,27 @@ pythonpath = ["."]
 where = ["."]
 include = ["src*"]
 
+[tool.flet]
+
+[tool.flet.app]
+# Exclude non-essential files/dirs from the app package
+# The 'previous' folder alone was adding 824 MB of old APKs!
+exclude = [
+    "previous",
+    ".git",
+    ".idea",
+    ".pytest_cache",
+    "tests",
+    "saves",
+    "__pycache__",
+    "*.pyc",
+    "*.db",
+    "buildozer.spec",
+    "test_output*.txt",
+]
+
+# Android build — only arm64 (99%+ of modern phones)
+[tool.flet.android]
+target_arch = ["arm64-v8a"]
+split_per_abi = false
+
