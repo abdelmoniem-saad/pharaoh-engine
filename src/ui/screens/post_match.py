@@ -288,7 +288,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                             size=11, color=ft.Colors.GREY_500),
                 ],
             ),
-            padding=ft.padding.only(top=15, bottom=12),
+            padding=ft.padding.only(top=6, bottom=12),
             border_radius=14,
             bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.WHITE),
             border=ft.border.all(1, ft.Colors.with_opacity(0.18, "#FFD54F")),

@@ -48,6 +48,8 @@ def navigate(page: ft.Page, route: str):
     Navigate to a screen by replacing page controls.
 
     This is the central navigation function used by all screens.
+    All content is wrapped in SafeArea to respect the mobile
+    notification/status bar at the top and navigation bar at the bottom.
     """
     from src.ui.screens.main_menu import build_main_menu
     from src.ui.screens.squad import build_squad_screen
@@ -83,8 +85,23 @@ def navigate(page: ft.Page, route: str):
     builder = builders.get(route, build_main_menu)
     content = builder(page)
 
+    # Screens without a NavigationBar need bottom safe area too
+    has_nav_bar = route not in ("/", "/main_menu", "/season_summary",
+                                "/post_match", "/pre_match", "/settings")
+
+    # Wrap in SafeArea — respects mobile status bar at top and
+    # system navigation at bottom for screens without a nav bar.
+    safe = ft.SafeArea(
+        content=content,
+        top=True,
+        bottom=not has_nav_bar,  # NavigationBar screens handle their own bottom
+        left=True,
+        right=True,
+        minimum_padding=ft.padding.only(top=4),
+    )
+
     page.controls.clear()
-    page.controls.append(content)
+    page.controls.append(safe)
     page.update()
 
 
@@ -100,6 +117,10 @@ def main(page: ft.Page):
         color_scheme_seed=ft.Colors.AMBER,
         font_family="Roboto",
     )
+
+    # ── Portrait-first mobile layout ──────────────────────────────────
+    # page.padding = 0: we let SafeArea in navigate() handle all insets
+    # so content never hides behind the mobile status/notification bar.
     page.padding = 0
     page.spacing = 0
 

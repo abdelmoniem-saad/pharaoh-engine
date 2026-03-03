@@ -80,6 +80,10 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
             if club_obj:
                 club_obj.formation = preset.formation
                 club_obj.mentality = preset.mentality
+                club_obj.pressing_intensity = preset.pressing_intensity
+                club_obj.tempo = preset.tempo
+                club_obj.width = preset.width
+                club_obj.defensive_line = preset.defensive_line
                 queries.update_club(conn, club_obj)
                 navigate(page, "/tactics")
                 show_snackbar(page, f"Preset applied: {preset.name}")
@@ -87,6 +91,39 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
 
     # Visual pitch
     pitch = _build_formation_pitch(club.formation, page)
+
+    # ── Slider change handlers ────────────────────────────────────────
+    def _make_slider_handler(attr_name, label):
+        def handler(e):
+            club_obj = queries.get_club(conn, gs.user_club_id)
+            if club_obj:
+                setattr(club_obj, attr_name, int(e.control.value))
+                queries.update_club(conn, club_obj)
+                navigate(page, "/tactics")
+                show_snackbar(page, f"{label} set to {int(e.control.value)}")
+        return handler
+
+    def _slider_row(label, value, attr_name, low_label="Low", high_label="High"):
+        return ft.Column(spacing=2, controls=[
+            ft.Row(
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                controls=[
+                    ft.Text(label, size=12, weight=ft.FontWeight.W_500),
+                    ft.Text(str(value), size=12, color=ft.Colors.AMBER_400,
+                            weight=ft.FontWeight.BOLD),
+                ],
+            ),
+            ft.Row(spacing=4, controls=[
+                ft.Text(low_label, size=9, color=ft.Colors.GREY_500),
+                ft.Slider(
+                    min=1, max=10, divisions=9, value=value,
+                    on_change=_make_slider_handler(attr_name, label),
+                    expand=True,
+                    active_color=ft.Colors.AMBER_400,
+                ),
+                ft.Text(high_label, size=9, color=ft.Colors.GREY_500),
+            ]),
+        ])
 
     # Mentality indicator
     mentality_color = {
@@ -133,7 +170,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
         scroll=ft.ScrollMode.AUTO,
         controls=[
             ft.Container(
-                padding=ft.padding.only(left=12, right=12, top=10, bottom=10),
+                padding=ft.padding.only(left=12, right=12, top=4, bottom=10),
                 content=ft.Column(
                     spacing=10,
                     controls=[
@@ -182,6 +219,22 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                         # Pitch
                         ft.Text("Formation View", size=14, weight=ft.FontWeight.W_500),
                         pitch,
+                        ft.Divider(height=1),
+                        # Tactical Sliders
+                        ft.Text("🎛️ Tactical Sliders", size=14, weight=ft.FontWeight.W_500),
+                        ft.Container(
+                            padding=ft.padding.symmetric(horizontal=4),
+                            content=ft.Column(spacing=8, controls=[
+                                _slider_row("Pressing Intensity", club.pressing_intensity,
+                                            "pressing_intensity", "Passive", "Aggressive"),
+                                _slider_row("Tempo", club.tempo,
+                                            "tempo", "Slow", "Fast"),
+                                _slider_row("Width", club.width,
+                                            "width", "Narrow", "Wide"),
+                                _slider_row("Defensive Line", club.defensive_line,
+                                            "defensive_line", "Deep", "High"),
+                            ]),
+                        ),
                         ft.Divider(height=1),
                         # Presets
                         ft.Text("⚡ Quick Presets", size=14, weight=ft.FontWeight.W_500),

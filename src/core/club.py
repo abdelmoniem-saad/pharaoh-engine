@@ -25,16 +25,17 @@ def prepare_team_for_match(club: Club, squad: list[Player]) -> TeamTactics:
     """
     Prepare a team's tactics for a match.
     For AI clubs, auto-selects the best XI based on club's preferred formation.
+    Uses the club's persisted tactical sliders (pressing, tempo, width, def line).
     """
     starting_xi, bench = auto_select_xi(squad, club.formation)
 
     return TeamTactics(
         formation=club.formation,
         mentality=club.mentality,
-        pressing_intensity=5,
-        tempo=5,
-        width=5,
-        defensive_line=5,
+        pressing_intensity=club.pressing_intensity,
+        tempo=club.tempo,
+        width=club.width,
+        defensive_line=club.defensive_line,
         starting_xi=starting_xi,
         bench=bench,
     )
@@ -55,6 +56,10 @@ def ai_select_tactics(club: Club) -> None:
     chosen_preset = get_preset(rng.choice(presets))
     club.formation = chosen_preset.formation
     club.mentality = chosen_preset.mentality
+    club.pressing_intensity = chosen_preset.pressing_intensity
+    club.tempo = chosen_preset.tempo
+    club.width = chosen_preset.width
+    club.defensive_line = chosen_preset.defensive_line
 
 
 def calculate_wage_bill(squad: list[Player]) -> int:

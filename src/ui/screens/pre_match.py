@@ -250,7 +250,13 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
             from src.ui.screens.live_match import build_live_match_screen
             page.navigation_bar = None
             page.controls.clear()
-            page.controls.append(build_live_match_screen(page, outcome))
+            live_content = build_live_match_screen(page, outcome)
+            safe = ft.SafeArea(
+                content=live_content,
+                top=True, bottom=True, left=True, right=True,
+                minimum_padding=ft.padding.only(top=4),
+            )
+            page.controls.append(safe)
             page.update()
         else:
             show_snackbar(page, "Could not simulate match!", bgcolor=ft.Colors.RED_800)
@@ -263,7 +269,7 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
             ft.Container(
-                padding=ft.padding.only(left=12, right=12, top=10, bottom=10),
+                padding=ft.padding.only(left=12, right=12, top=4, bottom=10),
                 content=ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=8,

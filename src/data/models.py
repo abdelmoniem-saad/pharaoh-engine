@@ -160,6 +160,12 @@ class Club(BaseModel):
     formation: str = "4-2-3-1"
     mentality: Mentality = Mentality.BALANCED
 
+    # Tactical sliders (1-10) — persisted so user's choices carry into matches
+    pressing_intensity: int = Field(default=5, ge=1, le=10)
+    tempo: int = Field(default=5, ge=1, le=10)
+    width: int = Field(default=5, ge=1, le=10)
+    defensive_line: int = Field(default=5, ge=1, le=10)
+
     is_user_controlled: bool = False
 
     # Season expectation — set per-club at season start based on reputation

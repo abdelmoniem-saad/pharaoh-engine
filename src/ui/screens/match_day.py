@@ -248,7 +248,7 @@ def _build_match_preview(page, conn, gs, fixture):
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
             ft.Container(
-                padding=ft.padding.only(left=12, right=12, top=10, bottom=10),
+                padding=ft.padding.only(left=12, right=12, top=4, bottom=10),
                 content=ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=12,
