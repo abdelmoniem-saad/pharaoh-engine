@@ -70,7 +70,6 @@ ITEM_SPACING = 6
 MIN_TOUCH_TARGET = 44
 TOUCH_ROW_PADDING_V = 10
 NAV_BAR_HEIGHT = 60
-BOTTOM_NAV_CLEARANCE = 8  # Extra bottom padding so scrollable content clears the nav bar
 
 # ── Typography ──────────────────────────────────────────────────────────────
 TITLE_SIZE = 22
@@ -80,12 +79,6 @@ CAPTION_SIZE = 11
 TINY_SIZE = 9
 
 # ── Responsive helpers ──────────────────────────────────────────────────────
-
-# SafeArea handles the mobile status/notification bar at the top.
-# These helpers provide usable dimensions for layout calculations.
-SAFE_AREA_TOP = 44       # Typical iOS status bar height (handled by SafeArea)
-SAFE_AREA_BOTTOM = 34    # Typical iOS home indicator (handled by NavigationBar)
-
 
 def get_page_width(page: ft.Page) -> int:
     """Get usable page width, defaulting to 390 if not yet known."""
@@ -98,25 +91,9 @@ def get_page_width(page: ft.Page) -> int:
     return 390  # iPhone 14 default
 
 
-def get_page_height(page: ft.Page) -> int:
-    """Get usable page height, defaulting to 844 (iPhone 14) if not known."""
-    try:
-        h = page.height
-        if h and h > 0:
-            return int(h)
-    except Exception:
-        pass
-    return 844
-
-
 def content_width(page: ft.Page) -> int:
     """Usable content width = page width minus 2 * PAGE_PADDING."""
     return get_page_width(page) - 2 * PAGE_PADDING
-
-
-def content_height(page: ft.Page) -> int:
-    """Usable content height for portrait mode (minus nav bar and safe areas)."""
-    return get_page_height(page) - NAV_BAR_HEIGHT - SAFE_AREA_TOP - SAFE_AREA_BOTTOM
 
 
 def pitch_width(page: ft.Page) -> int:
@@ -188,8 +165,7 @@ def gradient_bg(
 
 
 def screen_container(content: ft.Control, page: ft.Page | None = None) -> ft.Container:
-    """Full-screen container with the signature dark gradient background.
-    SafeArea is handled at the navigation level, so no extra top padding here."""
+    """Full-screen container with the signature dark gradient background."""
     return ft.Container(
         content=content,
         gradient=gradient_bg(),
@@ -270,7 +246,7 @@ def header_bar(
                 ft.Row(spacing=0, controls=right) if right else ft.Container(),
             ],
         ),
-        padding=ft.padding.only(left=PAGE_PADDING, right=8, top=8, bottom=8),
+        padding=ft.padding.only(left=PAGE_PADDING, right=8, top=12, bottom=10),
         gradient=ft.LinearGradient(
             colors=[BG_SURFACE, ft.Colors.with_opacity(0, BG_SURFACE)],
             begin=ft.Alignment(0, -1), end=ft.Alignment(0, 1),

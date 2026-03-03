@@ -542,7 +542,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
         scroll=ft.ScrollMode.AUTO,
         controls=[
             ft.Container(
-                padding=ft.padding.only(left=12, right=12, top=4, bottom=10),
+                padding=ft.padding.only(left=12, right=12, top=10, bottom=10),
                 content=ft.Column(
                     spacing=8,
                     controls=[

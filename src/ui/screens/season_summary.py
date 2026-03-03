@@ -127,7 +127,7 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
             ft.Container(
-                padding=ft.padding.only(left=16, right=16, top=6, bottom=20),
+                padding=ft.padding.only(left=16, right=16, top=20, bottom=20),
                 content=ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=10,

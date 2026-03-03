@@ -253,8 +253,11 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
             live_content = build_live_match_screen(page, outcome)
             safe = ft.SafeArea(
                 content=live_content,
-                top=True, bottom=True, left=True, right=True,
-                minimum_padding=ft.padding.only(top=4),
+                avoid_intrusions_top=True,
+                avoid_intrusions_bottom=True,
+                avoid_intrusions_left=True,
+                avoid_intrusions_right=True,
+                minimum_padding=ft.Padding(top=4, bottom=0, left=0, right=0),
             )
             page.controls.append(safe)
             page.update()
@@ -269,7 +272,7 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
             ft.Container(
-                padding=ft.padding.only(left=12, right=12, top=4, bottom=10),
+                padding=ft.padding.only(left=12, right=12, top=10, bottom=10),
                 content=ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=8,
