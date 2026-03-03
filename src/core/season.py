@@ -103,6 +103,18 @@ def start_new_season(conn: sqlite3.Connection,
     """
     messages = []
 
+    # ── Archive historical stats BEFORE anything gets reset ──────────────────
+    # This preserves the completed season's data for the history screen.
+    try:
+        awards = get_season_awards(conn, game_state)
+        queries.archive_season_history(conn, game_state.season_year,
+                                        awards, game_state.user_club_id)
+        queries.archive_all_player_stats(conn, game_state.season_year)
+        queries.archive_all_club_standings(conn, game_state.season_year)
+        messages.append(f"Season {game_state.season_year}/{game_state.season_year + 1} archived to history.")
+    except Exception as e:
+        messages.append(f"Warning: Could not archive season history ({e}).")
+
     # Evaluate board objectives before reset
     user_club = queries.get_club(conn, game_state.user_club_id)
     if user_club:

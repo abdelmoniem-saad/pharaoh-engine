@@ -130,8 +130,6 @@ CREATE TABLE IF NOT EXISTS players (
     is_captain INTEGER NOT NULL DEFAULT 0,
     shirt_number INTEGER,
     transfer_listed INTEGER NOT NULL DEFAULT 0,
-
-    -- Technical attributes
     finishing INTEGER NOT NULL DEFAULT 10,
     passing INTEGER NOT NULL DEFAULT 10,
     dribbling INTEGER NOT NULL DEFAULT 10,
@@ -142,15 +140,11 @@ CREATE TABLE IF NOT EXISTS players (
     tackling INTEGER NOT NULL DEFAULT 10,
     marking INTEGER NOT NULL DEFAULT 10,
     free_kicks INTEGER NOT NULL DEFAULT 10,
-
-    -- Physical attributes
     pace INTEGER NOT NULL DEFAULT 10,
     stamina INTEGER NOT NULL DEFAULT 10,
     strength INTEGER NOT NULL DEFAULT 10,
     agility INTEGER NOT NULL DEFAULT 10,
     jumping INTEGER NOT NULL DEFAULT 10,
-
-    -- Mental attributes
     composure INTEGER NOT NULL DEFAULT 10,
     vision INTEGER NOT NULL DEFAULT 10,
     work_rate INTEGER NOT NULL DEFAULT 10,
@@ -158,20 +152,14 @@ CREATE TABLE IF NOT EXISTS players (
     aggression INTEGER NOT NULL DEFAULT 10,
     positioning INTEGER NOT NULL DEFAULT 10,
     decisions INTEGER NOT NULL DEFAULT 10,
-
-    -- GK attributes
     gk_reflexes INTEGER NOT NULL DEFAULT 5,
     gk_handling INTEGER NOT NULL DEFAULT 5,
     gk_positioning INTEGER NOT NULL DEFAULT 5,
     gk_one_on_ones INTEGER NOT NULL DEFAULT 5,
     gk_kicking INTEGER NOT NULL DEFAULT 5,
-
-    -- Contract
     wage_weekly INTEGER NOT NULL DEFAULT 0,
     contract_expiry TEXT,
     release_clause INTEGER,
-
-    -- Season stats
     appearances INTEGER NOT NULL DEFAULT 0,
     goals INTEGER NOT NULL DEFAULT 0,
     assists INTEGER NOT NULL DEFAULT 0,
@@ -181,16 +169,10 @@ CREATE TABLE IF NOT EXISTS players (
     minutes_played INTEGER NOT NULL DEFAULT 0,
     average_rating REAL NOT NULL DEFAULT 0.0,
     man_of_the_match INTEGER NOT NULL DEFAULT 0,
-
-    -- Injury & suspension
     injury_days_remaining INTEGER NOT NULL DEFAULT 0,
     injury_type TEXT NOT NULL DEFAULT '',
     suspension_matches INTEGER NOT NULL DEFAULT 0,
-
-    -- Training
     training_focus TEXT NOT NULL DEFAULT '',
-
-    -- Morale tracking
     matches_benched_streak INTEGER NOT NULL DEFAULT 0
 );
 
@@ -243,6 +225,10 @@ CREATE TABLE IF NOT EXISTS game_settings (
     auto_save INTEGER NOT NULL DEFAULT 1,
     auto_save_interval INTEGER NOT NULL DEFAULT 7,
     difficulty TEXT NOT NULL DEFAULT 'normal'
+);
+
+CREATE TABLE IF NOT EXISTS schema_version (
+    version INTEGER PRIMARY KEY
 );
 
 CREATE TABLE IF NOT EXISTS transfer_negotiations (
@@ -339,99 +325,98 @@ CREATE TABLE IF NOT EXISTS achievements (
 
 
 def _migrate_schema(conn: sqlite3.Connection) -> None:
-    """Add columns that may not exist in older saves."""
-    migrations = [
-        ("players", "injury_days_remaining", "INTEGER NOT NULL DEFAULT 0"),
-        ("players", "injury_type", "TEXT NOT NULL DEFAULT ''"),
-        ("players", "suspension_matches", "INTEGER NOT NULL DEFAULT 0"),
-        ("players", "training_focus", "TEXT NOT NULL DEFAULT ''"),
-        ("clubs", "season_expectation", "TEXT NOT NULL DEFAULT 'mid_table'"),
-        ("players", "matches_benched_streak", "INTEGER NOT NULL DEFAULT 0"),
-        ("clubs", "youth_promoted_count", "INTEGER NOT NULL DEFAULT 0"),
-        ("clubs", "pressing_intensity", "INTEGER NOT NULL DEFAULT 5"),
-        ("clubs", "tempo", "INTEGER NOT NULL DEFAULT 5"),
-        ("clubs", "width", "INTEGER NOT NULL DEFAULT 5"),
-        ("clubs", "defensive_line", "INTEGER NOT NULL DEFAULT 5"),
-    ]
-    for table, col, col_def in migrations:
-        try:
-            conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_def}")
-        except sqlite3.OperationalError:
-            pass  # Column already exists
+    """Run versioned schema migrations. Each migration runs at most once."""
+    conn.execute("CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY)")
 
-    # Ensure new tables exist (in case of old saves)
-    new_tables = [
-        """CREATE TABLE IF NOT EXISTS loan_deals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            player_id INTEGER NOT NULL,
-            player_name TEXT NOT NULL DEFAULT '',
-            from_club_id INTEGER NOT NULL,
-            from_club_name TEXT NOT NULL DEFAULT '',
-            to_club_id INTEGER NOT NULL,
-            to_club_name TEXT NOT NULL DEFAULT '',
-            start_date TEXT NOT NULL DEFAULT '',
-            end_date TEXT NOT NULL DEFAULT '',
-            wage_split INTEGER NOT NULL DEFAULT 100,
-            buy_option INTEGER NOT NULL DEFAULT 0,
-            status TEXT NOT NULL DEFAULT 'active'
-        )""",
-        """CREATE TABLE IF NOT EXISTS transfer_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            player_id INTEGER NOT NULL,
-            player_name TEXT NOT NULL DEFAULT '',
-            from_club_id INTEGER NOT NULL,
-            from_club_name TEXT NOT NULL DEFAULT '',
-            to_club_id INTEGER NOT NULL,
-            to_club_name TEXT NOT NULL DEFAULT '',
-            fee INTEGER NOT NULL DEFAULT 0,
-            wage INTEGER NOT NULL DEFAULT 0,
-            transfer_date TEXT NOT NULL DEFAULT '',
-            transfer_type TEXT NOT NULL DEFAULT 'permanent'
-        )""",
-        """CREATE TABLE IF NOT EXISTS head_to_head (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            club_a_id INTEGER NOT NULL,
-            club_b_id INTEGER NOT NULL,
-            club_a_wins INTEGER NOT NULL DEFAULT 0,
-            club_b_wins INTEGER NOT NULL DEFAULT 0,
-            draws INTEGER NOT NULL DEFAULT 0,
-            club_a_goals INTEGER NOT NULL DEFAULT 0,
-            club_b_goals INTEGER NOT NULL DEFAULT 0,
-            UNIQUE(club_a_id, club_b_id)
-        )""",
-        """CREATE TABLE IF NOT EXISTS manager_career (
-            id INTEGER PRIMARY KEY DEFAULT 1,
-            total_wins INTEGER NOT NULL DEFAULT 0,
-            total_draws INTEGER NOT NULL DEFAULT 0,
-            total_losses INTEGER NOT NULL DEFAULT 0,
-            trophies INTEGER NOT NULL DEFAULT 0,
-            longest_win_streak INTEGER NOT NULL DEFAULT 0,
-            current_win_streak INTEGER NOT NULL DEFAULT 0,
-            current_unbeaten INTEGER NOT NULL DEFAULT 0,
-            longest_unbeaten INTEGER NOT NULL DEFAULT 0,
-            clean_sheets INTEGER NOT NULL DEFAULT 0,
-            total_goals_scored INTEGER NOT NULL DEFAULT 0,
-            total_goals_conceded INTEGER NOT NULL DEFAULT 0,
-            best_signing_name TEXT NOT NULL DEFAULT '',
-            best_signing_fee INTEGER NOT NULL DEFAULT 0,
-            manager_rating REAL NOT NULL DEFAULT 50.0
-        )""",
-        """CREATE TABLE IF NOT EXISTS achievements (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            key TEXT NOT NULL UNIQUE,
-            title TEXT NOT NULL,
-            description TEXT NOT NULL DEFAULT '',
-            icon TEXT NOT NULL DEFAULT '🏆',
-            unlocked INTEGER NOT NULL DEFAULT 0,
-            unlock_date TEXT NOT NULL DEFAULT ''
-        )""",
-    ]
-    for sql in new_tables:
-        try:
-            conn.execute(sql)
-        except sqlite3.OperationalError:
-            pass
+    row = conn.execute("SELECT MAX(version) as v FROM schema_version").fetchone()
+    current_version = row["v"] if row and row["v"] is not None else 0
+
+    for ver, sqls in _MIGRATIONS:
+        if ver <= current_version:
+            continue
+        for sql in sqls:
+            try:
+                conn.execute(sql)
+            except sqlite3.OperationalError:
+                pass  # Column/table already exists
+        conn.execute("INSERT OR REPLACE INTO schema_version (version) VALUES (?)", (ver,))
 
     conn.commit()
 
+
+# ── Ordered Migrations ────────────────────────────────────────────────────────
+
+_MIGRATIONS = [
+    (1, [
+        "ALTER TABLE players ADD COLUMN injury_days_remaining INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE players ADD COLUMN injury_type TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE players ADD COLUMN suspension_matches INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE players ADD COLUMN training_focus TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE clubs ADD COLUMN season_expectation TEXT NOT NULL DEFAULT 'mid_table'",
+        "ALTER TABLE players ADD COLUMN matches_benched_streak INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE clubs ADD COLUMN youth_promoted_count INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE clubs ADD COLUMN pressing_intensity INTEGER NOT NULL DEFAULT 5",
+        "ALTER TABLE clubs ADD COLUMN tempo INTEGER NOT NULL DEFAULT 5",
+        "ALTER TABLE clubs ADD COLUMN width INTEGER NOT NULL DEFAULT 5",
+        "ALTER TABLE clubs ADD COLUMN defensive_line INTEGER NOT NULL DEFAULT 5",
+    ]),
+    (2, [
+        """CREATE TABLE IF NOT EXISTS season_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            season_year INTEGER NOT NULL UNIQUE,
+            champion_club_id INTEGER,
+            champion_club_name TEXT NOT NULL DEFAULT '',
+            user_club_id INTEGER,
+            user_position INTEGER NOT NULL DEFAULT 0,
+            total_goals INTEGER NOT NULL DEFAULT 0,
+            total_matches INTEGER NOT NULL DEFAULT 0,
+            golden_boot_player TEXT NOT NULL DEFAULT '',
+            golden_boot_goals INTEGER NOT NULL DEFAULT 0,
+            golden_glove_player TEXT NOT NULL DEFAULT '',
+            golden_glove_clean_sheets INTEGER NOT NULL DEFAULT 0,
+            young_player_name TEXT NOT NULL DEFAULT '',
+            most_assists_player TEXT NOT NULL DEFAULT '',
+            most_assists_count INTEGER NOT NULL DEFAULT 0
+        )""",
+        """CREATE TABLE IF NOT EXISTS player_season_archive (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            season_year INTEGER NOT NULL,
+            player_id INTEGER NOT NULL,
+            player_name TEXT NOT NULL DEFAULT '',
+            club_id INTEGER,
+            club_name TEXT NOT NULL DEFAULT '',
+            position TEXT NOT NULL DEFAULT '',
+            age INTEGER NOT NULL DEFAULT 0,
+            appearances INTEGER NOT NULL DEFAULT 0,
+            goals INTEGER NOT NULL DEFAULT 0,
+            assists INTEGER NOT NULL DEFAULT 0,
+            clean_sheets INTEGER NOT NULL DEFAULT 0,
+            yellow_cards INTEGER NOT NULL DEFAULT 0,
+            red_cards INTEGER NOT NULL DEFAULT 0,
+            minutes_played INTEGER NOT NULL DEFAULT 0,
+            average_rating REAL NOT NULL DEFAULT 0.0,
+            man_of_the_match INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(season_year, player_id)
+        )""",
+        """CREATE TABLE IF NOT EXISTS club_season_archive (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            season_year INTEGER NOT NULL,
+            club_id INTEGER NOT NULL,
+            club_name TEXT NOT NULL DEFAULT '',
+            position_finish INTEGER NOT NULL DEFAULT 0,
+            played INTEGER NOT NULL DEFAULT 0,
+            won INTEGER NOT NULL DEFAULT 0,
+            drawn INTEGER NOT NULL DEFAULT 0,
+            lost INTEGER NOT NULL DEFAULT 0,
+            goals_for INTEGER NOT NULL DEFAULT 0,
+            goals_against INTEGER NOT NULL DEFAULT 0,
+            points INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(season_year, club_id)
+        )""",
+        "CREATE INDEX IF NOT EXISTS idx_player_archive_season ON player_season_archive(season_year)",
+        "CREATE INDEX IF NOT EXISTS idx_player_archive_player ON player_season_archive(player_id)",
+        "CREATE INDEX IF NOT EXISTS idx_club_archive_season ON club_season_archive(season_year)",
+        "CREATE INDEX IF NOT EXISTS idx_club_archive_club ON club_season_archive(club_id)",
+    ]),
+]
 

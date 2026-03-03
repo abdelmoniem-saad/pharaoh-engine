@@ -335,3 +335,68 @@ class MatchdayOutcome(BaseModel):
     newly_unlocked: list[str] = Field(default_factory=list)  # achievement keys
 
 
+
+# ── Historical Stats Archive ────────────────────────────────────────────────
+
+class SeasonHistory(BaseModel):
+    """Record of a completed season."""
+    id: int = 0
+    season_year: int
+    champion_club_id: Optional[int] = None
+    champion_club_name: str = ""
+    user_club_id: Optional[int] = None
+    user_position: int = 0
+    total_goals: int = 0
+    total_matches: int = 0
+    golden_boot_player: str = ""
+    golden_boot_goals: int = 0
+    golden_glove_player: str = ""
+    golden_glove_clean_sheets: int = 0
+    young_player_name: str = ""
+    most_assists_player: str = ""
+    most_assists_count: int = 0
+
+    @property
+    def season_display(self) -> str:
+        return f"{self.season_year}/{self.season_year + 1}"
+
+
+class PlayerSeasonArchive(BaseModel):
+    """Archived player stats for a single completed season."""
+    id: int = 0
+    season_year: int
+    player_id: int
+    player_name: str = ""
+    club_id: Optional[int] = None
+    club_name: str = ""
+    position: str = ""
+    age: int = 0
+    appearances: int = 0
+    goals: int = 0
+    assists: int = 0
+    clean_sheets: int = 0
+    yellow_cards: int = 0
+    red_cards: int = 0
+    minutes_played: int = 0
+    average_rating: float = 0.0
+    man_of_the_match: int = 0
+
+
+class ClubSeasonArchive(BaseModel):
+    """Archived club standings for a single completed season."""
+    id: int = 0
+    season_year: int
+    club_id: int
+    club_name: str = ""
+    position_finish: int = 0
+    played: int = 0
+    won: int = 0
+    drawn: int = 0
+    lost: int = 0
+    goals_for: int = 0
+    goals_against: int = 0
+    points: int = 0
+
+    @property
+    def goal_difference(self) -> int:
+        return self.goals_for - self.goals_against

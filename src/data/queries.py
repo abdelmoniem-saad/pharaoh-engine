@@ -13,6 +13,7 @@ from src.data.models import (
     Player, PlayerAttributes, PlayerContract, PlayerSeasonStats,
     Club, ClubFinances, LeagueStanding, Fixture, MatchResult,
     MatchEvent, MatchStats, GameState, InboxMessage,
+    SeasonHistory, PlayerSeasonArchive, ClubSeasonArchive,
 )
 from src.utils.config import Position, Foot, Mentality
 
@@ -918,3 +919,239 @@ def check_player_milestones(conn: sqlite3.Connection, player: "Player",
     return messages
 
 
+
+# ── Historical Stats Archive ────────────────────────────────────────────────
+
+def archive_season_history(conn: sqlite3.Connection, season_year: int,
+                            awards: dict, user_club_id: int) -> None:
+    """Archive the completed season summary into season_history."""
+    champion = awards.get("champion")
+    golden_boot = awards.get("golden_boot")
+    golden_glove = awards.get("golden_glove")
+    young_player = awards.get("young_player")
+    most_assists = awards.get("most_assists")
+
+    row = conn.execute("""
+        SELECT COUNT(*) as matches,
+               COALESCE(SUM(home_goals), 0) + COALESCE(SUM(away_goals), 0) as goals
+        FROM fixtures WHERE played = 1
+    """).fetchone()
+    total_matches = row["matches"] if row else 0
+    total_goals = row["goals"] if row else 0
+
+    conn.execute("""
+        INSERT OR REPLACE INTO season_history
+        (season_year, champion_club_id, champion_club_name, user_club_id, user_position,
+         total_goals, total_matches,
+         golden_boot_player, golden_boot_goals,
+         golden_glove_player, golden_glove_clean_sheets,
+         young_player_name, most_assists_player, most_assists_count)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        season_year,
+        champion.club_id if champion else None,
+        champion.club_name if champion else "",
+        user_club_id,
+        awards.get("user_position", 0),
+        total_goals, total_matches,
+        golden_boot["name"] if golden_boot else "",
+        golden_boot["goals"] if golden_boot else 0,
+        golden_glove["name"] if golden_glove else "",
+        golden_glove["clean_sheets"] if golden_glove else 0,
+        young_player["name"] if young_player else "",
+        most_assists["name"] if most_assists else "",
+        most_assists["assists"] if most_assists else 0,
+    ))
+    conn.commit()
+
+
+def archive_all_player_stats(conn: sqlite3.Connection, season_year: int) -> None:
+    """Archive every player's current season stats before they get reset."""
+    conn.execute("""
+        INSERT OR REPLACE INTO player_season_archive
+        (season_year, player_id, player_name, club_id, club_name, position, age,
+         appearances, goals, assists, clean_sheets, yellow_cards, red_cards,
+         minutes_played, average_rating, man_of_the_match)
+        SELECT ?, p.id, p.name, p.club_id, COALESCE(c.name, ''), p.position, p.age,
+               p.appearances, p.goals, p.assists, p.clean_sheets,
+               p.yellow_cards, p.red_cards, p.minutes_played,
+               p.average_rating, p.man_of_the_match
+        FROM players p
+        LEFT JOIN clubs c ON p.club_id = c.id
+        WHERE p.appearances > 0
+    """, (season_year,))
+    conn.commit()
+
+
+def archive_all_club_standings(conn: sqlite3.Connection, season_year: int) -> None:
+    """Archive every club's final standings before they get reset."""
+    conn.execute("""
+        INSERT OR REPLACE INTO club_season_archive
+        (season_year, club_id, club_name, position_finish, played, won, drawn, lost,
+         goals_for, goals_against, points)
+        SELECT ?, s.club_id, s.club_name,
+               ROW_NUMBER() OVER (ORDER BY (s.won * 3 + s.drawn) DESC,
+                                  (s.goals_for - s.goals_against) DESC,
+                                  s.goals_for DESC),
+               s.played, s.won, s.drawn, s.lost,
+               s.goals_for, s.goals_against,
+               (s.won * 3 + s.drawn)
+        FROM standings s
+        WHERE s.played > 0
+    """, (season_year,))
+    conn.commit()
+
+
+# ── Historical Stats Retrieval ──────────────────────────────────────────────
+
+def get_season_history(conn: sqlite3.Connection) -> list[SeasonHistory]:
+    """Get all archived season records ordered by year descending."""
+    rows = conn.execute(
+        "SELECT * FROM season_history ORDER BY season_year DESC"
+    ).fetchall()
+    return [SeasonHistory(
+        id=row["id"],
+        season_year=row["season_year"],
+        champion_club_id=row["champion_club_id"],
+        champion_club_name=row["champion_club_name"],
+        user_club_id=row["user_club_id"],
+        user_position=row["user_position"],
+        total_goals=row["total_goals"],
+        total_matches=row["total_matches"],
+        golden_boot_player=row["golden_boot_player"],
+        golden_boot_goals=row["golden_boot_goals"],
+        golden_glove_player=row["golden_glove_player"],
+        golden_glove_clean_sheets=row["golden_glove_clean_sheets"],
+        young_player_name=row["young_player_name"],
+        most_assists_player=row["most_assists_player"],
+        most_assists_count=row["most_assists_count"],
+    ) for row in rows]
+
+
+def get_player_career_stats(conn: sqlite3.Connection,
+                             player_id: int) -> list[PlayerSeasonArchive]:
+    """Get all archived season stats for a single player."""
+    rows = conn.execute("""
+        SELECT * FROM player_season_archive
+        WHERE player_id = ? ORDER BY season_year DESC
+    """, (player_id,)).fetchall()
+    return [_row_to_player_archive(row) for row in rows]
+
+
+def get_all_time_top_scorers(conn: sqlite3.Connection,
+                              limit: int = 20) -> list[dict]:
+    """Get all-time top scorers aggregated across all archived seasons."""
+    rows = conn.execute("""
+        SELECT player_id, player_name,
+               SUM(goals) as total_goals,
+               SUM(assists) as total_assists,
+               SUM(appearances) as total_appearances,
+               ROUND(AVG(average_rating), 1) as avg_rating,
+               COUNT(season_year) as seasons_played,
+               MAX(club_name) as last_club
+        FROM player_season_archive
+        GROUP BY player_id
+        HAVING total_goals > 0
+        ORDER BY total_goals DESC, total_assists DESC
+        LIMIT ?
+    """, (limit,)).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_all_time_top_assists(conn: sqlite3.Connection,
+                              limit: int = 20) -> list[dict]:
+    """Get all-time top assist providers aggregated across all archived seasons."""
+    rows = conn.execute("""
+        SELECT player_id, player_name,
+               SUM(assists) as total_assists,
+               SUM(goals) as total_goals,
+               SUM(appearances) as total_appearances,
+               ROUND(AVG(average_rating), 1) as avg_rating,
+               COUNT(season_year) as seasons_played,
+               MAX(club_name) as last_club
+        FROM player_season_archive
+        GROUP BY player_id
+        HAVING total_assists > 0
+        ORDER BY total_assists DESC, total_goals DESC
+        LIMIT ?
+    """, (limit,)).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_all_time_top_rated(conn: sqlite3.Connection,
+                            limit: int = 20, min_appearances: int = 10) -> list[dict]:
+    """Get all-time highest rated players (min appearances threshold)."""
+    rows = conn.execute("""
+        SELECT player_id, player_name,
+               ROUND(AVG(average_rating), 2) as avg_rating,
+               SUM(goals) as total_goals,
+               SUM(assists) as total_assists,
+               SUM(appearances) as total_appearances,
+               SUM(man_of_the_match) as total_motm,
+               COUNT(season_year) as seasons_played,
+               MAX(club_name) as last_club
+        FROM player_season_archive
+        GROUP BY player_id
+        HAVING total_appearances >= ?
+        ORDER BY avg_rating DESC
+        LIMIT ?
+    """, (min_appearances, limit)).fetchall()
+    return [dict(row) for row in rows]
+
+
+def get_club_history(conn: sqlite3.Connection,
+                      club_id: int) -> list[ClubSeasonArchive]:
+    """Get all archived season standings for a specific club."""
+    rows = conn.execute("""
+        SELECT * FROM club_season_archive
+        WHERE club_id = ? ORDER BY season_year DESC
+    """, (club_id,)).fetchall()
+    return [ClubSeasonArchive(
+        id=row["id"],
+        season_year=row["season_year"],
+        club_id=row["club_id"],
+        club_name=row["club_name"],
+        position_finish=row["position_finish"],
+        played=row["played"],
+        won=row["won"],
+        drawn=row["drawn"],
+        lost=row["lost"],
+        goals_for=row["goals_for"],
+        goals_against=row["goals_against"],
+        points=row["points"],
+    ) for row in rows]
+
+
+def get_season_player_stats(conn: sqlite3.Connection,
+                             season_year: int,
+                             limit: int = 50) -> list[PlayerSeasonArchive]:
+    """Get all player stats for a specific archived season."""
+    rows = conn.execute("""
+        SELECT * FROM player_season_archive
+        WHERE season_year = ? ORDER BY goals DESC, assists DESC
+        LIMIT ?
+    """, (season_year, limit)).fetchall()
+    return [_row_to_player_archive(row) for row in rows]
+
+
+def _row_to_player_archive(row: sqlite3.Row) -> PlayerSeasonArchive:
+    """Convert a DB row to a PlayerSeasonArchive model."""
+    return PlayerSeasonArchive(
+        id=row["id"],
+        season_year=row["season_year"],
+        player_id=row["player_id"],
+        player_name=row["player_name"],
+        club_id=row["club_id"],
+        club_name=row["club_name"],
+        position=row["position"],
+        age=row["age"],
+        appearances=row["appearances"],
+        goals=row["goals"],
+        assists=row["assists"],
+        clean_sheets=row["clean_sheets"],
+        yellow_cards=row["yellow_cards"],
+        red_cards=row["red_cards"],
+        minutes_played=row["minutes_played"],
+        average_rating=row["average_rating"],
+        man_of_the_match=row["man_of_the_match"],
+    )

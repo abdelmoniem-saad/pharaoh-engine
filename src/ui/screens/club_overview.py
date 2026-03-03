@@ -214,6 +214,9 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
     sections.append(action_card("🏪 Transfer Market", subtitle="Buy and sell players",
                                  icon=ft.Icons.STORE,
                                  on_click=lambda e: navigate(page, "/transfers")))
+    sections.append(action_card("📜 History & Records", subtitle="Past seasons, all-time stats",
+                                 icon=ft.Icons.HISTORY,
+                                 on_click=lambda e: navigate(page, "/history")))
 
     return ft.Column(
         expand=True,
