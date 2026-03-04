@@ -58,6 +58,18 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
         result_color = ft.Colors.YELLOW_400
         result_icon = ft.Icons.HANDSHAKE
 
+    # Show match result notification
+    try:
+        from src.ui.app import show_notification
+        show_notification(
+            page,
+            f"{result_text} — {user_club_name} {user_goals}-{opp_goals} {opp_club_name}",
+            category="match",
+            duration=4.0,
+        )
+    except Exception:
+        pass
+
     # ── MOTM calculation ────────────────────────────────────────────
     user_players = queries.get_players_by_club(conn, gs.user_club_id)
     name_map = {p.id: p for p in user_players}

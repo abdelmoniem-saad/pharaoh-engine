@@ -6,6 +6,7 @@ from __future__ import annotations
 import os
 import sys
 import sqlite3
+import threading
 
 # Ensure src is on the path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -23,10 +24,176 @@ class AppState:
         self.db_conn: sqlite3.Connection | None = None
         self.game_state: GameState | None = None
         self.pending_event = None  # Interactive random event awaiting player choice
+        self._page_ref: ft.Page | None = None
+        self._transition_container: ft.Container | None = None
+        self._notification_column: ft.Column | None = None
+        self._notification_timer: threading.Timer | None = None
 
 
 # Global state instance
 app_state = AppState()
+
+
+# ── Notification System ─────────────────────────────────────────────────────
+
+_NOTIFY_ICONS = {
+    "match":    ft.Icons.SPORTS_SOCCER,
+    "transfer": ft.Icons.SWAP_HORIZ,
+    "board":    ft.Icons.ACCOUNT_BALANCE,
+    "media":    ft.Icons.NEWSPAPER,
+    "injury":   ft.Icons.LOCAL_HOSPITAL,
+    "trophy":   ft.Icons.EMOJI_EVENTS,
+    "general":  ft.Icons.NOTIFICATIONS,
+    "success":  ft.Icons.CHECK_CIRCLE,
+    "warning":  ft.Icons.WARNING,
+    "error":    ft.Icons.ERROR,
+}
+
+_NOTIFY_COLORS = {
+    "match":    ft.Colors.GREEN_400,
+    "transfer": ft.Colors.AMBER_400,
+    "board":    ft.Colors.PURPLE_400,
+    "media":    ft.Colors.BLUE_400,
+    "injury":   ft.Colors.RED_400,
+    "trophy":   ft.Colors.AMBER_300,
+    "general":  ft.Colors.GREY_400,
+    "success":  ft.Colors.GREEN_400,
+    "warning":  ft.Colors.ORANGE_400,
+    "error":    ft.Colors.RED_400,
+}
+
+
+def show_notification(page: ft.Page, message: str,
+                      category: str = "general",
+                      duration: float = 3.5) -> None:
+    """Show a themed toast notification that slides in from top-right and auto-dismisses."""
+    if not app_state._notification_column:
+        return
+
+    icon = _NOTIFY_ICONS.get(category, ft.Icons.NOTIFICATIONS)
+    accent = _NOTIFY_COLORS.get(category, ft.Colors.GREY_400)
+
+    card = ft.Container(
+        content=ft.Row(
+            spacing=10, tight=True,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                ft.Icon(icon, size=18, color=accent),
+                ft.Text(message, size=12, color="#EAEAEA",
+                        max_lines=2, overflow=ft.TextOverflow.ELLIPSIS,
+                        expand=True),
+            ],
+        ),
+        padding=ft.padding.symmetric(horizontal=14, vertical=10),
+        border_radius=10,
+        bgcolor="#141e33",
+        border=ft.border.only(left=ft.BorderSide(3, accent),
+                              top=ft.BorderSide(1, ft.Colors.with_opacity(0.15, "#FFD54F")),
+                              right=ft.BorderSide(1, ft.Colors.with_opacity(0.15, "#FFD54F")),
+                              bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.15, "#FFD54F"))),
+        shadow=ft.BoxShadow(spread_radius=0, blur_radius=12,
+                            color=ft.Colors.with_opacity(0.3, ft.Colors.BLACK)),
+        width=330,
+        opacity=0,
+        animate_opacity=ft.Animation(250, ft.AnimationCurve.EASE_OUT),
+        offset=ft.Offset(0.05, 0),
+        animate_offset=ft.Animation(250, ft.AnimationCurve.EASE_OUT),
+    )
+
+    col = app_state._notification_column
+    col.controls.append(card)
+    page.update()
+
+    # Fade in
+    card.opacity = 1
+    card.offset = ft.Offset(0, 0)
+    page.update()
+
+    def _dismiss():
+        try:
+            card.opacity = 0
+            card.offset = ft.Offset(0.05, 0)
+            page.update()
+            import time
+            time.sleep(0.3)
+            if card in col.controls:
+                col.controls.remove(card)
+                page.update()
+        except Exception:
+            pass
+
+    t = threading.Timer(duration, _dismiss)
+    t.daemon = True
+    t.start()
+
+
+def show_breaking_news(page: ft.Page, headline: str,
+                       body: str = "",
+                       category: str = "general") -> None:
+    """Show a prominent 'Breaking News' banner that auto-dismisses."""
+    accent = _NOTIFY_COLORS.get(category, ft.Colors.AMBER_400)
+
+    banner = ft.Container(
+        content=ft.Column(
+            spacing=2,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=[
+                ft.Container(
+                    content=ft.Text("⚡ BREAKING NEWS", size=9,
+                                    weight=ft.FontWeight.BOLD,
+                                    color=ft.Colors.BLACK,
+                                    text_align=ft.TextAlign.CENTER),
+                    bgcolor="#FFD54F",
+                    padding=ft.padding.symmetric(horizontal=10, vertical=2),
+                    border_radius=4,
+                ),
+                ft.Text(headline, size=13, weight=ft.FontWeight.BOLD,
+                        color="#EAEAEA", text_align=ft.TextAlign.CENTER,
+                        max_lines=2),
+                *([ ft.Text(body, size=11, color="#9E9E9E",
+                            text_align=ft.TextAlign.CENTER, max_lines=2) ]
+                  if body else []),
+            ],
+        ),
+        padding=ft.padding.symmetric(horizontal=16, vertical=10),
+        border_radius=12,
+        bgcolor="#0f1729",
+        border=ft.border.all(1, ft.Colors.with_opacity(0.35, "#FFD54F")),
+        shadow=ft.BoxShadow(spread_radius=0, blur_radius=16,
+                            color=ft.Colors.with_opacity(0.25, "#FFD54F")),
+        width=340,
+        opacity=0,
+        animate_opacity=ft.Animation(350, ft.AnimationCurve.EASE_OUT),
+        scale=ft.Scale(0.95),
+        animate_scale=ft.Animation(350, ft.AnimationCurve.EASE_OUT),
+    )
+
+    col = app_state._notification_column
+    if not col:
+        return
+    col.controls.insert(0, banner)
+    page.update()
+
+    banner.opacity = 1
+    banner.scale = ft.Scale(1.0)
+    page.update()
+
+    def _dismiss():
+        try:
+            banner.opacity = 0
+            banner.scale = ft.Scale(0.95)
+            page.update()
+            import time
+            time.sleep(0.4)
+            if banner in col.controls:
+                col.controls.remove(banner)
+                page.update()
+        except Exception:
+            pass
+
+    t = threading.Timer(5.0, _dismiss)
+    t.daemon = True
+    t.start()
 
 
 def show_snackbar(page: ft.Page, message: str,
@@ -43,11 +210,11 @@ def show_snackbar(page: ft.Page, message: str,
     page.update()
 
 
+# ── Navigation ──────────────────────────────────────────────────────────────
+
 def navigate(page: ft.Page, route: str):
     """
-    Navigate to a screen by replacing page controls.
-
-    This is the central navigation function used by all screens.
+    Navigate to a screen with a smooth fade transition.
     """
     from src.ui.screens.main_menu import build_main_menu
     from src.ui.screens.squad import build_squad_screen
@@ -83,11 +250,22 @@ def navigate(page: ft.Page, route: str):
     }
 
     builder = builders.get(route, build_main_menu)
-    content = builder(page)
+    new_content = builder(page)
 
-    page.controls.clear()
-    page.controls.append(content)
-    page.update()
+    tc = app_state._transition_container
+    if tc is not None:
+        # Swap content directly (no fade-out/fade-in race condition).
+        # The animate_opacity on the container still provides a smooth feel
+        # on initial load, but we avoid the "glimpse then disappear" flicker
+        # caused by the background-thread timer fighting Flet's animation.
+        tc.content = new_content
+        tc.opacity = 1
+        page.update()
+    else:
+        # Fallback: no animation container yet (first load)
+        page.controls.clear()
+        page.controls.append(new_content)
+        page.update()
 
 
 def main(page: ft.Page):
@@ -105,6 +283,47 @@ def main(page: ft.Page):
     # Top padding accounts for the mobile status/notification bar
     page.padding = ft.Padding(top=40, bottom=0, left=0, right=0)
     page.spacing = 0
+
+    app_state._page_ref = page
+
+    # ── Transition container — wraps every screen for smooth fades ───────
+    transition_container = ft.Container(
+        expand=True,
+        opacity=1,
+        animate_opacity=ft.Animation(200, ft.AnimationCurve.EASE_IN_OUT),
+    )
+    app_state._transition_container = transition_container
+
+    # ── Notification overlay — floats above screen content ───────────────
+    # IMPORTANT: The overlay must not block pointer events on the content
+    # underneath.  We disable hit-testing on the overlay container itself
+    # so clicks pass through to buttons, lists, etc. in the game screens.
+    notification_col = ft.Column(
+        spacing=6,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+    )
+    app_state._notification_column = notification_col
+
+    notification_overlay = ft.Container(
+        content=notification_col,
+        alignment=ft.Alignment(0, -0.85),  # top center
+        expand=True,
+    )
+
+    # Stack: transition_container (full screen) + notification overlay on top
+    # The overlay is placed inside a transparent GestureDetector-like wrapper
+    # that ignores pointer events, letting clicks fall through to the
+    # transition_container below.
+    root = ft.Stack(
+        controls=[
+            transition_container,
+            ft.TransparentPointer(content=notification_overlay),
+        ],
+        expand=True,
+    )
+
+    page.controls.append(root)
+    page.update()
 
     # Show main menu
     navigate(page, "/")

@@ -368,13 +368,18 @@ def mark_fixture_played(conn: sqlite3.Connection, fixture_id: int,
     events_json = json.dumps([e.model_dump() for e in result.events], default=str)
     home_stats_json = json.dumps(result.home_stats.model_dump())
     away_stats_json = json.dumps(result.away_stats.model_dump())
+    ratings_json = json.dumps(
+        {str(k): v for k, v in result.player_ratings.items()}
+    ) if result.player_ratings else '{}'
 
     conn.execute("""
         UPDATE fixtures SET played=1, home_goals=?, away_goals=?,
-            events_json=?, home_stats_json=?, away_stats_json=?
+            events_json=?, home_stats_json=?, away_stats_json=?,
+            player_ratings_json=?
         WHERE id=?
     """, (result.home_goals, result.away_goals,
-          events_json, home_stats_json, away_stats_json, fixture_id))
+          events_json, home_stats_json, away_stats_json,
+          ratings_json, fixture_id))
     conn.commit()
 
 
@@ -401,6 +406,16 @@ def _row_to_fixture(row: sqlite3.Row) -> Fixture:
         home_stats = MatchStats(**json.loads(row["home_stats_json"])) if row["home_stats_json"] != '{}' else MatchStats()
         away_stats = MatchStats(**json.loads(row["away_stats_json"])) if row["away_stats_json"] != '{}' else MatchStats()
 
+        # Restore per-player ratings
+        player_ratings = {}
+        try:
+            pr_col = row["player_ratings_json"]
+            if pr_col and pr_col != '{}':
+                raw = json.loads(pr_col)
+                player_ratings = {int(k): float(v) for k, v in raw.items()}
+        except (KeyError, IndexError):
+            pass
+
         result = MatchResult(
             match_id=row["id"],
             home_club_id=row["home_club_id"],
@@ -412,6 +427,7 @@ def _row_to_fixture(row: sqlite3.Row) -> Fixture:
             events=events,
             home_stats=home_stats,
             away_stats=away_stats,
+            player_ratings=player_ratings,
         )
 
     return Fixture(
@@ -1155,3 +1171,4 @@ def _row_to_player_archive(row: sqlite3.Row) -> PlayerSeasonArchive:
         average_rating=row["average_rating"],
         man_of_the_match=row["man_of_the_match"],
     )
+# END OF FILE - chart queries moved to src/data/chart_queries.py

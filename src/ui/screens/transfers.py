@@ -811,6 +811,13 @@ def _show_free_agent_dialog(page, conn, gs, user_club, player):
             category="transfer",
         ))
         show_snackbar(page, f"✅ {player.name} signed on a free!", bgcolor=ft.Colors.GREEN_800)
+        try:
+            from src.ui.app import show_breaking_news
+            show_breaking_news(page, f"{player.name} signs for {gs.user_club_name}!",
+                               body=f"Free transfer — Wage: {wage:,} EGP/wk",
+                               category="transfer")
+        except Exception:
+            pass
         navigate(page, "/transfers")
 
     dlg = ft.AlertDialog(

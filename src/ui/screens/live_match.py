@@ -135,6 +135,15 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
     def on_continue(e):
         # ── Apply halftime team talk effects to player morale ────────
         _apply_team_talk(conn, gs, halftime_choice[0], result)
+
+        # ── Restore root page structure ──────────────────────────────
+        # play_match() in pre_match.py cleared page.controls and added
+        # the live-match content directly, which orphaned the
+        # transition_container / notification overlay Stack.  We must
+        # rebuild it before calling navigate() so the transition
+        # container is back in the page's control tree.
+        _restore_page_root(page)
+
         navigate(page, "/post_match")
 
     def on_subs(e):
@@ -706,3 +715,78 @@ def _apply_team_talk(conn, gs, talk_choice, result):
 
         p.morale = int(clamp(p.morale + adj_delta, 0, 100))
         queries.update_player_stats(conn, p)
+
+
+def _restore_page_root(page: ft.Page):
+    """
+    Rebuild the root page structure (transition container + notification
+    overlay) that was destroyed when play_match() called
+    page.controls.clear().
+
+    This must be called before navigate() so that the transition container
+    is present in the page's control tree.
+    """
+    from src.ui.app import app_state
+
+    tc = app_state._transition_container
+    nc = app_state._notification_column
+
+    # If the transition container is already parented (i.e. the root Stack
+    # is still in the page), there's nothing to do.
+    if tc is not None and any(tc is c or _contains(c, tc) for c in page.controls):
+        return
+
+    # Rebuild the root stack from scratch, reusing the same objects so that
+    # app_state references remain valid.
+    if tc is None:
+        tc = ft.Container(
+            expand=True,
+            opacity=1,
+            animate_opacity=ft.Animation(200, ft.AnimationCurve.EASE_IN_OUT),
+        )
+        app_state._transition_container = tc
+
+    if nc is None:
+        nc = ft.Column(
+            spacing=6,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+        app_state._notification_column = nc
+
+    notification_overlay = ft.Container(
+        content=nc,
+        alignment=ft.Alignment(0, -0.85),
+        expand=True,
+    )
+
+    root = ft.Stack(
+        controls=[
+            tc,
+            ft.TransparentPointer(content=notification_overlay),
+        ],
+        expand=True,
+    )
+
+    page.controls.clear()
+    page.controls.append(root)
+    page.update()
+
+
+def _contains(parent, target) -> bool:
+    """Recursively check whether *target* is anywhere inside *parent*."""
+    if parent is target:
+        return True
+    children = getattr(parent, 'controls', None) or []
+    if not isinstance(children, list):
+        children = []
+    content = getattr(parent, 'content', None)
+    if content is not None:
+        if content is target:
+            return True
+        if _contains(content, target):
+            return True
+    for child in children:
+        if _contains(child, target):
+            return True
+    return False
+

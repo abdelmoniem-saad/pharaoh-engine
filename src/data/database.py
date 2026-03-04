@@ -418,5 +418,8 @@ _MIGRATIONS = [
         "CREATE INDEX IF NOT EXISTS idx_club_archive_season ON club_season_archive(season_year)",
         "CREATE INDEX IF NOT EXISTS idx_club_archive_club ON club_season_archive(club_id)",
     ]),
+    (3, [
+        "ALTER TABLE fixtures ADD COLUMN player_ratings_json TEXT NOT NULL DEFAULT '{}'",
+    ]),
 ]
 

@@ -112,6 +112,12 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
             ),
         ], title_color=ft.Colors.ORANGE_400),
 
+        # ── League Position Chart ─────────────────
+        *_build_position_chart(conn, gs),
+
+        # ── Form Trend ────────────────────────────
+        *_build_form_trend(conn, gs),
+
         # ── Finances ─────────────────────────────
         section_card("💰 Monthly Finances", [
             kv_row("Balance", f"{club.finances.balance:,} EGP"),
@@ -386,5 +392,48 @@ def _build_mini_table(conn, gs) -> list:
             bgcolor=CARD_GLASS,
             border=ft.border.all(1, GOLD_BORDER),
         ),
+    ]
+
+
+def _build_position_chart(conn, gs) -> list:
+    """Build the league position history chart section."""
+    from src.data.chart_queries import get_user_position_history
+    from src.ui.widgets.charts import season_position_chart
+
+    try:
+        positions = get_user_position_history(conn, gs.user_club_id)
+    except Exception:
+        positions = []
+
+    if not positions:
+        return []
+
+    clubs_count = len(queries.get_all_clubs(conn))
+    chart = season_position_chart(positions, total_teams=clubs_count, width=320, height=130)
+
+    return [
+        section_card("📈 League Position", [chart], title_color=ft.Colors.BLUE_400),
+    ]
+
+
+def _build_form_trend(conn, gs) -> list:
+    """Build the club form trend chart section."""
+    from src.data.chart_queries import get_club_form_results
+    from src.ui.widgets.charts import club_form_trend_line
+    from src.ui.widgets.cards import form_chips
+
+    try:
+        results = get_club_form_results(conn, gs.user_club_id, limit=10)
+    except Exception:
+        results = []
+
+    if not results:
+        return []
+
+    chips = form_chips(results)
+    trend = club_form_trend_line(results, width=320, height=90)
+
+    return [
+        section_card("📊 Recent Form", [chips, trend], title_color=ACCENT),
     ]
 

@@ -259,6 +259,8 @@ def _build_match_preview(page, conn, gs, fixture):
                             icon=ft.Icons.SPORTS_SOCCER,
                             page=page,
                         ),
+                        # News ticker with recent headlines
+                        _build_news_ticker(conn),
                         match_card,
                         ft.Row(alignment=ft.MainAxisAlignment.CENTER,
                                spacing=8, wrap=True, controls=info_items
@@ -1085,3 +1087,12 @@ def _show_availability_dialog(page, squad):
     page.show_dialog(dlg)
 
 
+def _build_news_ticker(conn):
+    """Build a scrolling news ticker from recent inbox messages."""
+    from src.ui.widgets.news import news_ticker
+    try:
+        messages = queries.get_inbox(conn, limit=5)
+        headlines = [{"subject": m.subject, "category": m.category} for m in messages]
+    except Exception:
+        headlines = []
+    return news_ticker(headlines)

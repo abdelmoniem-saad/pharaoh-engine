@@ -208,10 +208,12 @@ def header_bar(
     back_route: str | None = None,
     page: ft.Page | None = None,
     extra_controls: list | None = None,
+    show_notification_bell: bool = True,
 ) -> ft.Container:
     """
     Premium gradient header bar for screens.
     Provides visual weight at the top of every game screen.
+    Includes a notification bell with unread count badge.
     """
     left = []
     if icon:
@@ -226,6 +228,42 @@ def header_bar(
     )
 
     right = list(extra_controls or [])
+
+    # Notification bell
+    if show_notification_bell and page:
+        try:
+            from src.ui.app import app_state, navigate
+            from src.data.queries import get_unread_count
+            unread = 0
+            if app_state.db_conn:
+                unread = get_unread_count(app_state.db_conn)
+            bell_icon = ft.Stack(
+                controls=[
+                    ft.IconButton(
+                        icon=ft.Icons.NOTIFICATIONS_OUTLINED,
+                        icon_size=20, icon_color=GOLD,
+                        tooltip="Inbox",
+                        on_click=lambda e: navigate(page, "/inbox"),
+                    ),
+                    *(
+                        [ft.Container(
+                            content=ft.Text(str(min(unread, 99)), size=8,
+                                            color=ft.Colors.WHITE,
+                                            weight=ft.FontWeight.BOLD,
+                                            text_align=ft.TextAlign.CENTER),
+                            width=16, height=16, border_radius=8,
+                            bgcolor=ft.Colors.RED_600,
+                            alignment=ft.Alignment(0, 0),
+                            top=4, right=4,
+                        )] if unread > 0 else []
+                    ),
+                ],
+                width=40, height=36,
+            )
+            right.insert(0, bell_icon)
+        except Exception:
+            pass
+
     if back_route and page:
         from src.ui.app import navigate
 

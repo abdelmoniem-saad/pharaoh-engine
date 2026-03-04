@@ -350,6 +350,40 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
 
     # Season stats row
     avg_rating_str = f"{s.average_rating:.1f}" if s.average_rating > 0 else "—"
+
+    # ── Chart data ──────────────────────────────────────────────────
+    from src.data.chart_queries import get_player_match_ratings
+    from src.ui.widgets.charts import player_form_line_chart, player_stats_bar_chart
+    from src.ui.app import app_state as _app_state
+
+    match_ratings = []
+    if _app_state.db_conn:
+        try:
+            match_ratings = get_player_match_ratings(_app_state.db_conn, player.id, limit=10)
+        except Exception:
+            pass
+
+    form_chart = player_form_line_chart(match_ratings, width=270, height=130)
+
+    # Attribute category averages
+    tech_avg = (a.finishing + a.passing + a.dribbling + a.first_touch +
+                a.crossing + a.heading + a.long_shots) / 7
+    phys_avg = (a.pace + a.stamina + a.strength + a.agility + a.jumping) / 5
+    mental_avg = (a.composure + a.vision + a.work_rate + a.positioning + a.decisions) / 5
+    def_avg = (a.tackling + a.marking) / 2
+    attr_categories = {
+        "Tech": round(tech_avg, 1),
+        "Phys": round(phys_avg, 1),
+        "Mental": round(mental_avg, 1),
+        "Def": round(def_avg, 1),
+    }
+    if player.position.value == "GK":
+        gk_avg = (a.gk_reflexes + a.gk_handling + a.gk_positioning +
+                  a.gk_one_on_ones + a.gk_kicking) / 5
+        attr_categories["GK"] = round(gk_avg, 1)
+
+    attr_chart = player_stats_bar_chart(attr_categories, width=270, height=120)
+
     season_info = ft.Row(
         wrap=True, spacing=12,
         controls=[
@@ -482,6 +516,16 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
                             ft.Text(f"Mins/Assist: {mins_per_assist}", size=11, color=ft.Colors.GREY_400),
                         ],
                     ),
+                    ft.Divider(height=1),
+                    # Form chart
+                    ft.Text("📊 Form Trend", size=13, weight=ft.FontWeight.W_500,
+                             color=ft.Colors.AMBER_300),
+                    form_chart,
+                    ft.Divider(height=1),
+                    # Attribute overview chart
+                    ft.Text("📈 Attribute Overview", size=13, weight=ft.FontWeight.W_500,
+                             color=ft.Colors.AMBER_300),
+                    attr_chart,
                     ft.Divider(height=1),
                     # GK section (if applicable)
                     *gk_section,
