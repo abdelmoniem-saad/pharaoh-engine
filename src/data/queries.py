@@ -272,9 +272,16 @@ def _row_to_player(row: sqlite3.Row) -> Player:
     if row["contract_expiry"]:
         contract_expiry = date.fromisoformat(row["contract_expiry"])
 
+    # Arabic name (may not exist in older saves)
+    try:
+        name_ar = row["name_ar"] if row["name_ar"] else ""
+    except (IndexError, KeyError):
+        name_ar = ""
+
     return Player(
         id=row["id"],
         name=row["name"],
+        name_ar=name_ar,
         age=row["age"],
         nationality=row["nationality"],
         governorate=row["governorate"],
@@ -353,9 +360,9 @@ def get_fixtures_by_matchday(conn: sqlite3.Connection, matchday: int) -> list[Fi
 
 
 def get_next_unplayed_matchday(conn: sqlite3.Connection) -> int | None:
-    """Get the next matchday that has unplayed fixtures."""
+    """Get the next league matchday that has unplayed fixtures (cup excluded)."""
     row = conn.execute(
-        "SELECT MIN(matchday) as md FROM fixtures WHERE played = 0"
+        "SELECT MIN(matchday) as md FROM fixtures WHERE played = 0 AND matchday > 0"
     ).fetchone()
     if row and row["md"] is not None:
         return row["md"]

@@ -337,6 +337,21 @@ def seed_database(conn: sqlite3.Connection, game_seed: int = 42) -> GameState:
         club.id = club_id
         clubs.append(club)
 
+        # ── Set Arabic names if available ────────────────────────────
+        name_ar = cd.get("name_ar", "")
+        short_ar = cd.get("short_name_ar", "")
+        city_ar = cd.get("city_ar", "")
+        stadium_ar = cd.get("stadium_name_ar", "")
+        if name_ar:
+            try:
+                conn.execute(
+                    """UPDATE clubs SET name_ar=?, short_name_ar=?,
+                       city_ar=?, stadium_name_ar=? WHERE id=?""",
+                    (name_ar, short_ar, city_ar, stadium_ar, club_id),
+                )
+            except Exception:
+                pass
+
     # 2. Generate players for each club
     for club in clubs:
         shirt = 1
@@ -379,6 +394,23 @@ def seed_database(conn: sqlite3.Connection, game_seed: int = 42) -> GameState:
     from src.core.achievements import seed_achievements
     seed_achievements(conn)
 
+    # 7. Seed Arabic player names
+    _seed_arabic_player_names(conn)
+
+    # 8. Seed rivalries
+    try:
+        from src.core.rivalries import seed_rivalries
+        seed_rivalries(conn)
+    except Exception:
+        pass
+
+    # 9. Create initial Egypt Cup
+    try:
+        from src.core.competition import create_egypt_cup
+        create_egypt_cup(conn, clubs, 2025, date(2025, 8, 15))
+    except Exception:
+        pass
+
     return game_state
 
 
@@ -387,3 +419,67 @@ def _load_json(filename: str) -> list | dict:
     filepath = DATA_DIR / filename
     with open(filepath, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+# ── Arabic Name Pools ────────────────────────────────────────────────────────
+# Mapping English first names to Arabic equivalents
+FIRST_NAMES_AR = {
+    "Ahmed": "أحمد", "Mohamed": "محمد", "Mahmoud": "محمود", "Omar": "عمر",
+    "Ali": "علي", "Hassan": "حسن", "Youssef": "يوسف", "Ibrahim": "إبراهيم",
+    "Khaled": "خالد", "Tamer": "تامر", "Amr": "عمرو", "Karim": "كريم",
+    "Mostafa": "مصطفى", "Tarek": "طارق", "Hossam": "حسام", "Walid": "وليد",
+    "Sherif": "شريف", "Nabil": "نبيل", "Hazem": "حازم", "Ramy": "رامي",
+    "Eslam": "إسلام", "Abdallah": "عبد الله", "Ashraf": "أشرف", "Bassem": "باسم",
+    "Ehab": "إيهاب", "Fathy": "فتحي", "Gamal": "جمال", "Hamdi": "حمدي",
+    "Ismail": "إسماعيل", "Jihad": "جهاد", "Lotfy": "لطفي", "Magdy": "مجدي",
+    "Nashaat": "نشأت", "Osama": "أسامة", "Reda": "رضا", "Saad": "سعد",
+    "Shady": "شادي", "Wael": "وائل", "Zaki": "زكي", "Ayman": "أيمن",
+    "Hany": "هاني", "Marwan": "مروان", "Sameh": "سامح", "Adel": "عادل",
+    "Emad": "عماد", "Kareem": "كريم", "Mido": "ميدو", "Nour": "نور",
+    "Said": "سعيد", "Yasser": "ياسر", "Barakat": "بركات", "Diab": "دياب",
+    "Fakhr": "فخر", "Galal": "جلال", "Helmy": "حلمي", "Issa": "عيسى",
+    "Jawad": "جواد", "Maher": "ماهر", "Nagib": "نجيب",
+}
+
+LAST_NAMES_AR = {
+    "El-Sayed": "السيد", "Abdel-Rahman": "عبد الرحمن", "Hassan": "حسن",
+    "Ibrahim": "إبراهيم", "El-Din": "الدين", "Mansour": "منصور",
+    "El-Naggar": "النجار", "Farouk": "فاروق", "Shehata": "شحاتة",
+    "El-Masry": "المصري", "Abou-Gabal": "أبو جبل", "Salah": "صلاح",
+    "Zidan": "زيدان", "El-Hadary": "الحضري", "Barakat": "بركات",
+    "Hegazy": "حجازي", "Sobhy": "صبحي", "Ashour": "عاشور",
+    "El-Wensh": "الونش", "Elneny": "النني", "Trezeguet": "تريزيجيه",
+    "El-Shennawy": "الشناوي", "Mohsen": "محسن", "Ghaly": "غالي",
+    "Warda": "وردة", "Hamdy": "حمدي", "Kahraba": "كهربا",
+    "Kouka": "كوكا", "Marmoush": "مرموش", "El-Shahat": "الشحات",
+    "Fathy": "فتحي", "Abdel-Shafy": "عبد الشافي", "Gomaa": "جمعة",
+    "Meteb": "متعب", "Ekramy": "إكرامي", "Aboutrika": "أبو تريكة",
+    "Moteab": "متعب", "El-Khatib": "الخطيب", "Samir": "سمير",
+    "Attia": "عطية", "Ragab": "رجب", "Soliman": "سليمان",
+    "Abdelaal": "عبد العال", "Raouf": "رؤوف", "Zahran": "زهران",
+    "Nassar": "نصار", "Gaber": "جابر", "Nasser": "ناصر",
+    "Refaat": "رفعت", "Shaaban": "شعبان",
+}
+
+
+def _seed_arabic_player_names(conn: sqlite3.Connection) -> None:
+    """Generate Arabic names for all existing players."""
+    rows = conn.execute("SELECT id, name FROM players").fetchall()
+    for row in rows:
+        parts = row["name"].split(" ", 1)
+        first_en = parts[0] if parts else ""
+        last_en = parts[1] if len(parts) > 1 else ""
+
+        first_ar = FIRST_NAMES_AR.get(first_en, first_en)
+        last_ar = LAST_NAMES_AR.get(last_en, last_en)
+        name_ar = f"{first_ar} {last_ar}".strip()
+
+        try:
+            conn.execute(
+                "UPDATE players SET name_ar=? WHERE id=?",
+                (name_ar, row["id"]),
+            )
+        except Exception:
+            pass
+    conn.commit()
+

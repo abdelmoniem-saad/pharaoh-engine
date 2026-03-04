@@ -4,6 +4,7 @@ News ticker and notification banner widgets for the match day screen.
 from __future__ import annotations
 
 import flet as ft
+from src.utils.localization import t
 
 _GOLD = "#FFD54F"
 _GOLD_BORDER = ft.Colors.with_opacity(0.18, "#FFD54F")

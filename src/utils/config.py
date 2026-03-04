@@ -264,6 +264,73 @@ def expectation_target_position(key: str) -> int:
 SUPPORTED_LANGUAGES = ["en", "ar"]
 DEFAULT_LANGUAGE = "en"
 
+# ── Ramadan Calendar ─────────────────────────────────────────────────────────
+# Approximate Gregorian start dates for Ramadan (shifts ~11 days/year)
+# Format: year → (start_month, start_day, duration_days)
+RAMADAN_DATES: dict[int, tuple[int, int, int]] = {
+    2025: (2, 28, 30),   # Feb 28 – Mar 30
+    2026: (2, 17, 30),   # Feb 17 – Mar 19
+    2027: (2, 7, 30),    # Feb 7 – Mar 9
+    2028: (1, 27, 30),   # Jan 27 – Feb 26
+    2029: (1, 15, 30),   # Jan 15 – Feb 14
+    2030: (1, 5, 30),    # Jan 5 – Feb 4
+    2031: (12, 25, 30),  # Dec 25 – Jan 24
+    2032: (12, 14, 30),  # Dec 14 – Jan 13
+    2033: (12, 3, 30),   # Dec 3 – Jan 2
+    2034: (11, 22, 30),  # Nov 22 – Dec 22
+    2035: (11, 12, 30),  # Nov 12 – Dec 12
+}
+
+
+def is_ramadan(check_date) -> bool:
+    """Check if a given date falls within Ramadan."""
+    from datetime import date, timedelta
+    year = check_date.year
+    # Check current year and previous year (Ramadan can span year boundary)
+    for y in [year, year - 1]:
+        if y in RAMADAN_DATES:
+            m, d, duration = RAMADAN_DATES[y]
+            try:
+                start = date(y, m, d)
+                end = start + timedelta(days=duration)
+                if start <= check_date <= end:
+                    return True
+            except ValueError:
+                pass
+    return False
+
+
+# ── Egyptian Governorate Arabic Names ────────────────────────────────────────
+GOVERNORATE_NAMES_AR: dict[str, str] = {
+    "Cairo": "القاهرة",
+    "Giza": "الجيزة",
+    "Alexandria": "الإسكندرية",
+    "Dakahlia": "الدقهلية",
+    "Sharqia": "الشرقية",
+    "Qalyubia": "القليوبية",
+    "Beheira": "البحيرة",
+    "Gharbia": "الغربية",
+    "Kafr El-Sheikh": "كفر الشيخ",
+    "Monufia": "المنوفية",
+    "Damietta": "دمياط",
+    "Port Said": "بورسعيد",
+    "Ismailia": "الإسماعيلية",
+    "Suez": "السويس",
+    "Fayoum": "الفيوم",
+    "Beni Suef": "بني سويف",
+    "Minya": "المنيا",
+    "Asyut": "أسيوط",
+    "Sohag": "سوهاج",
+    "Qena": "قنا",
+    "Luxor": "الأقصر",
+    "Aswan": "أسوان",
+    "Red Sea": "البحر الأحمر",
+    "New Valley": "الوادي الجديد",
+    "Matrouh": "مطروح",
+    "North Sinai": "شمال سيناء",
+    "South Sinai": "جنوب سيناء",
+}
+
 
 @dataclass
 class GameSettings:

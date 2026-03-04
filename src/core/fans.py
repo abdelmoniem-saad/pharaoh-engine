@@ -11,12 +11,14 @@ from src.utils.rng import clamp
 
 
 def calculate_attendance(club: Club, is_home: bool,
-                          opponent_reputation: int) -> int:
+                          opponent_reputation: int,
+                          opponent_club_id: int = 0,
+                          conn=None) -> int:
     """
     Calculate expected match attendance.
 
     Factors: stadium capacity, fan happiness, opponent reputation (big games draw more),
-    recent form, weather (not yet implemented).
+    derby status, recent form, weather (not yet implemented).
     """
     if not is_home:
         return 0  # Away attendance handled separately
@@ -31,13 +33,24 @@ def calculate_attendance(club: Club, is_home: bool,
 
     attendance = base * happiness_mod * opponent_draw
 
+    # ── Derby attendance boost ───────────────────────────────────────
+    if conn and opponent_club_id:
+        try:
+            from src.core.rivalries import get_rivalry, derby_attendance_multiplier
+            rivalry = get_rivalry(conn, club.id, opponent_club_id)
+            if rivalry:
+                attendance *= derby_attendance_multiplier(rivalry)
+        except Exception:
+            pass
+
     # Add some randomness
     attendance *= rng.uniform(0.9, 1.1)
 
     return int(clamp(attendance, 500, club.stadium_capacity))
 
 
-def update_fan_happiness(club: Club, result_type: str) -> None:
+def update_fan_happiness(club: Club, result_type: str,
+                         opponent_club_id: int = 0, conn=None) -> None:
     """
     Update fan happiness after a match result.
     result_type: 'win', 'draw', 'loss'
@@ -52,6 +65,17 @@ def update_fan_happiness(club: Club, result_type: str) -> None:
     # Winning streak bonus
     if result_type == "win" and club.fan_happiness >= 70:
         change += 1
+
+    # ── Derby amplification ──────────────────────────────────────────
+    if conn and opponent_club_id:
+        try:
+            from src.core.rivalries import get_rivalry, derby_happiness_multiplier
+            rivalry = get_rivalry(conn, club.id, opponent_club_id)
+            if rivalry:
+                mult = derby_happiness_multiplier(rivalry)
+                change = int(change * mult)
+        except Exception:
+            pass
 
     club.fan_happiness = int(clamp(club.fan_happiness + change, 0, 100))
 

@@ -325,6 +325,36 @@ def main(page: ft.Page):
     page.controls.append(root)
     page.update()
 
+    # ── Load language preference (once, at startup) ────────────────────
+    try:
+        from src.utils.localization import set_language, get_language, is_rtl
+        _lang_conn = app_state.db_conn
+        if _lang_conn is None:
+            try:
+                from src.data.database import connect as _connect
+                _lang_conn = _connect()
+            except Exception:
+                _lang_conn = None
+        if _lang_conn:
+            try:
+                # Ensure the settings row + language column exist
+                _lang_conn.execute(
+                    "INSERT OR IGNORE INTO game_settings (id) VALUES (1)"
+                )
+                _lang_conn.commit()
+                row = _lang_conn.execute(
+                    "SELECT language FROM game_settings WHERE id=1"
+                ).fetchone()
+                if row and row["language"] and row["language"] != "en":
+                    set_language(row["language"])
+                    page.rtl = is_rtl()
+                    page.update()
+                    print(f"DEBUG: Startup language loaded from DB: '{row['language']}'")
+            except Exception as ex:
+                print(f"DEBUG: Startup language load skipped: {ex}")
+    except Exception:
+        pass
+
     # Show main menu
     navigate(page, "/")
 

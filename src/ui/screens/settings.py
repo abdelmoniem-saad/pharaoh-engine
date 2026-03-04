@@ -15,8 +15,19 @@ from src.ui.theme import (
 
 def build_settings_screen(page: ft.Page) -> ft.Column:
     from src.ui.app import app_state, navigate, show_snackbar
+    from src.utils.localization import get_language, set_language, is_rtl, t
+
     page.navigation_bar = None
+
+    # Get a DB connection — either the game's or a standalone one for settings
     conn = app_state.db_conn
+    if conn is None:
+        try:
+            from src.data.database import connect
+            conn = connect()
+        except Exception:
+            conn = None
+
     settings = _load_settings(conn) if conn else {}
     match_speed = settings.get("match_speed", 3)
     auto_save = settings.get("auto_save", 1)
@@ -74,7 +85,7 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
 
     controls_list = [
         header_bar(
-            title="Settings",
+            title=t("settings"),
             icon=ft.Icons.SETTINGS,
             page=page,
             back_route="/squad" if app_state.game_state else "/",
@@ -83,7 +94,7 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
         # Gameplay section
         glass_card(
             content=ft.Column(spacing=10, controls=[
-                ft.Text("🎮 Gameplay", size=16, weight=ft.FontWeight.W_600, color=GOLD),
+                ft.Text("🎮 " + t("gameplay"), size=16, weight=ft.FontWeight.W_600, color=GOLD),
                 speed_dd,
                 diff_dd,
             ]),
@@ -92,24 +103,68 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
         # Save section
         glass_card(
             content=ft.Column(spacing=10, controls=[
-                ft.Text("💾 Save Settings", size=16, weight=ft.FontWeight.W_600, color=GOLD),
+                ft.Text("💾 " + t("save"), size=16, weight=ft.FontWeight.W_600, color=GOLD),
                 auto_save_switch,
                 interval_dd,
             ]),
         ),
+    ]
 
-        # Language section
+    # Language section — use RadioGroup for reliable on_change
+    current_lang = get_language()
+
+    def on_lang_change(e):
+        new_lang = e.control.value or "en"
+        print(f"DEBUG: Language toggle fired → '{new_lang}' (was '{get_language()}')")
+        set_language(new_lang)
+        # Persist to DB
+        if conn:
+            try:
+                conn.execute(
+                    "INSERT OR IGNORE INTO game_settings (id) VALUES (1)"
+                )
+                conn.execute(
+                    "UPDATE game_settings SET language=? WHERE id=1", (new_lang,)
+                )
+                conn.commit()
+                print(f"DEBUG: Language '{new_lang}' saved to DB ✅")
+            except Exception as ex:
+                print(f"DEBUG: language save failed: {ex}")
+        # Toggle RTL
+        page.rtl = is_rtl()
+        # Rebuild the screen with new language labels
+        navigate(page, "/settings")
+
+    lang_radio = ft.RadioGroup(
+        value=current_lang,
+        on_change=on_lang_change,
+        content=ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=20,
+            controls=[
+                ft.Radio(value="en", label="🇬🇧 English"),
+                ft.Radio(value="ar", label="🇪🇬 العربية"),
+            ],
+        ),
+    )
+
+    controls_list.append(
         glass_card(
             content=ft.Column(spacing=10, controls=[
-                ft.Text("🌍 Language", size=16, weight=ft.FontWeight.W_600, color=GOLD),
-                ft.Dropdown(label="Language", value="English", expand=True,
-                            options=[ft.dropdown.Option("English")], disabled=True),
-                ft.Text("Arabic support coming soon!", size=11, color=TEXT_MUTED, italic=True),
+                ft.Text("🌍 " + t("language"), size=16, weight=ft.FontWeight.W_600, color=GOLD),
+                lang_radio,
+                ft.Text(
+                    "Switch between English and Arabic (العربية). "
+                    "Arabic enables right-to-left layout.",
+                    size=11, color=TEXT_MUTED, italic=True,
+                ),
             ]),
         ),
+    )
 
+    controls_list.extend([
         ft.Container(height=10),
-        ft.ElevatedButton("💾 Save Settings", width=280, height=48,
+        ft.ElevatedButton("💾 " + t("save") + " " + t("settings"), width=280, height=48,
             style=PRIMARY_BTN_STYLE,
             on_click=save_click),
         ft.Container(height=16),
@@ -117,14 +172,14 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
         # Danger zone
         glass_card(
             content=ft.Column(spacing=10, controls=[
-                ft.Text("⚠️ Danger Zone", size=16, weight=ft.FontWeight.W_600, color=TEXT_DANGER),
-                ft.OutlinedButton("🗑️ Delete Save Game", width=250, height=42,
+                ft.Text("⚠️ " + t("danger_zone"), size=16, weight=ft.FontWeight.W_600, color=TEXT_DANGER),
+                ft.OutlinedButton("🗑️ " + t("delete_save"), width=250, height=42,
                     style=DANGER_BTN_STYLE,
                     on_click=delete_save_click),
             ]),
             border_color=ft.Colors.with_opacity(0.2, ft.Colors.RED),
         ),
-    ]
+    ])
 
     return ft.Column(
         expand=True, scroll=ft.ScrollMode.AUTO,
@@ -137,22 +192,32 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
 
 def _load_settings(conn) -> dict:
     try:
+        # Ensure a settings row exists
+        conn.execute("INSERT OR IGNORE INTO game_settings (id) VALUES (1)")
+        conn.commit()
         row = conn.execute("SELECT * FROM game_settings WHERE id = 1").fetchone()
         if row:
-            return dict(match_speed=row["match_speed"], auto_save=row["auto_save"],
-                        auto_save_interval=row["auto_save_interval"], difficulty=row["difficulty"])
-    except Exception:
-        pass
+            d = dict(
+                match_speed=row["match_speed"],
+                auto_save=row["auto_save"],
+                auto_save_interval=row["auto_save_interval"],
+                difficulty=row["difficulty"],
+            )
+            return d
+    except Exception as ex:
+        print(f"DEBUG: _load_settings error: {ex}")
     return {}
 
 
 def _save_settings(conn, s: dict) -> None:
     try:
-        conn.execute("""INSERT INTO game_settings (id,match_speed,auto_save,auto_save_interval,difficulty)
-            VALUES (1,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
-            match_speed=excluded.match_speed, auto_save=excluded.auto_save,
-            auto_save_interval=excluded.auto_save_interval, difficulty=excluded.difficulty
-        """, (s["match_speed"], s["auto_save"], s["auto_save_interval"], s["difficulty"]))
+        from src.utils.localization import get_language
+        lang = get_language()
+        conn.execute("INSERT OR IGNORE INTO game_settings (id) VALUES (1)")
+        conn.execute("""UPDATE game_settings SET
+            match_speed=?, auto_save=?, auto_save_interval=?, difficulty=?, language=?
+            WHERE id=1
+        """, (s["match_speed"], s["auto_save"], s["auto_save_interval"], s["difficulty"], lang))
         conn.commit()
-    except Exception:
-        pass
+    except Exception as ex:
+        print(f"DEBUG: _save_settings error: {ex}")

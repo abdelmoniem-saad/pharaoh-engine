@@ -13,6 +13,7 @@ from src.ui.widgets.cards import (
     section_card, info_tile, player_card_h, position_group_header,
     action_card, form_chips, kv_row, collapsible_section,
 )
+from src.utils.localization import t
 from src.ui.theme import (
     ACCENT, TEXT_SECONDARY, TEXT_MUTED,
     CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS, PAGE_PADDING, SECTION_SPACING,
@@ -29,26 +30,26 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = build_nav_bar(page, 0)
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text("No game loaded")])
+        return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
 
     conn = app_state.db_conn
     gs = app_state.game_state
     club = queries.get_club(conn, gs.user_club_id)
     if not club:
-        return ft.Column(controls=[ft.Text("Club not found")])
+        return ft.Column(controls=[ft.Text(t("club_not_found"))])
 
     players = queries.get_players_by_club(conn, club.id)
 
     # Sorting
     sort_options = {
-        "Position": lambda p: (p.position.value, -calculate_overall_rating(p)),
-        "OVR ↓": lambda p: -calculate_overall_rating(p),
+        t("position") + ":": lambda p: (p.position.value, -calculate_overall_rating(p)),
+        t("overall") + " ↓": lambda p: -calculate_overall_rating(p),
         "Age": lambda p: p.age,
         "Fitness": lambda p: -p.fitness,
         "Form ↓": lambda p: -p.form,
         "Morale": lambda p: -p.morale,
     }
-    default_sort = "Position"
+    default_sort = list(sort_options.keys())[0]
     players.sort(key=sort_options[default_sort])
 
     # Squad summary

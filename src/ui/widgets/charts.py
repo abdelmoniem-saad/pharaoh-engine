@@ -8,6 +8,7 @@ containers, rows, and gradients — no external chart dependencies.
 from __future__ import annotations
 
 import flet as ft
+from src.utils.localization import t
 
 # Theme constants (duplicated locally to avoid circular imports)
 _GOLD = "#FFD54F"

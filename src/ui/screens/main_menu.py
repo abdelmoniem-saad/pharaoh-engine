@@ -11,6 +11,7 @@ from src.data import queries
 from src.core.league import create_league_season
 from src.utils import rng
 from src.utils.config import APP_VERSION, expectation_display
+from src.utils.localization import t
 
 
 def build_main_menu(page: ft.Page) -> ft.Column:
@@ -52,7 +53,7 @@ def build_main_menu(page: ft.Page) -> ft.Column:
             ),
             ft.Container(height=8),
             ft.Text(
-                "PHARAOH ENGINE",
+                t("app_title").upper(),
                 size=34, weight=ft.FontWeight.BOLD,
                 text_align=ft.TextAlign.CENTER,
                 color=GOLD,
@@ -69,7 +70,7 @@ def build_main_menu(page: ft.Page) -> ft.Column:
                 ),
             ),
             ft.Text(
-                "Egyptian Football Manager",
+                t("egyptian_football_manager"),
                 size=15,
                 color=TEXT_SECONDARY,
                 text_align=ft.TextAlign.CENTER,
@@ -84,19 +85,19 @@ def build_main_menu(page: ft.Page) -> ft.Column:
         spacing=10,
         controls=[
             ft.ElevatedButton(
-                "⚽  New Game",
+                "⚽  " + t("new_game"),
                 width=280, height=56,
                 style=PRIMARY_BTN_STYLE,
                 on_click=new_game_click,
             ),
             ft.ElevatedButton(
-                "📂  Continue",
+                "📂  " + t("continue_game"),
                 width=280, height=52,
                 style=SECONDARY_BTN_STYLE,
                 on_click=continue_click,
             ),
             ft.OutlinedButton(
-                "⚙️  Settings",
+                "⚙️  " + t("settings"),
                 width=280, height=48,
                 style=ft.ButtonStyle(
                     color=TEXT_SECONDARY,
@@ -144,9 +145,9 @@ def _show_manager_name_dialog(page: ft.Page):
     from src.ui.theme import GOLD, GOLD_BORDER, TEXT_SECONDARY
 
     name_field = ft.TextField(
-        label="Manager Name",
+        label=t("manager_name"),
         value="",
-        hint_text="Enter your name",
+        hint_text=t("enter_your_name"),
         width=280,
         autofocus=True,
         text_size=16,
@@ -160,11 +161,11 @@ def _show_manager_name_dialog(page: ft.Page):
         _show_club_selection(page, manager_name)
 
     dlg = ft.AlertDialog(
-        title=ft.Text("👤 Your Identity", color=GOLD),
+        title=ft.Text("👤 " + t("your_identity"), color=GOLD),
         content=ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.Text("What should the board call you?",
+                    ft.Text(t("what_should_board_call_you"),
                             size=13, color=TEXT_SECONDARY),
                     ft.Container(height=10),
                     name_field,
@@ -176,8 +177,8 @@ def _show_manager_name_dialog(page: ft.Page):
             height=120,
         ),
         actions=[
-            ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),
-            ft.ElevatedButton("Continue ➡️", on_click=on_confirm,
+            ft.TextButton(t("cancel"), on_click=lambda e: page.pop_dialog()),
+            ft.ElevatedButton(t("confirm") + " ➡️", on_click=on_confirm,
                               style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
                                                     color=ft.Colors.WHITE,
                                                     shape=ft.RoundedRectangleBorder(radius=10))),
@@ -227,7 +228,7 @@ def _show_club_selection(page: ft.Page, manager_name: str):
         )
 
     dlg = ft.AlertDialog(
-        title=ft.Text("🏟️ Choose Your Club",
+        title=ft.Text("🏟️ " + t("choose_your_club"),
                        color="#FFD54F", weight=ft.FontWeight.BOLD),
         content=ft.Container(
             content=ft.ListView(
@@ -268,7 +269,7 @@ def _select_club(page: ft.Page, conn, game_state, club_id: int,
         obj_text = "\n".join(f"• {o.description} ({o.priority})" for o in objectives)
         queries.insert_message(conn, InboxMessage(
             date=date(2025, 8, 15),
-            subject="📋 Board Objectives",
+            subject="📋 " + t("board_objectives"),
             body=(
                 f"Welcome, {game_state.manager_name}!\n\n"
                 f"The board expects you to achieve the following this season:\n\n"
@@ -302,8 +303,8 @@ def _continue_game(page: ft.Page):
         else:
             page.show_dialog(
                 ft.AlertDialog(
-                    title=ft.Text("No Save Found"),
-                    content=ft.Text("No save game found. Start a New Game!"),
+                    title=ft.Text(t("no_save_found")),
+                    content=ft.Text(t("no_save_found_msg")),
                     actions=[ft.TextButton("OK", on_click=lambda e: page.pop_dialog())],
                 )
             )

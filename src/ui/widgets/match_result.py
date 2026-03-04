@@ -6,6 +6,7 @@ from __future__ import annotations
 import flet as ft
 
 from src.data.models import MatchResult
+from src.utils.localization import t
 
 
 def match_result_row(result: MatchResult, user_club_id: int = 0) -> ft.Container:

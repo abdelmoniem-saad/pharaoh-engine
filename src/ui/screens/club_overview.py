@@ -18,6 +18,7 @@ from src.ui.theme import (
     GOLD_BORDER, header_bar, CARD_GLASS, CARD_GLASS_STRONG,
 )
 from src.utils.config import expectation_display, expectation_description
+from src.utils.localization import t
 
 
 def build_club_overview_screen(page: ft.Page) -> ft.Column:
@@ -27,7 +28,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = build_nav_bar(page, 3)  # table index since accessed from there
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text("No game loaded")])
+        return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
 
     conn = app_state.db_conn
     gs = app_state.game_state

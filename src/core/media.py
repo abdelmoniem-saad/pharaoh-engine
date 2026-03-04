@@ -43,6 +43,38 @@ HEADLINES = {
         "Manager under pressure after {club}'s dismal showing against {opponent}!",
         "Nightmare for {club} as {opponent} run riot!",
     ],
+    "derby_win": [
+        "🔥 {club} triumph in the derby! Fans celebrate historic victory!",
+        "Bragging rights to {club} in fiery derby clash!",
+        "{club} reign supreme in the big derby!",
+        "Derby delight for {club} as they overcome bitter rivals!",
+    ],
+    "derby_loss": [
+        "😞 Heartbreak for {club} in the derby — rivals take the spoils!",
+        "Dark day for {club} as bitter rivals celebrate derby victory!",
+        "Derby despair: {club} fall to their fiercest rivals!",
+    ],
+    "derby_draw": [
+        "Honours even in an intense derby clash!",
+        "Neither side blinks in the big derby!",
+        "Passionate derby ends all square — fans want more!",
+    ],
+    "cup_win": [
+        "🏆 {club} advance in the Egypt Cup with victory over {opponent}!",
+        "{club} march on in the cup after beating {opponent}!",
+    ],
+    "cup_loss": [
+        "Cup heartbreak for {club} — eliminated by {opponent}!",
+        "{club}'s cup dream is over after defeat to {opponent}!",
+    ],
+    "cup_final_win": [
+        "🏆🎉 {club} WIN THE EGYPT CUP! A glorious day for the club!",
+        "CHAMPIONS! {club} lift the Egypt Cup after defeating {opponent}!",
+    ],
+    "ramadan_match": [
+        "🌙 Evening kick-off under the Ramadan lights as {club} face {opponent}.",
+        "🌙 A special Ramadan atmosphere as {club} host {opponent}.",
+    ],
 }
 
 # ── Random mid-season event templates ────────────────────────────────────────

@@ -11,6 +11,7 @@ from src.utils.config import Mentality, Position, FORMATION_TEMPLATES
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.theme import header_bar, GOLD_BORDER, CARD_GLASS_STRONG
 from src.ui.widgets.cards import collapsible_section
+from src.utils.localization import t
 
 
 # Position display coordinates on a pitch (x%, y%) from top-left
@@ -41,7 +42,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = build_nav_bar(page, 1)
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text("No game loaded")])
+        return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
 
     conn = app_state.db_conn
     gs = app_state.game_state
@@ -176,7 +177,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                     spacing=10,
                     controls=[
                         header_bar(
-                            title="Tactics",
+                            title=t("tactics"),
                             subtitle=(
                                 f"{gs.user_club_name} — {club.formation} | "
                                 f"{club.mentality.name.replace('_', ' ').title()}"

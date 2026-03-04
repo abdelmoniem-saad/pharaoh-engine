@@ -79,6 +79,7 @@ class Player(BaseModel):
     """Complete player model."""
     id: int = 0
     name: str
+    name_ar: str = ""
     age: int = Field(ge=15, le=45)
     nationality: str = "Egyptian"
     governorate: str = "Cairo"
@@ -141,9 +142,13 @@ class Club(BaseModel):
     id: int = 0
     name: str
     short_name: str
+    short_name_ar: str = ""
+    city_ar: str = ""
+    name_ar: str = ""
     city: str
     governorate: str
     reputation: int = Field(default=100, ge=1, le=200)
+    stadium_name_ar: str = ""
     facilities_level: int = Field(default=5, ge=1, le=10)
     youth_rating: int = Field(default=5, ge=1, le=10)
     stadium_name: str = ""

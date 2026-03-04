@@ -15,6 +15,7 @@ from src.ui.theme import (
     header_bar, GOLD_BORDER, CARD_GLASS, PRIMARY_BTN_STYLE,
 )
 from src.utils.config import Position
+from src.utils.localization import t
 
 
 # Pitch coordinates for position markers

@@ -15,6 +15,7 @@ import flet as ft
 
 from src.utils.config import MatchEventType
 from src.data import queries
+from src.utils.localization import t
 
 
 # Event icons

@@ -208,6 +208,32 @@ def start_new_season(conn: sqlite3.Connection,
     create_league_season(conn, clubs, game_state.season_year)
     messages.append(f"Season {game_state.season_year}/{game_state.season_year + 1} fixtures generated.")
 
+    # ── Create Egypt Cup ─────────────────────────────────────────────
+    try:
+        from src.core.competition import create_egypt_cup, CUP_NAME
+        season_start = date(game_state.season_year, 8, 15)
+        cup = create_egypt_cup(conn, clubs, game_state.season_year, season_start)
+        messages.append(f"Egypt Cup draw complete — {len(cup.participating_clubs)} teams enter.")
+        queries.insert_message(conn, InboxMessage(
+            date=game_state.current_date,
+            subject="🏆 Egypt Cup Draw Announced",
+            body=(
+                f"The Egypt Cup {game_state.season_year}/{game_state.season_year + 1} "
+                f"draw has been made. {len(cup.participating_clubs)} teams will compete "
+                f"in the knockout tournament. Round of 32 begins in October."
+            ),
+            category="general",
+        ))
+    except Exception as e:
+        messages.append(f"Warning: Could not create Egypt Cup ({e}).")
+
+    # ── Seed rivalries (first season only) ───────────────────────────
+    try:
+        from src.core.rivalries import seed_rivalries
+        seed_rivalries(conn)
+    except Exception:
+        pass
+
     # Re-derive season expectations for ALL clubs based on current reputation
     for c in clubs:
         c.season_expectation = derive_season_expectation(c.reputation)

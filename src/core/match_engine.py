@@ -26,6 +26,8 @@ def simulate_match(
     away_squad: list[Player],
     home_tactics: TeamTactics,
     away_tactics: TeamTactics,
+    match_date=None,
+    is_derby: bool = False,
 ) -> MatchResult:
     """
     Simulate a full match between two teams.
@@ -39,6 +41,8 @@ def simulate_match(
     - Stamina → fatigue penalty in 2nd half
     - Red cards remove players from the XI
     - Training focus gives small match bonuses
+    - Ramadan → reduced stamina effectiveness
+    - Derby → amplified morale effects
     """
     # Build player lookup maps
     home_players = {p.id: p for p in home_squad}
@@ -144,6 +148,14 @@ def simulate_match(
 
     home_avg_stamina = _avg_stamina(home_players, home_active_xi)
     away_avg_stamina = _avg_stamina(away_players, away_active_xi)
+
+    # ── Ramadan stamina penalty ──────────────────────────────────────
+    # During Ramadan, players tire ~10% faster due to fasting
+    if match_date:
+        from src.utils.config import is_ramadan as _is_ramadan
+        if _is_ramadan(match_date):
+            home_avg_stamina *= 0.90
+            away_avg_stamina *= 0.90
 
     # Simulate minute by minute
     for minute in range(1, MATCH_DURATION_MINUTES + second_half_added + 1):

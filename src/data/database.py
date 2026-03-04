@@ -421,5 +421,45 @@ _MIGRATIONS = [
     (3, [
         "ALTER TABLE fixtures ADD COLUMN player_ratings_json TEXT NOT NULL DEFAULT '{}'",
     ]),
+    (4, [
+        # ── Egypt Cup state table ────────────────────────────────────
+        """CREATE TABLE IF NOT EXISTS cup_state (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            competition_name TEXT NOT NULL DEFAULT 'Egypt Cup',
+            season_year INTEGER NOT NULL,
+            current_round TEXT NOT NULL DEFAULT '',
+            rounds_json TEXT NOT NULL DEFAULT '{}',
+            champion_club_id INTEGER,
+            champion_club_name TEXT NOT NULL DEFAULT '',
+            is_complete INTEGER NOT NULL DEFAULT 0,
+            UNIQUE(competition_name, season_year)
+        )""",
+        # Extra-time / penalty columns for knockout matches
+        "ALTER TABLE fixtures ADD COLUMN extra_time INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE fixtures ADD COLUMN penalties_json TEXT NOT NULL DEFAULT ''",
+        # ── Rivalries table ──────────────────────────────────────────
+        """CREATE TABLE IF NOT EXISTS rivalries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            club_a_id INTEGER NOT NULL,
+            club_b_id INTEGER NOT NULL,
+            rivalry_name TEXT NOT NULL DEFAULT '',
+            rivalry_name_ar TEXT NOT NULL DEFAULT '',
+            intensity INTEGER NOT NULL DEFAULT 3,
+            description TEXT NOT NULL DEFAULT '',
+            description_ar TEXT NOT NULL DEFAULT '',
+            UNIQUE(club_a_id, club_b_id)
+        )""",
+        # ── Arabic name columns ──────────────────────────────────────
+        "ALTER TABLE clubs ADD COLUMN name_ar TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE clubs ADD COLUMN short_name_ar TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE clubs ADD COLUMN city_ar TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE clubs ADD COLUMN stadium_name_ar TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE players ADD COLUMN name_ar TEXT NOT NULL DEFAULT ''",
+        # ── Language setting ─────────────────────────────────────────
+        "ALTER TABLE game_settings ADD COLUMN language TEXT NOT NULL DEFAULT 'en'",
+        # ── Cup winner in season history ─────────────────────────────
+        "ALTER TABLE season_history ADD COLUMN cup_winner_club_id INTEGER",
+        "ALTER TABLE season_history ADD COLUMN cup_winner_club_name TEXT NOT NULL DEFAULT ''",
+    ]),
 ]
 

@@ -4,6 +4,7 @@ Shared navigation bar used across all game screens.
 from __future__ import annotations
 
 import flet as ft
+from src.utils.localization import t
 
 
 def _get_unread() -> int:
@@ -46,7 +47,7 @@ def build_nav_bar(page: ft.Page, selected_index: int = 0) -> ft.NavigationBar:
         inbox_dest = ft.NavigationBarDestination(
             icon=ft.Icons.MAIL_OUTLINED,
             selected_icon=ft.Icons.MAIL,
-            label="Inbox",
+            label=t("inbox"),
             badge=ft.Badge(label=str(unread_count)),
         )
     else:
@@ -66,16 +67,16 @@ def build_nav_bar(page: ft.Page, selected_index: int = 0) -> ft.NavigationBar:
         destinations=[
             ft.NavigationBarDestination(icon=ft.Icons.PEOPLE_OUTLINED,
                                         selected_icon=ft.Icons.PEOPLE,
-                                        label="Squad"),
+                                        label=t("squad")),
             ft.NavigationBarDestination(icon=ft.Icons.TUNE_OUTLINED,
                                         selected_icon=ft.Icons.TUNE,
-                                        label="Tactics"),
+                                        label=t("tactics")),
             ft.NavigationBarDestination(icon=ft.Icons.SPORTS_SOCCER_OUTLINED,
                                         selected_icon=ft.Icons.SPORTS_SOCCER,
-                                        label="Match"),
+                                        label=t("match")),
             ft.NavigationBarDestination(icon=ft.Icons.LEADERBOARD_OUTLINED,
                                         selected_icon=ft.Icons.LEADERBOARD,
-                                        label="Table"),
+                                        label=t("table")),
             inbox_dest,
         ],
     )

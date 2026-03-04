@@ -1,0 +1,50 @@
+{
+  "rivalries": [
+    {
+      "club_a_id": 1,
+      "club_b_id": 2,
+      "rivalry_name": "Cairo Derby",
+      "rivalry_name_ar": "ديربي القاهرة",
+      "intensity": 5,
+      "description": "The fiercest rivalry in Egyptian football. The Cairo Derby between the two biggest clubs in the country transcends sport — it divides families, neighborhoods, and even workplaces. Matches are always sold out and surrounded by intense media coverage.",
+      "description_ar": "أشرس تنافس في كرة القدم المصرية. ديربي القاهرة بين أكبر ناديين في البلاد يتجاوز الرياضة — يقسم العائلات والأحياء وحتى أماكن العمل."
+    },
+    {
+      "club_a_id": 3,
+      "club_b_id": 4,
+      "rivalry_name": "Canal Derby",
+      "rivalry_name_ar": "ديربي القناة",
+      "intensity": 4,
+      "description": "The Canal Derby between two major clubs represents a clash of playing styles and regional pride. Both clubs have passionate fan bases and a long history of dramatic encounters.",
+      "description_ar": "ديربي القناة بين ناديين كبيرين يمثل صراع أساليب اللعب والفخر الإقليمي."
+    },
+    {
+      "club_a_id": 5,
+      "club_b_id": 6,
+      "rivalry_name": "Mediterranean Derby",
+      "rivalry_name_ar": "ديربي المتوسط",
+      "intensity": 4,
+      "description": "The Mediterranean Derby pits two coastal powerhouses against each other. With deep-rooted fan cultures and ultras groups, these matches are always electric affairs.",
+      "description_ar": "ديربي المتوسط يضع قوتين ساحليتين في مواجهة بعضهما البعض."
+    },
+    {
+      "club_a_id": 1,
+      "club_b_id": 3,
+      "rivalry_name": "Top-of-the-Table Clash",
+      "rivalry_name_ar": "قمة الدوري",
+      "intensity": 3,
+      "description": "A rivalry born from years of title races. When these two meet, the league title is often on the line.",
+      "description_ar": "منافسة ولدت من سنوات من سباقات اللقب."
+    },
+    {
+      "club_a_id": 7,
+      "club_b_id": 8,
+      "rivalry_name": "Upper Egypt Derby",
+      "rivalry_name_ar": "ديربي الصعيد",
+      "intensity": 3,
+      "description": "The Upper Egypt Derby brings together clubs from the south, representing regional pride and a physical, no-nonsense style of play.",
+      "description_ar": "ديربي الصعيد يجمع أندية الجنوب، يمثل الفخر الإقليمي وأسلوب لعب بدني."
+    }
+  ]
+}
+

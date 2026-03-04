@@ -51,6 +51,15 @@ def process_weekly_training(player: Player, club: Club,
     focus = player.training_focus or "Balanced"
     growth_mult, fitness_cost, injury_risk = INTENSITY_EFFECTS[intensity]
 
+    # ── Ramadan training reduction ───────────────────────────────────
+    # During Ramadan, training effectiveness is reduced by 20%
+    try:
+        from src.utils.config import is_ramadan
+        if hasattr(player, '_training_date') and is_ramadan(player._training_date):
+            growth_mult *= 0.80
+    except Exception:
+        pass
+
     # Apply fitness cost from intense training
     if fitness_cost:
         player.fitness = max(0, player.fitness + fitness_cost)

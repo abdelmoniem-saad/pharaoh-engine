@@ -16,7 +16,11 @@
     "wage_budget_weekly": 3500000,
     "matchday_income": 2000000,
     "sponsorship_income_yearly": 80000000,
-    "tv_revenue_yearly": 40000000
+    "tv_revenue_yearly": 40000000,
+    "name_ar": "نايل يونايتد",
+    "short_name_ar": "ن.ي",
+    "city_ar": "القاهرة",
+    "stadium_name_ar": "استاد القاهرة الدولي"
   },
   {
     "name": "Pharaohs SC",
@@ -35,7 +39,11 @@
     "wage_budget_weekly": 3200000,
     "matchday_income": 1800000,
     "sponsorship_income_yearly": 70000000,
-    "tv_revenue_yearly": 38000000
+    "tv_revenue_yearly": 38000000,
+    "name_ar": "فراعنة إس سي",
+    "short_name_ar": "ف.س",
+    "city_ar": "القاهرة",
+    "stadium_name_ar": "ملعب الفراعنة"
   },
   {
     "name": "Sphinx Athletic",
@@ -54,7 +62,11 @@
     "wage_budget_weekly": 2200000,
     "matchday_income": 1200000,
     "sponsorship_income_yearly": 40000000,
-    "tv_revenue_yearly": 30000000
+    "tv_revenue_yearly": 30000000,
+    "name_ar": "سفينكس أتلتيك",
+    "short_name_ar": "س.أ",
+    "city_ar": "الجيزة",
+    "stadium_name_ar": "مجمع الجيزة الرياضي"
   },
   {
     "name": "Mediterranean FC",
@@ -73,7 +85,11 @@
     "wage_budget_weekly": 2000000,
     "matchday_income": 1100000,
     "sponsorship_income_yearly": 35000000,
-    "tv_revenue_yearly": 28000000
+    "tv_revenue_yearly": 28000000,
+    "name_ar": "ميديتيرينيان",
+    "short_name_ar": "م.ف",
+    "city_ar": "الإسكندرية",
+    "stadium_name_ar": "استاد الإسكندرية"
   },
   {
     "name": "Canal Stars",
@@ -92,7 +108,11 @@
     "wage_budget_weekly": 1500000,
     "matchday_income": 800000,
     "sponsorship_income_yearly": 20000000,
-    "tv_revenue_yearly": 22000000
+    "tv_revenue_yearly": 22000000,
+    "name_ar": "نجوم القناة",
+    "short_name_ar": "ن.ق",
+    "city_ar": "الإسماعيلية",
+    "stadium_name_ar": "استاد القناة"
   },
   {
     "name": "Delta Force FC",
@@ -111,7 +131,11 @@
     "wage_budget_weekly": 1400000,
     "matchday_income": 700000,
     "sponsorship_income_yearly": 18000000,
-    "tv_revenue_yearly": 20000000
+    "tv_revenue_yearly": 20000000,
+    "name_ar": "دلتا فورس",
+    "short_name_ar": "د.ف",
+    "city_ar": "المنصورة",
+    "stadium_name_ar": "ملعب الدلتا"
   },
   {
     "name": "Port Guardians",
@@ -130,7 +154,11 @@
     "wage_budget_weekly": 1200000,
     "matchday_income": 600000,
     "sponsorship_income_yearly": 15000000,
-    "tv_revenue_yearly": 18000000
+    "tv_revenue_yearly": 18000000,
+    "name_ar": "حراس بورسعيد",
+    "short_name_ar": "ح.ب",
+    "city_ar": "بورسعيد",
+    "stadium_name_ar": "استاد بورسعيد"
   },
   {
     "name": "Red Sea FC",
@@ -149,7 +177,11 @@
     "wage_budget_weekly": 1100000,
     "matchday_income": 500000,
     "sponsorship_income_yearly": 12000000,
-    "tv_revenue_yearly": 16000000
+    "tv_revenue_yearly": 16000000,
+    "name_ar": "البحر الأحمر",
+    "short_name_ar": "ب.أ",
+    "city_ar": "الغردقة",
+    "stadium_name_ar": "ملعب البحر الأحمر"
   },
   {
     "name": "Suez Titans",
@@ -168,7 +200,11 @@
     "wage_budget_weekly": 1000000,
     "matchday_income": 450000,
     "sponsorship_income_yearly": 10000000,
-    "tv_revenue_yearly": 15000000
+    "tv_revenue_yearly": 15000000,
+    "name_ar": "عمالقة السويس",
+    "short_name_ar": "ع.س",
+    "city_ar": "السويس",
+    "stadium_name_ar": "مدينة السويس الرياضية"
   },
   {
     "name": "Sharqia Eagles",
@@ -187,7 +223,11 @@
     "wage_budget_weekly": 900000,
     "matchday_income": 400000,
     "sponsorship_income_yearly": 8000000,
-    "tv_revenue_yearly": 14000000
+    "tv_revenue_yearly": 14000000,
+    "name_ar": "نسور الشرقية",
+    "short_name_ar": "ن.ش",
+    "city_ar": "الزقازيق",
+    "stadium_name_ar": "استاد الشرقية"
   },
   {
     "name": "Gharbia United",
@@ -206,7 +246,11 @@
     "wage_budget_weekly": 850000,
     "matchday_income": 350000,
     "sponsorship_income_yearly": 7000000,
-    "tv_revenue_yearly": 13000000
+    "tv_revenue_yearly": 13000000,
+    "name_ar": "الغربية يونايتد",
+    "short_name_ar": "غ.ي",
+    "city_ar": "طنطا",
+    "stadium_name_ar": "استاد طنطا البلدي"
   },
   {
     "name": "Fayoum Oasis FC",
@@ -225,7 +269,11 @@
     "wage_budget_weekly": 800000,
     "matchday_income": 300000,
     "sponsorship_income_yearly": 6000000,
-    "tv_revenue_yearly": 12000000
+    "tv_revenue_yearly": 12000000,
+    "name_ar": "واحة الفيوم",
+    "short_name_ar": "و.ف",
+    "city_ar": "الفيوم",
+    "stadium_name_ar": "مركز الفيوم الرياضي"
   },
   {
     "name": "Upper Nile SC",
@@ -244,7 +292,11 @@
     "wage_budget_weekly": 750000,
     "matchday_income": 280000,
     "sponsorship_income_yearly": 5500000,
-    "tv_revenue_yearly": 11000000
+    "tv_revenue_yearly": 11000000,
+    "name_ar": "أعالي النيل",
+    "short_name_ar": "أ.ن",
+    "city_ar": "أسيوط",
+    "stadium_name_ar": "استاد أسيوط الوطني"
   },
   {
     "name": "Luxor Legends",
@@ -263,7 +315,11 @@
     "wage_budget_weekly": 700000,
     "matchday_income": 260000,
     "sponsorship_income_yearly": 5000000,
-    "tv_revenue_yearly": 10000000
+    "tv_revenue_yearly": 10000000,
+    "name_ar": "أساطير الأقصر",
+    "short_name_ar": "أ.ق",
+    "city_ar": "الأقصر",
+    "stadium_name_ar": "استاد الأقصر القديم"
   },
   {
     "name": "Damietta Dolphins",
@@ -282,7 +338,11 @@
     "wage_budget_weekly": 650000,
     "matchday_income": 240000,
     "sponsorship_income_yearly": 4500000,
-    "tv_revenue_yearly": 9000000
+    "tv_revenue_yearly": 9000000,
+    "name_ar": "دلافين دمياط",
+    "short_name_ar": "د.د",
+    "city_ar": "دمياط",
+    "stadium_name_ar": "استاد مدينة دمياط"
   },
   {
     "name": "Aswan Falcons",
@@ -301,7 +361,11 @@
     "wage_budget_weekly": 600000,
     "matchday_income": 220000,
     "sponsorship_income_yearly": 4000000,
-    "tv_revenue_yearly": 8000000
+    "tv_revenue_yearly": 8000000,
+    "name_ar": "صقور أسوان",
+    "short_name_ar": "ص.أ",
+    "city_ar": "أسوان",
+    "stadium_name_ar": "استاد أسوان"
   },
   {
     "name": "Minya Wolves",
@@ -320,7 +384,11 @@
     "wage_budget_weekly": 550000,
     "matchday_income": 200000,
     "sponsorship_income_yearly": 3500000,
-    "tv_revenue_yearly": 7000000
+    "tv_revenue_yearly": 7000000,
+    "name_ar": "ذئاب المنيا",
+    "short_name_ar": "ذ.م",
+    "city_ar": "المنيا",
+    "stadium_name_ar": "ملعب المنيا"
   },
   {
     "name": "Beheira FC",
@@ -339,7 +407,10 @@
     "wage_budget_weekly": 500000,
     "matchday_income": 180000,
     "sponsorship_income_yearly": 3000000,
-    "tv_revenue_yearly": 6000000
+    "tv_revenue_yearly": 6000000,
+    "name_ar": "البحيرة إف سي",
+    "short_name_ar": "ب.ف",
+    "city_ar": "دمنهور",
+    "stadium_name_ar": "استاد دمنهور"
   }
 ]
-

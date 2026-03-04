@@ -10,6 +10,7 @@ from src.data.models import MatchResult, MatchdayOutcome, InboxMessage
 from src.core.player import calculate_overall_rating
 from src.utils.config import MatchEventType
 from src.utils import rng
+from src.utils.localization import t
 
 
 def build_post_match_screen(page: ft.Page) -> ft.Column:

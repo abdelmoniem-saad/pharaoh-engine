@@ -17,6 +17,24 @@ Built with Python + Flet (Flutter-backed) for cross-platform deployment: Android
 - **Season summary & awards** — Champion, Golden Boot, Golden Glove, Young Player of the Season, Most Assists
 - **Board evaluation** — end-of-season performance review against club-specific expectations
 
+### 🏆 Egypt Cup
+- **32-team knockout tournament** running alongside the league season
+- **Seeded draw** — top 8 EPL clubs seeded into separate halves; 14 lower-division virtual clubs enter
+- **5 rounds**: Round of 32, Round of 16, Quarter-finals, Semi-finals, Final
+- **Interleaved scheduling** — cup rounds scheduled between league matchdays (Oct–Apr)
+- **AI simulation** — non-user cup matches auto-simulated; user plays their cup ties
+- **Penalty shootouts** — drawn knockout matches resolved via penalties
+- **Cup winner tracked** in season history and career achievements
+- **Cup-specific inbox messages** — draw announcements, results, and elimination/victory notifications
+
+### 🔥 Derby Rivalries
+- **5 defined rivalries** with named derbies (Cairo Derby, Canal Derby, Mediterranean Derby, etc.)
+- **Intensity levels** (1-5) affecting match atmosphere and consequences
+- **Attendance boost** — derby matches draw 1.1x–1.5x more fans
+- **Amplified fan happiness** — wins/losses in derbies swing fan mood up to 2.5x more
+- **Derby-specific headlines** — unique media coverage for rivalry matches
+- **Arabic rivalry names** — each derby has bilingual naming
+
 ### ⚔️ Match Engine
 - **Minute-by-minute simulation** producing goals, assists, cards, injuries, penalties, corners, and saves
 - **Live match playback** — watch the match unfold from minute 0 to 90+ with real-time event feed and option to skip to end
@@ -127,6 +145,23 @@ Built with Python + Flet (Flutter-backed) for cross-platform deployment: Android
 - **Regional talent dynamics** — Cairo/Alexandria produce more players; Upper Egypt produces physically strong players
 - **Culturally appropriate club names** — fictionalized but recognizable Egyptian league structure
 - **Egyptian-scale finances** — realistic EGP-denominated budgets, wages, and transfer fees
+- **5 named derby rivalries** — Cairo Derby, Canal Derby, Mediterranean Derby, and more
+- **Ramadan calendar integration** — Ramadan dates mapped 2025-2035; during Ramadan:
+  - Player stamina reduced by 10% in matches (fasting effect)
+  - Training effectiveness reduced by 20%
+  - Evening kick-off schedule adjustments
+  - Inbox notification: "🌙 Ramadan Mubarak!"
+- **Bilingual club and player names** — all 18 clubs have Arabic names (العربية)
+- **Arabic governorate names** — 27 governorates with Arabic translations
+
+### 🌐 Localization (Arabic / العربية)
+- **200+ translated UI strings** — full English and Arabic string tables
+- **RTL layout support** — right-to-left page layout toggled automatically when Arabic is selected
+- **Language toggle in Settings** — switch between English and Arabic with one tap
+- **Parameterized translations** — dynamic strings like "5 day(s) until match" → "5 يوم حتى المباراة"
+- **Bilingual entity names** — `display_name()` helper returns Arabic or English based on active language
+- **Persistent language preference** — saved per game in the database
+- **Categories covered**: navigation, match events, league table headers, player attributes, positions, tactics, transfers, board/finance, training, cup, inbox, Ramadan, settings
 
 ### 💾 Save System
 - **SQLite-based persistence** — full game state saved to `.db` files
@@ -178,7 +213,8 @@ pharaoh-engine/
 │   │   ├── commentary.py      # Contextual match event commentary
 │   │   ├── youth.py           # Youth academy, annual intake
 │   │   ├── regional.py        # Governorate talent profiles & attribute biases
-│   │   └── competition.py     # Cup/continental stubs (future)
+│   │   ├── competition.py     # Egypt Cup knockout tournament (draw, rounds, penalties)
+│   │   ├── rivalries.py       # Derby rivalries (Cairo Derby, Canal, Mediterranean, etc.)
 │   ├── data/                  # Database & data layer
 │   │   ├── database.py        # SQLite schema & connection management
 │   │   ├── models.py          # Pydantic data models (50+ model classes)
@@ -211,11 +247,12 @@ pharaoh-engine/
 │   └── utils/                 # Utilities
 │       ├── config.py          # Constants, enums, formations, governorates
 │       ├── rng.py             # Seeded deterministic RNG system
-│       └── localization.py    # English/Arabic string tables (future)
+│       └── localization.py    # English/Arabic string tables (200+ keys), RTL support
 ├── data/seed/                 # JSON seed data
-│   ├── clubs.json             # 18 EPL club definitions
+│   ├── clubs.json             # 18 EPL club definitions (with Arabic names)
 │   ├── governorates.json      # Regional talent profiles
-│   └── competitions.json      # League/cup structures
+│   ├── competitions.json      # League/cup structures
+│   └── rivalries.json         # Derby rivalry definitions
 ├── saves/                     # Save game directory
 │   └── default.db             # Default save file
 └── tests/                     # Test suite (45 tests)
@@ -303,18 +340,25 @@ Single-season league simulation with squad management, tactical presets, match e
 - ✅ AI club management (transfers, training, tactics, recovery)
 - ✅ Proper financial tracking across all systems (transfers, wages, attendance, events)
 
-### Phase 3 — Culture (Next)
-- Arabic localization and right-to-left UI support
-- Enhanced fan ultras system with tifo, chants, and supporter groups
-- Deeper governorate talent dynamics with regional rivalries
-- Egypt Cup knockout competition
-- CAF Champions League group stage
-- Enhanced match narratives and press conferences
-- Manager reputation system
+### Phase 3 — Culture ✅ (Current)
+- ✅ Egypt Cup 32-team knockout tournament (seeded draw, 5 rounds, interleaved with league)
+- ✅ Derby rivalries system (5 named rivalries with attendance/happiness multipliers)
+- ✅ Ramadan calendar integration (2025-2035 dates, stamina/training effects)
+- ✅ Full Arabic localization (200+ translated strings, RTL layout, language toggle)
+- ✅ Bilingual club and player names (Arabic names in DB and models)
+- ✅ Arabic governorate name mappings
+- ✅ Derby-specific and cup-specific media headlines
+- ✅ Parameterized translation system (`t_format()`)
+- ✅ Persistent language preference in game settings
 
 ### Phase 4 — Launch
 - Mobile deployment (Google Play Store / Apple App Store)
 - Onboarding tutorial and guided first season
+- Enhanced fan ultras system with tifo, chants, and supporter groups
+- CAF Champions League group stage
+- Egyptian Second Division with promotion/relegation
+- Enhanced match narratives and press conferences
+- Manager reputation system
 - Ethical free-to-play monetization (cosmetics only)
 - Community features and leaderboards
 - Official licensing partnerships

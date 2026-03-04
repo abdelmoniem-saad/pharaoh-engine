@@ -25,6 +25,7 @@ from src.ui.theme import (
     PRIMARY_BTN_STYLE, SECONDARY_BTN_STYLE,
 )
 from src.utils.config import MatchEventType, expectation_display
+from src.utils.localization import t
 
 
 def build_match_day_screen(page: ft.Page) -> ft.Column:
@@ -40,7 +41,7 @@ def build_match_day_screen(page: ft.Page) -> ft.Column:
             controls=[
                 ft.Icon(ft.Icons.SPORTS_SOCCER, size=60, color=ft.Colors.GREY_700),
                 ft.Container(height=10),
-                ft.Text("No game loaded", size=18, color=ft.Colors.GREY_400),
+                ft.Text(t("no_game_loaded"), size=18, color=ft.Colors.GREY_400),
                 ft.Text("Start a new game from the main menu.", size=14, color=ft.Colors.GREY_600),
                 ft.Container(height=20),
                 ft.ElevatedButton(
@@ -295,7 +296,7 @@ def _build_match_preview(page, conn, gs, fixture):
                     spacing=12,
                     controls=[
                         header_bar(
-                            title="Match Day",
+                            title=t("match_day"),
                             subtitle=f"📅 {gs.current_date.strftime('%d %B %Y')}",
                             icon=ft.Icons.SPORTS_SOCCER,
                             page=page,

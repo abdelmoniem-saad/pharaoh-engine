@@ -12,6 +12,7 @@ from src.core.player import calculate_overall_rating
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.widgets.stat_bar import stat_bar
 from src.utils.config import Position
+from src.utils.localization import t
 from src.ui.theme import (
     header_bar, GOLD_BORDER, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS_SM,
     TEXT_SECONDARY, TEXT_MUTED, ACCENT,
@@ -26,7 +27,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = build_nav_bar(page, 0)
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text("No game loaded")])
+        return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
 
     conn = app_state.db_conn
     gs = app_state.game_state
@@ -567,7 +568,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                     spacing=8,
                     controls=[
                         header_bar(
-                            title="Transfer Market",
+                            title=t("transfer_market"),
                             icon=ft.Icons.STORE,
                             page=page,
                             back_route="/squad",

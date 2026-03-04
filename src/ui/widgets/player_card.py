@@ -7,6 +7,7 @@ import flet as ft
 
 from src.data.models import Player
 from src.core.player import calculate_overall_rating
+from src.utils.localization import t
 
 
 def player_card(player: Player) -> ft.ListTile:

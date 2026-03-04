@@ -7,6 +7,7 @@ import flet as ft
 
 from src.data import queries
 from src.ui.widgets.nav_bar import build_nav_bar
+from src.utils.localization import t
 from src.ui.theme import (
     ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
     CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS, CARD_RADIUS_SM,
@@ -40,7 +41,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = build_nav_bar(page, 4)
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text("No game loaded")])
+        return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
 
     conn = app_state.db_conn
     gs = app_state.game_state
@@ -269,7 +270,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                     spacing=SECTION_SPACING,
                     controls=[
                         header_bar(
-                            title="Inbox",
+                            title=t("inbox"),
                             subtitle=f"{unread} unread" if unread > 0 else "All caught up",
                             icon=ft.Icons.MAIL,
                             page=page,

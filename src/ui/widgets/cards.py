@@ -7,6 +7,7 @@ raw ft.Container / ft.Row layouts inline.
 from __future__ import annotations
 
 import flet as ft
+from src.utils.localization import t
 from src.ui.theme import (
     ACCENT, ACCENT_DARK, ACCENT_BG,
     CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_BG_HIGHLIGHT, CARD_BG_DANGER,

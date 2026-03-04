@@ -36,7 +36,7 @@ def advance_day(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
     game_state.current_date += timedelta(days=1)
     game_state.day_count += 1
 
-    # Check if today is a match day
+    # Check if today is a match day (league)
     is_match_day = False
     next_matchday = queries.get_next_unplayed_matchday(conn)
     if next_matchday is not None:
@@ -48,6 +48,43 @@ def advance_day(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
         if todays_fixtures:
             is_match_day = True
             messages.extend(_simulate_matchday(conn, game_state, todays_fixtures))
+
+    # ── Cup match simulation ─────────────────────────────────────────
+    try:
+        from src.core.competition import (
+            get_cup_state, simulate_cup_match_result,
+            advance_cup_round, CUP_NAME, is_cup_match,
+        )
+        cup = get_cup_state(conn, game_state.season_year)
+        if cup and not cup.is_complete:
+            # Find today's cup fixtures (non-user matches only)
+            cup_rows = conn.execute(
+                """SELECT id FROM fixtures
+                   WHERE competition=? AND played=0 AND match_date=?
+                   AND home_club_id != ? AND away_club_id != ?""",
+                (CUP_NAME, game_state.current_date.isoformat(),
+                 game_state.user_club_id, game_state.user_club_id),
+            ).fetchall()
+            for row in cup_rows:
+                simulate_cup_match_result(conn, row["id"], cup)
+
+            # Try advancing the round
+            cup_msgs = advance_cup_round(conn, cup, game_state)
+            messages.extend(cup_msgs)
+    except Exception:
+        pass  # Cup not available yet
+
+    # ── Ramadan notification (once per Ramadan period) ────────────────
+    from src.utils.config import is_ramadan
+    if is_ramadan(game_state.current_date) and game_state.day_count % 30 == 1:
+        from src.utils.localization import t
+        queries.insert_message(conn, InboxMessage(
+            date=game_state.current_date,
+            subject="🌙 Ramadan Mubarak",
+            body=t("ramadan_notice") + "\n\n" + t("ramadan_schedule"),
+            category="general",
+        ))
+        messages.append("Ramadan period — fitness and training affected.")
 
     # Daily fitness recovery and injury healing for ALL clubs (every day)
     _daily_recovery(conn, game_state)
@@ -244,7 +281,9 @@ def simulate_user_match(conn: sqlite3.Connection,
     # Calculate attendance and generate real matchday income
     opp_rep = opp_club.reputation if opp_club else 100
     is_home_match = fixture.home_club_id == game_state.user_club_id
-    attendance = calculate_attendance(user_club, is_home_match, opp_rep)
+    opp_id = opp_club.id if opp_club else 0
+    attendance = calculate_attendance(user_club, is_home_match, opp_rep,
+                                      opponent_club_id=opp_id, conn=conn)
 
     # Ticket revenue: only for home matches (average ticket ~50 EGP)
     if is_home_match and attendance > 0:
@@ -302,8 +341,10 @@ def simulate_user_match(conn: sqlite3.Connection,
     # Update board confidence
     update_confidence_after_match(user_club, result_type)
 
-    # Update fan happiness
-    update_fan_happiness(user_club, result_type)
+    # Update fan happiness (with derby amplification)
+    opponent_id = away_club.id if user_is_home else home_club.id
+    update_fan_happiness(user_club, result_type,
+                         opponent_club_id=opponent_id, conn=conn)
 
     # Save updated club
     queries.update_club(conn, user_club)

@@ -10,6 +10,7 @@ from src.core.season import get_season_awards, start_new_season
 from src.core.board import get_confidence_level, generate_season_objectives, evaluate_objectives
 from src.core.fans import get_fan_happiness_level
 from src.utils.config import expectation_display, expectation_description
+from src.utils.localization import t
 
 
 def build_season_summary_screen(page: ft.Page) -> ft.Column:
