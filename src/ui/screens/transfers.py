@@ -501,41 +501,61 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     active_negs = get_user_negotiations(conn, gs.user_club_id)
     active_tab = [0]
 
+    _active_style = ft.ButtonStyle(
+        bgcolor=ft.Colors.AMBER_800, color=ft.Colors.WHITE,
+        shape=ft.RoundedRectangleBorder(radius=10),
+    )
+    _inactive_style = ft.ButtonStyle(
+        shape=ft.RoundedRectangleBorder(radius=10),
+        side=ft.BorderSide(1, GOLD_BORDER),
+    )
+
+    tab_contents = [search_content, sell_content, shortlist_content,
+                    free_content, negotiations_content]
+
+    neg_label = f"📋 ({len(active_negs)})" if active_negs else "📋"
+    tab_labels = ["🔍 Search", "💰 Sell", f"⭐ ({len(shortlist)})",
+                  "🆓 Free", neg_label]
+    tab_btns = []
+    for i, lbl in enumerate(tab_labels):
+        tab_btns.append(
+            ft.ElevatedButton(lbl, on_click=None, height=34,
+                               style=_active_style if i == 0 else _inactive_style)
+        )
+
     def switch_tab(idx):
         def handler(e):
             active_tab[0] = idx
-            search_content.visible = idx == 0
-            sell_content.visible = idx == 1
-            shortlist_content.visible = idx == 2
-            free_content.visible = idx == 3
-            negotiations_content.visible = idx == 4
+            for i, tc in enumerate(tab_contents):
+                tc.visible = (i == idx)
+            for i, btn in enumerate(tab_btns):
+                btn.style = _active_style if i == idx else _inactive_style
             if idx == 2:
                 shortlist_content.controls.clear()
                 shortlist_content.controls.extend(_build_shortlist_content())
+            if idx == 3:
+                load_free_agents()
             if idx == 4:
                 negotiations_content.controls.clear()
                 negotiations_content.controls.extend(_build_negotiations_list())
             page.update()
         return handler
 
-    neg_label = f"📋 ({len(active_negs)})" if active_negs else "📋"
-    tab_row = ft.Row(spacing=4, scroll=ft.ScrollMode.AUTO, controls=[
-        ft.ElevatedButton("🔍 Search", on_click=switch_tab(0), width=90,
-                           style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_800, color=ft.Colors.WHITE,
-                                                shape=ft.RoundedRectangleBorder(radius=10))),
-        ft.OutlinedButton("💰 Sell", on_click=switch_tab(1), width=75,
-                           style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10),
-                                                side=ft.BorderSide(1, GOLD_BORDER))),
-        ft.OutlinedButton(f"⭐ ({len(shortlist)})", on_click=switch_tab(2), width=65,
-                           style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10),
-                                                side=ft.BorderSide(1, GOLD_BORDER))),
-        ft.OutlinedButton("🆓 Free", on_click=switch_tab(3), width=70,
-                           style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10),
-                                                side=ft.BorderSide(1, GOLD_BORDER))),
-        ft.OutlinedButton(neg_label, on_click=switch_tab(4), width=70,
-                           style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10),
-                                                side=ft.BorderSide(1, GOLD_BORDER))),
-    ])
+    for i, btn in enumerate(tab_btns):
+        btn.on_click = switch_tab(i)
+
+    tab_row = ft.Row(spacing=4, scroll=ft.ScrollMode.AUTO, controls=tab_btns)
+
+    # ── Budget summary (collapsible) ─────────────────────────────────
+    from src.ui.widgets.cards import collapsible_section
+
+    budget_section = collapsible_section(
+        "💰 Transfer Budget",
+        [budget_bar],
+        initially_expanded=False,
+        title_color=ft.Colors.GREEN_400,
+        subtitle=f"{club.finances.transfer_budget:,} EGP  •  {'🟢 Open' if window_open else '🔴 Closed'}",
+    )
 
     return ft.Column(
         expand=True,
@@ -552,9 +572,8 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                             page=page,
                             back_route="/squad",
                         ),
-                        budget_bar,
+                        budget_section,
                         tab_row,
-                        ft.Divider(height=1),
                         search_content,
                         sell_content,
                         shortlist_content,

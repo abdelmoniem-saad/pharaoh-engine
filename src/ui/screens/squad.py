@@ -11,7 +11,7 @@ from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.widgets.stat_bar import stat_bar
 from src.ui.widgets.cards import (
     section_card, info_tile, player_card_h, position_group_header,
-    action_card, form_chips, kv_row,
+    action_card, form_chips, kv_row, collapsible_section,
 )
 from src.ui.theme import (
     ACCENT, TEXT_SECONDARY, TEXT_MUTED,
@@ -148,7 +148,7 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                 content=ft.Column(
                     spacing=SECTION_SPACING,
                     controls=[
-                        # ── Header ──────────────────────────────────────
+                        # ── Header (minimal) ────────────────────────────
                         header_bar(
                             title=gs.user_club_name,
                             subtitle=f"👤 {gs.manager_name}  •  📅 {gs.current_date.strftime('%d %b %Y')}",
@@ -159,93 +159,71 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                                               icon_color=TEXT_SECONDARY,
                                               tooltip="Save",
                                               on_click=lambda e: _save_game(page, conn, gs)),
-                                ft.IconButton(icon=ft.Icons.SETTINGS_OUTLINED, icon_size=18,
-                                              icon_color=TEXT_SECONDARY,
-                                              tooltip="Settings",
-                                              on_click=lambda e: navigate(page, "/settings")),
                             ],
                         ),
 
-                        # ── Quick Info Strip ────────────────────────────
-                        ft.Row(
-                            spacing=6, scroll=ft.ScrollMode.AUTO,
-                            controls=[
-                                info_tile("Position", f"{user_pos}{'st' if user_pos == 1 else 'nd' if user_pos == 2 else 'rd' if user_pos == 3 else 'th'}",
-                                          icon=ft.Icons.EMOJI_EVENTS),
-                                info_tile("Points", str(user_pts), icon=ft.Icons.STAR),
-                                info_tile("Squad", str(len(players)), icon=ft.Icons.PEOPLE),
-                                info_tile("Avg OVR", f"{avg_ovr:.0f}", icon=ft.Icons.INSIGHTS),
+                        # ── Squad Summary (collapsed) ──────────────────
+                        collapsible_section(
+                            "📊 Squad Summary",
+                            [
+                                ft.Row(
+                                    spacing=6, scroll=ft.ScrollMode.AUTO,
+                                    controls=[
+                                        info_tile("Pos", f"{user_pos}{'st' if user_pos == 1 else 'nd' if user_pos == 2 else 'rd' if user_pos == 3 else 'th'}",
+                                                  icon=ft.Icons.EMOJI_EVENTS),
+                                        info_tile("Points", str(user_pts), icon=ft.Icons.STAR),
+                                        info_tile("Squad", str(len(players)), icon=ft.Icons.PEOPLE),
+                                        info_tile("Avg OVR", f"{avg_ovr:.0f}", icon=ft.Icons.INSIGHTS),
+                                    ],
+                                ),
+                                ft.Container(
+                                    content=ft.Row(
+                                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                        controls=[
+                                            ft.Row(spacing=6, tight=True, controls=[
+                                                ft.Text("Form:", size=CAPTION_SIZE, color=TEXT_MUTED),
+                                                form_chips(form_results),
+                                            ]),
+                                            ft.Row(spacing=4, tight=True, controls=[
+                                                *([ ft.Text(f"🏥 {injured_count}", size=CAPTION_SIZE,
+                                                            color=ft.Colors.RED_400)
+                                                ] if injured_count > 0 else []),
+                                                *([ ft.Text(f"🚫 {suspended_count}", size=CAPTION_SIZE,
+                                                            color=ft.Colors.ORANGE_400)
+                                                ] if suspended_count > 0 else []),
+                                            ]),
+                                        ],
+                                    ),
+                                    padding=ft.padding.symmetric(horizontal=8, vertical=6),
+                                    border_radius=8,
+                                    bgcolor=CARD_GLASS,
+                                    border=ft.border.all(1, GOLD_BORDER),
+                                ),
                             ],
+                            initially_expanded=False,
+                            subtitle=f"{len(players)} players  •  Avg {avg_ovr:.0f} OVR",
                         ),
 
-                        # ── Career Stats Bar ──────────────────────────
-                        *_build_career_bar(conn, page),
-
-                        # ── Form strip ──────────────────────────────────
-                        ft.Container(
-                            content=ft.Row(
-                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                                controls=[
-                                    ft.Row(spacing=6, tight=True, controls=[
-                                        ft.Text("Form:", size=CAPTION_SIZE, color=TEXT_MUTED),
-                                        form_chips(form_results),
-                                    ]),
-                                    ft.Row(spacing=4, tight=True, controls=[
-                                        *([ ft.Container(
-                                            content=ft.Text(f"🏥 {injured_count}", size=CAPTION_SIZE,
-                                                            color=ft.Colors.RED_400),
-                                        )] if injured_count > 0 else []),
-                                        *([ ft.Container(
-                                            content=ft.Text(f"🚫 {suspended_count}", size=CAPTION_SIZE,
-                                                            color=ft.Colors.ORANGE_400),
-                                        )] if suspended_count > 0 else []),
-                                    ]),
-                                ],
-                            ),
-                            padding=ft.padding.symmetric(horizontal=8, vertical=6),
-                            border_radius=8,
-                            bgcolor=CARD_GLASS,
-                            border=ft.border.all(1, GOLD_BORDER),
-                        ),
-
-                        # ── Quick Actions ───────────────────────────────
-                        ft.Row(spacing=6, controls=[
-                            ft.OutlinedButton("🏟️ Club", height=34,
-                                              on_click=lambda e: navigate(page, "/club"),
-                                              style=ft.ButtonStyle(
-                                                  padding=ft.padding.symmetric(horizontal=12),
-                                                  shape=ft.RoundedRectangleBorder(radius=10),
-                                                  side=ft.BorderSide(1, GOLD_BORDER),
-                                              )),
-                            ft.OutlinedButton("🏪 Transfers", height=34,
-                                              on_click=lambda e: navigate(page, "/transfers"),
-                                              style=ft.ButtonStyle(
-                                                  padding=ft.padding.symmetric(horizontal=12),
-                                                  shape=ft.RoundedRectangleBorder(radius=10),
-                                                  side=ft.BorderSide(1, GOLD_BORDER),
-                                              )),
-                            ft.OutlinedButton("🔄 Compare", height=34,
-                                              on_click=lambda e: _start_compare(page, players),
-                                              style=ft.ButtonStyle(
-                                                  padding=ft.padding.symmetric(horizontal=12),
-                                                  shape=ft.RoundedRectangleBorder(radius=10),
-                                                  side=ft.BorderSide(1, GOLD_BORDER),
-                                              )),
-                        ]),
-
-                        # ── Sort + Player List ──────────────────────────
+                        # ── Sort + Compare + Player List ────────────────
                         ft.Row(
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
                                 ft.Text("Tap a player for details",
                                         size=CAPTION_SIZE, color=TEXT_MUTED, italic=True),
-                                ft.Dropdown(
-                                    label="Sort",
-                                    value=default_sort,
-                                    options=[ft.dropdown.Option(k) for k in sort_options],
-                                    on_select=on_sort_change,
-                                    width=120, text_size=11,
-                                ),
+                                ft.Row(spacing=4, tight=True, controls=[
+                                    ft.IconButton(
+                                        icon=ft.Icons.COMPARE_ARROWS, icon_size=18,
+                                        icon_color=TEXT_SECONDARY, tooltip="Compare Players",
+                                        on_click=lambda e: _start_compare(page, players),
+                                    ),
+                                    ft.Dropdown(
+                                        label="Sort",
+                                        value=default_sort,
+                                        options=[ft.dropdown.Option(k) for k in sort_options],
+                                        on_select=on_sort_change,
+                                        width=120, text_size=11,
+                                    ),
+                                ]),
                             ],
                         ),
 

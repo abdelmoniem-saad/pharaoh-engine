@@ -113,12 +113,12 @@ def build_match_day_screen(page: ft.Page) -> ft.Column:
 
 
 def _build_match_preview(page, conn, gs, fixture):
-    """Build the pre-match preview with opponent info and simulate button."""
+    """Build the pre-match preview — focused on the upcoming match."""
     from src.ui.app import navigate, show_snackbar
+    from src.ui.widgets.cards import collapsible_section, info_tile
 
     is_home = fixture.home_club_id == gs.user_club_id
     venue_text = "🏟️ HOME" if is_home else "✈️ AWAY"
-    venue_color = ft.Colors.GREEN_400 if is_home else ft.Colors.ORANGE_400
 
     match_date = fixture.date
     date_str = match_date.strftime("%A, %d %B %Y") if match_date else "TBD"
@@ -129,16 +129,6 @@ def _build_match_preview(page, conn, gs, fixture):
     opp_club = queries.get_club(conn, opp_id)
 
     days_until = (match_date - gs.current_date).days if match_date else 0
-
-    # Opponent form
-    opp_form = _build_club_form(conn, opp_id)
-
-    # Head-to-head record
-    h2h = queries.get_head_to_head(conn, gs.user_club_id, opp_id)
-
-    # Transfer window status
-    from src.core.transfers import get_window_status
-    window_status = get_window_status(gs.current_date)
 
     def simulate_click(e):
         navigate(page, "/pre_match")
@@ -151,7 +141,7 @@ def _build_match_preview(page, conn, gs, fixture):
         advance_day(conn, gs)
         navigate(page, "/match_day")
 
-    # Match card — use shared widget
+    # ── Match card (always visible — the main focus) ─────────────────
     match_card = match_score_card(
         home_name=fixture.home_club_name,
         away_name=fixture.away_club_name,
@@ -161,50 +151,7 @@ def _build_match_preview(page, conn, gs, fixture):
         date_str=date_str,
     )
 
-    # Squad availability
-    user_squad = queries.get_players_by_club(conn, gs.user_club_id)
-    injured_count = sum(1 for p in user_squad if p.injury_days_remaining > 0)
-    suspended_count = sum(1 for p in user_squad if p.suspension_matches > 0)
-
-    # Info chips — using shared info_tile
-    info_items = []
-    if user_club and user_club.formation:
-        info_items.append(info_tile("Formation", user_club.formation, icon=ft.Icons.GRID_VIEW))
-    if user_club and user_club.mentality:
-        info_items.append(info_tile("Mentality",
-                                     user_club.mentality.name.replace("_", " ").title(),
-                                     icon=ft.Icons.PSYCHOLOGY))
-    if opp_club:
-        info_items.append(info_tile("Opp. Rep", str(opp_club.reputation), icon=ft.Icons.STAR))
-    if user_club:
-        from src.core.board import get_confidence_level
-        info_items.append(info_tile("Board",
-                                     get_confidence_level(user_club.board_confidence).value,
-                                     icon=ft.Icons.ACCOUNT_BALANCE))
-        info_items.append(info_tile("Target",
-                                     expectation_display(user_club.season_expectation),
-                                     icon=ft.Icons.FLAG))
-    if injured_count > 0:
-        info_items.append(info_tile("Injured", str(injured_count),
-                                     icon=ft.Icons.LOCAL_HOSPITAL, color=TEXT_DANGER))
-    if suspended_count > 0:
-        info_items.append(info_tile("Suspended", str(suspended_count),
-                                     icon=ft.Icons.BLOCK, color=TEXT_WARNING))
-
-    # Attendance preview
-    from src.core.fans import calculate_attendance, get_atmosphere_description
-    is_home_match = fixture.home_club_id == gs.user_club_id
-    opp_rep_val = opp_club.reputation if opp_club else 100
-    expected_attendance = calculate_attendance(user_club, is_home_match, opp_rep_val) if user_club else 0
-    atmosphere_text = get_atmosphere_description(user_club.fan_happiness) if user_club else ""
-
-    # Form streak
-    form_streak_widget = _build_form_streak(conn, gs.user_club_id)
-
-    # Recent form
-    user_form = _build_club_form(conn, gs.user_club_id)
-
-    # Action buttons
+    # ── Action buttons (always visible) ──────────────────────────────
     action_controls = []
     if days_until <= 0:
         action_controls.append(
@@ -242,6 +189,100 @@ def _build_match_preview(page, conn, gs, fixture):
                                on_click=advance_one_day),
         )
 
+    # ── Match Intelligence (collapsed) ───────────────────────────────
+    intel_controls = []
+
+    # Form comparison
+    user_form = _build_club_form(conn, gs.user_club_id)
+    opp_form = _build_club_form(conn, opp_id)
+    intel_controls.append(
+        ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER, spacing=15,
+            controls=[
+                ft.Column(horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                           spacing=2, controls=[
+                    ft.Text("Your Form", size=10, color=ft.Colors.GREY_500),
+                    user_form,
+                ]),
+                ft.Column(horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                           spacing=2, controls=[
+                    ft.Text("Opponent Form", size=10, color=ft.Colors.GREY_500),
+                    opp_form,
+                ]),
+            ],
+        )
+    )
+
+    # Key info chips
+    info_items = []
+    if user_club and user_club.formation:
+        info_items.append(info_tile("Formation", user_club.formation, icon=ft.Icons.GRID_VIEW))
+    if opp_club:
+        info_items.append(info_tile("Opp. Rep", str(opp_club.reputation), icon=ft.Icons.STAR))
+    user_squad = queries.get_players_by_club(conn, gs.user_club_id)
+    injured_count = sum(1 for p in user_squad if p.injury_days_remaining > 0)
+    suspended_count = sum(1 for p in user_squad if p.suspension_matches > 0)
+    if injured_count > 0:
+        info_items.append(info_tile("Injured", str(injured_count),
+                                     icon=ft.Icons.LOCAL_HOSPITAL, color=TEXT_DANGER))
+    if suspended_count > 0:
+        info_items.append(info_tile("Suspended", str(suspended_count),
+                                     icon=ft.Icons.BLOCK, color=TEXT_WARNING))
+    if info_items:
+        intel_controls.append(
+            ft.Row(alignment=ft.MainAxisAlignment.CENTER,
+                   spacing=8, wrap=True, controls=info_items)
+        )
+
+    # H2H record
+    h2h = queries.get_head_to_head(conn, gs.user_club_id, opp_id)
+    if h2h['total'] > 0:
+        intel_controls.append(
+            ft.Row(
+                alignment=ft.MainAxisAlignment.CENTER, spacing=12,
+                controls=[
+                    ft.Text("📊 H2H:", size=11, color=ft.Colors.GREY_400),
+                    ft.Text(f"W{h2h['wins']}", size=11,
+                            color=ft.Colors.GREEN_400, weight=ft.FontWeight.BOLD),
+                    ft.Text(f"D{h2h['draws']}", size=11, color=ft.Colors.YELLOW_400),
+                    ft.Text(f"L{h2h['losses']}", size=11, color=ft.Colors.RED_400),
+                ],
+            )
+        )
+
+    # Attendance
+    from src.core.fans import calculate_attendance
+    is_home_match = fixture.home_club_id == gs.user_club_id
+    opp_rep_val = opp_club.reputation if opp_club else 100
+    expected_attendance = calculate_attendance(user_club, is_home_match, opp_rep_val) if user_club else 0
+    if expected_attendance > 0:
+        intel_controls.append(
+            ft.Text(f"🏟️ {expected_attendance:,} expected attendance",
+                    size=11, color=ft.Colors.GREY_400, text_align=ft.TextAlign.CENTER)
+        )
+
+    # Subtitle for the collapsed section
+    avail_count = len(user_squad) - injured_count - suspended_count
+    intel_subtitle = f"{avail_count} available  •  {venue_text}"
+
+    intel_section = collapsible_section(
+        "📊 Match Intelligence",
+        intel_controls,
+        initially_expanded=False,
+        title_color=ft.Colors.BLUE_400,
+        subtitle=intel_subtitle,
+    )
+
+    # ── Matchday Fixtures (collapsed) ────────────────────────────────
+    fixture_controls = _build_matchday_fixtures(conn, fixture, gs.user_club_id)
+    fixtures_section = collapsible_section(
+        "📋 All Matchday Fixtures",
+        fixture_controls,
+        initially_expanded=False,
+        title_color=ft.Colors.GREY_400,
+        subtitle=f"Matchday {fixture.matchday}",
+    )
+
     return ft.Column(
         expand=True,
         scroll=ft.ScrollMode.AUTO,
@@ -259,109 +300,13 @@ def _build_match_preview(page, conn, gs, fixture):
                             icon=ft.Icons.SPORTS_SOCCER,
                             page=page,
                         ),
-                        # News ticker with recent headlines
-                        _build_news_ticker(conn),
                         match_card,
-                        ft.Row(alignment=ft.MainAxisAlignment.CENTER,
-                               spacing=8, wrap=True, controls=info_items
-                        ) if info_items else ft.Container(),
-                        # Attendance + atmosphere
-                        ft.Row(
-                            alignment=ft.MainAxisAlignment.CENTER, spacing=12,
-                            controls=[
-                                ft.Text(f"🏟️ {expected_attendance:,} expected", size=11,
-                                         color=ft.Colors.GREY_400) if expected_attendance > 0 else ft.Container(),
-                                form_streak_widget if form_streak_widget else ft.Container(),
-                            ],
-                        ),
-                        ft.Text(f"🎤 {atmosphere_text}", size=11, color=ft.Colors.GREY_500,
-                                 italic=True, text_align=ft.TextAlign.CENTER) if atmosphere_text else ft.Container(),
-                        # Form rows
-                        ft.Row(
-                            alignment=ft.MainAxisAlignment.CENTER, spacing=15,
-                            controls=[
-                                ft.Column(horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                           spacing=2, controls=[
-                                    ft.Text("Your Form", size=10, color=ft.Colors.GREY_500),
-                                    user_form,
-                                ]),
-                                ft.Column(horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                           spacing=2, controls=[
-                                    ft.Text("Opponent Form", size=10, color=ft.Colors.GREY_500),
-                                    opp_form,
-                                ]),
-                            ],
-                        ),
-                        # Head-to-head record
-                        *(
-                            [ft.Container(
-                                content=ft.Row(
-                                    alignment=ft.MainAxisAlignment.CENTER, spacing=12,
-                                    controls=[
-                                        ft.Text("📊 H2H:", size=11, color=ft.Colors.GREY_400),
-                                        ft.Text(f"W{h2h['wins']}", size=11,
-                                                color=ft.Colors.GREEN_400, weight=ft.FontWeight.BOLD),
-                                        ft.Text(f"D{h2h['draws']}", size=11,
-                                                color=ft.Colors.YELLOW_400),
-                                        ft.Text(f"L{h2h['losses']}", size=11,
-                                                color=ft.Colors.RED_400),
-                                        ft.Text(f"({h2h['goals_for']}:{h2h['goals_against']})", size=10,
-                                                color=ft.Colors.GREY_500),
-                                    ],
-                                ),
-                                padding=ft.padding.symmetric(horizontal=10, vertical=4),
-                                border_radius=8,
-                                bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
-                                border=ft.border.all(1, ft.Colors.with_opacity(0.12, "#FFD54F")),
-                            )] if h2h['total'] > 0 else []
-                        ),
-                        # Transfer window status
-                        ft.Text(window_status, size=10, color=ft.Colors.GREY_500,
-                                text_align=ft.TextAlign.CENTER),
-                        ft.Container(height=5),
+                        ft.Container(height=4),
                         *action_controls,
+                        ft.Container(height=6),
+                        intel_section,
+                        fixtures_section,
                         ft.Container(height=10),
-
-                        # ── Quick Actions ────────────────────────────
-                        ft.Row(
-                            alignment=ft.MainAxisAlignment.CENTER,
-                            spacing=6, wrap=True,
-                            controls=[
-                                ft.OutlinedButton("📋 Tactics", height=36,
-                                                   on_click=lambda e: navigate(page, "/tactics"),
-                                                   style=ft.ButtonStyle(
-                                                       shape=ft.RoundedRectangleBorder(radius=10),
-                                                       side=ft.BorderSide(1, GOLD_BORDER),
-                                                   )),
-                                ft.OutlinedButton("💰 Transfers", height=36,
-                                                   on_click=lambda e: navigate(page, "/transfers"),
-                                                   style=ft.ButtonStyle(
-                                                       shape=ft.RoundedRectangleBorder(radius=10),
-                                                       side=ft.BorderSide(1, GOLD_BORDER),
-                                                   )),
-                                ft.OutlinedButton("🏟️ Club", height=36,
-                                                   on_click=lambda e: navigate(page, "/club"),
-                                                   style=ft.ButtonStyle(
-                                                       shape=ft.RoundedRectangleBorder(radius=10),
-                                                       side=ft.BorderSide(1, GOLD_BORDER),
-                                                   )),
-                                *(
-                                    [ft.OutlinedButton(
-                                        f"🏥 {injured_count + suspended_count}",
-                                        height=36,
-                                        style=ft.ButtonStyle(color=ft.Colors.RED_400),
-                                        on_click=lambda e: _show_availability_dialog(page, user_squad),
-                                    )] if (injured_count + suspended_count) > 0 else []
-                                ),
-                            ],
-                        ),
-
-                        # ── Mini League Table ────────────────────────
-                        *_build_mini_table(conn, gs.user_club_id),
-                        ft.Container(height=5),
-
-                        # ── Matchday Fixture List ────────────────────
-                        *_build_matchday_fixtures(conn, fixture, gs.user_club_id),
                     ],
                 ),
             ),

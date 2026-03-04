@@ -65,6 +65,54 @@ def section_card(
     )
 
 
+# ── Collapsible Section ─────────────────────────────────────────────────────
+
+def collapsible_section(
+    title: str,
+    controls: list,
+    initially_expanded: bool = False,
+    title_color: str = ACCENT,
+    icon: str | None = None,
+    subtitle: str | None = None,
+) -> ft.Container:
+    """
+    A collapsible card section — tap header to expand / collapse.
+    Same visual language as section_card but with progressive disclosure.
+    """
+    leading = None
+    if icon:
+        leading = ft.Icon(icon, size=16, color=title_color)
+
+    return ft.Container(
+        content=ft.ExpansionTile(
+            title=ft.Text(title, size=13, weight=ft.FontWeight.W_600,
+                          color=title_color),
+            subtitle=ft.Text(subtitle, size=TINY_SIZE, color=TEXT_MUTED) if subtitle else None,
+            leading=leading,
+            controls=controls,
+            expanded=initially_expanded,
+            maintain_state=True,
+            controls_padding=ft.padding.only(left=8, right=8, bottom=8),
+            tile_padding=ft.padding.symmetric(horizontal=10, vertical=4),
+            icon_color=title_color,
+            collapsed_icon_color=TEXT_MUTED,
+            text_color=title_color,
+            collapsed_text_color=TEXT_SECONDARY,
+            bgcolor=ft.Colors.TRANSPARENT,
+            collapsed_bgcolor=ft.Colors.TRANSPARENT,
+            dense=True,
+        ),
+        border_radius=CARD_RADIUS,
+        bgcolor=CARD_GLASS_STRONG,
+        border=ft.border.only(
+            left=ft.BorderSide(3, title_color),
+            top=ft.BorderSide(1, GOLD_BORDER),
+            right=ft.BorderSide(1, GOLD_BORDER),
+            bottom=ft.BorderSide(1, GOLD_BORDER),
+        ),
+    )
+
+
 # ── Info Tile ───────────────────────────────────────────────────────────────
 
 def info_tile(

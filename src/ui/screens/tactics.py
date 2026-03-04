@@ -10,6 +10,7 @@ from src.core.tactics import get_available_formations, PRESETS
 from src.utils.config import Mentality, Position, FORMATION_TEMPLATES
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.theme import header_bar, GOLD_BORDER, CARD_GLASS_STRONG
+from src.ui.widgets.cards import collapsible_section
 
 
 # Position display coordinates on a pitch (x%, y%) from top-left
@@ -203,28 +204,14 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                                 ),
                             ],
                         ),
-                        # Mentality bar
-                        ft.Container(
-                            content=ft.Row(
-                                controls=[
-                                    ft.Text("Mentality: ", size=11, color=ft.Colors.GREY_500),
-                                    ft.Container(
-                                        width=int(club.mentality) / 7 * 200,
-                                        height=6, bgcolor=mentality_color,
-                                        border_radius=3,
-                                    ),
-                                ],
-                            ),
-                        ),
                         # Pitch
                         ft.Text("Formation View", size=14, weight=ft.FontWeight.W_500),
                         pitch,
-                        ft.Divider(height=1),
-                        # Tactical Sliders
-                        ft.Text("🎛️ Tactical Sliders", size=14, weight=ft.FontWeight.W_500),
-                        ft.Container(
-                            padding=ft.padding.symmetric(horizontal=4),
-                            content=ft.Column(spacing=8, controls=[
+
+                        # Tactical Sliders (collapsible, expanded by default)
+                        collapsible_section(
+                            "🎛️ Tactical Sliders",
+                            [
                                 _slider_row("Pressing Intensity", club.pressing_intensity,
                                             "pressing_intensity", "Passive", "Aggressive"),
                                 _slider_row("Tempo", club.tempo,
@@ -233,12 +220,19 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                                             "width", "Narrow", "Wide"),
                                 _slider_row("Defensive Line", club.defensive_line,
                                             "defensive_line", "Deep", "High"),
-                            ]),
+                            ],
+                            initially_expanded=True,
+                            title_color=ft.Colors.CYAN_400,
                         ),
-                        ft.Divider(height=1),
-                        # Presets
-                        ft.Text("⚡ Quick Presets", size=14, weight=ft.FontWeight.W_500),
-                        *preset_cards,
+
+                        # Quick Presets (collapsed by default)
+                        collapsible_section(
+                            "⚡ Quick Presets",
+                            preset_cards,
+                            initially_expanded=False,
+                            title_color=ft.Colors.AMBER_400,
+                            subtitle="Tap to apply a preset formation & mentality",
+                        ),
                     ],
                 ),
             ),

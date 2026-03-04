@@ -1,8 +1,9 @@
 """
 Chart widgets for Pharaoh Engine — pharaoh-themed data visualization.
 
-Uses Flet's built-in LineChart and BarChart for player form,
-club position history, attribute breakdowns, and form trend lines.
+Flet 0.80.x removed the built-in LineChart / BarChart controls.
+This module provides lightweight pure-Flet visual replacements using
+containers, rows, and gradients — no external chart dependencies.
 """
 from __future__ import annotations
 
@@ -26,10 +27,8 @@ def player_form_line_chart(
     height: int = 160,
 ) -> ft.Container:
     """
-    Line chart showing a player's match-by-match ratings.
-
-    Args:
-        ratings: list of (matchday, rating) tuples, oldest first.
+    Visual form chart showing a player\'s match-by-match ratings
+    as a bar sparkline with color-coded columns.
     """
     if not ratings:
         return ft.Container(
@@ -39,84 +38,75 @@ def player_form_line_chart(
             alignment=ft.Alignment(0, 0),
         )
 
-    data_points = [
-        ft.LineChartDataPoint(
-            x=i,
-            y=r,
-            tooltip=f"MD {md}: {r:.1f}",
-        )
-        for i, (md, r) in enumerate(ratings)
-    ]
-
     avg_rating = sum(r for _, r in ratings) / len(ratings)
-    min_y = max(4.0, min(r for _, r in ratings) - 0.5)
-    max_y = min(10.0, max(r for _, r in ratings) + 0.5)
+    min_r = min(r for _, r in ratings)
+    max_r = max(r for _, r in ratings)
+    r_range = max(max_r - min_r, 1.0)
+    bar_height = height - 40
 
-    line = ft.LineChartData(
-        data_points=data_points,
-        stroke_width=2.5,
-        color=_GOLD,
-        curved=True,
-        stroke_cap_round=True,
-        below_line_gradient=ft.LinearGradient(
-            colors=[ft.Colors.with_opacity(0.25, _GOLD),
-                    ft.Colors.with_opacity(0.0, _GOLD)],
-            begin=ft.Alignment(0, -1),
-            end=ft.Alignment(0, 1),
-        ),
-    )
+    dots = []
+    for i, (md, r) in enumerate(ratings):
+        color = _GREEN if r >= 7.5 else _GOLD if r >= 6.5 else _RED
+        frac = (r - min_r + 0.5) / (r_range + 1.0)
+        dot_bottom = max(8, int(frac * bar_height))
 
-    # Average line
-    avg_line = ft.LineChartData(
-        data_points=[
-            ft.LineChartDataPoint(x=0, y=avg_rating),
-            ft.LineChartDataPoint(x=len(ratings) - 1, y=avg_rating),
-        ],
-        stroke_width=1,
-        color=ft.Colors.with_opacity(0.4, ft.Colors.WHITE),
-        dash_pattern=[4, 4],
-    )
-
-    chart = ft.LineChart(
-        data_series=[line, avg_line],
-        width=width,
-        height=height,
-        min_x=0,
-        max_x=max(len(ratings) - 1, 1),
-        min_y=min_y,
-        max_y=max_y,
-        bgcolor="transparent",
-        border=ft.border.all(1, _GRID),
-        horizontal_grid_lines=ft.ChartGridLines(
-            interval=1, color=_GRID, width=0.5,
-        ),
-        left_axis=ft.ChartAxis(
-            labels_size=28,
-            labels=[
-                ft.ChartAxisLabel(
-                    value=v,
-                    label=ft.Text(str(int(v)), size=9, color=_TEXT_MUTED),
-                )
-                for v in range(int(min_y), int(max_y) + 1)
-            ],
-        ),
-        bottom_axis=ft.ChartAxis(
-            labels_size=22,
-            labels=[
-                ft.ChartAxisLabel(
-                    value=i,
-                    label=ft.Text(f"MD{md}", size=8, color=_TEXT_MUTED),
-                )
-                for i, (md, _) in enumerate(ratings)
-                if i % max(1, len(ratings) // 5) == 0 or i == len(ratings) - 1
-            ],
-        ),
-        tooltip_bgcolor=_BG_SURFACE,
-    )
+        dots.append(
+            ft.Container(
+                content=ft.Column(
+                    spacing=2,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    alignment=ft.MainAxisAlignment.END,
+                    controls=[
+                        ft.Text(f"{r:.1f}", size=8, color=color,
+                                weight=ft.FontWeight.BOLD,
+                                text_align=ft.TextAlign.CENTER),
+                        ft.Container(
+                            width=max(6, (width - 40) // len(ratings) - 4),
+                            height=dot_bottom,
+                            border_radius=ft.border_radius.only(top_left=3, top_right=3),
+                            bgcolor=color,
+                            gradient=ft.LinearGradient(
+                                colors=[ft.Colors.with_opacity(0.3, color), color],
+                                begin=ft.Alignment(0, 1),
+                                end=ft.Alignment(0, -1),
+                            ),
+                        ),
+                        ft.Text(f"{md}", size=7, color=_TEXT_MUTED),
+                    ],
+                ),
+                expand=True,
+            )
+        )
 
     return ft.Container(
-        content=chart,
-        padding=ft.padding.only(right=8, top=4),
+        content=ft.Column(
+            spacing=2,
+            controls=[
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    controls=[
+                        ft.Text("Match Ratings", size=10, color=_TEXT_MUTED),
+                        ft.Text(f"Avg: {avg_rating:.1f}", size=10, color=_GOLD,
+                                weight=ft.FontWeight.BOLD),
+                    ],
+                ),
+                ft.Container(
+                    content=ft.Row(
+                        spacing=2,
+                        alignment=ft.MainAxisAlignment.SPACE_EVENLY,
+                        vertical_alignment=ft.CrossAxisAlignment.END,
+                        controls=dots,
+                    ),
+                    height=bar_height + 18,
+                    padding=ft.padding.only(left=4, right=4, bottom=2),
+                    border_radius=8,
+                    bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.WHITE),
+                    border=ft.border.all(1, _GRID),
+                ),
+            ],
+        ),
+        width=width,
+        padding=ft.padding.only(top=4),
     )
 
 
@@ -125,75 +115,55 @@ def player_stats_bar_chart(
     width: int = 340,
     height: int = 140,
 ) -> ft.Container:
-    """
-    Grouped bar chart for player attribute categories.
-
-    Args:
-        categories: dict like {"Technical": 14.2, "Physical": 12.5, ...}
-    """
+    """Horizontal bar chart for player attribute categories."""
     if not categories:
         return ft.Container()
 
-    bar_groups = []
-    for i, (name, value) in enumerate(categories.items()):
-        color = _GOLD if value >= 14 else _GREEN if value >= 10 else _AMBER if value >= 7 else _RED
-        bar_groups.append(
-            ft.BarChartGroup(
-                x=i,
-                bar_rods=[
-                    ft.BarChartRod(
-                        from_y=0,
-                        to_y=value,
-                        width=28,
-                        color=color,
-                        tooltip=f"{name}: {value:.1f}",
-                        border_radius=ft.border_radius.only(
-                            top_left=4, top_right=4,
+    max_val = 20.0
+    bars = []
+    for name, value in categories.items():
+        color = _GREEN if value >= 14 else _GOLD if value >= 10 else _AMBER if value >= 7 else _RED
+        pct = min(value / max_val, 1.0)
+
+        bars.append(
+            ft.Container(
+                content=ft.Row(
+                    spacing=6,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        ft.Text(name[:5], size=10, color=_TEXT_MUTED, width=40),
+                        ft.Container(
+                            content=ft.Container(
+                                width=pct * (width - 110),
+                                height=14,
+                                border_radius=ft.border_radius.only(
+                                    top_right=4, bottom_right=4),
+                                bgcolor=color,
+                                gradient=ft.LinearGradient(
+                                    colors=[ft.Colors.with_opacity(0.5, color), color],
+                                    begin=ft.Alignment(-1, 0),
+                                    end=ft.Alignment(1, 0),
+                                ),
+                            ),
+                            expand=True,
+                            height=14,
+                            border_radius=7,
+                            bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
                         ),
-                        gradient=ft.LinearGradient(
-                            colors=[ft.Colors.with_opacity(0.7, color), color],
-                            begin=ft.Alignment(0, 1),
-                            end=ft.Alignment(0, -1),
-                        ),
-                    ),
-                ],
+                        ft.Text(f"{value:.1f}", size=10, color=color,
+                                weight=ft.FontWeight.BOLD, width=32,
+                                text_align=ft.TextAlign.RIGHT),
+                    ],
+                ),
+                padding=ft.padding.symmetric(vertical=1),
             )
         )
 
-    chart = ft.BarChart(
-        bar_groups=bar_groups,
+    return ft.Container(
+        content=ft.Column(spacing=3, controls=bars),
         width=width,
-        height=height,
-        bgcolor="transparent",
-        border=ft.border.all(1, _GRID),
-        max_y=20,
-        horizontal_grid_lines=ft.ChartGridLines(
-            interval=5, color=_GRID, width=0.5,
-        ),
-        left_axis=ft.ChartAxis(
-            labels_size=24,
-            labels=[
-                ft.ChartAxisLabel(value=v, label=ft.Text(str(v), size=9, color=_TEXT_MUTED))
-                for v in [0, 5, 10, 15, 20]
-            ],
-        ),
-        bottom_axis=ft.ChartAxis(
-            labels_size=30,
-            labels=[
-                ft.ChartAxisLabel(
-                    value=i,
-                    label=ft.Text(
-                        name[:4], size=9, color=_TEXT_MUTED,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                )
-                for i, name in enumerate(categories.keys())
-            ],
-        ),
-        tooltip_bgcolor=_BG_SURFACE,
+        padding=ft.padding.only(top=4, right=4),
     )
-
-    return ft.Container(content=chart, padding=ft.padding.only(right=8, top=4))
 
 
 def season_position_chart(
@@ -202,13 +172,7 @@ def season_position_chart(
     width: int = 340,
     height: int = 140,
 ) -> ft.Container:
-    """
-    Line chart showing league position over matchdays (1 at top).
-
-    Args:
-        positions: list of (matchday, position) tuples.
-        total_teams: number of teams in the league.
-    """
+    """Visual position tracker — colored badges per matchday."""
     if not positions:
         return ft.Container(
             content=ft.Text("No position data yet", size=11, color=_TEXT_MUTED,
@@ -217,71 +181,63 @@ def season_position_chart(
             alignment=ft.Alignment(0, 0),
         )
 
-    data_points = [
-        ft.LineChartDataPoint(
-            x=i,
-            y=total_teams + 1 - pos,  # invert: 1st place = highest y
-            tooltip=f"MD {md}: {pos}{_ordinal(pos)}",
+    badges = []
+    for md, pos in positions:
+        color = (_GREEN if pos <= 4 else _GOLD if pos <= 8
+                 else _AMBER if pos <= 14 else _RED)
+        badges.append(
+            ft.Container(
+                content=ft.Column(
+                    spacing=1,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        ft.Text(f"{pos}", size=11, color=color,
+                                weight=ft.FontWeight.BOLD),
+                        ft.Text(f"{md}", size=7, color=_TEXT_MUTED),
+                    ],
+                ),
+                width=max(28, (width - 20) // max(len(positions), 1)),
+                height=40,
+                alignment=ft.Alignment(0, 0),
+                border_radius=6,
+                bgcolor=ft.Colors.with_opacity(0.08, color),
+                border=ft.border.all(1, ft.Colors.with_opacity(0.2, color)),
+            )
         )
-        for i, (md, pos) in enumerate(positions)
-    ]
 
-    # Color based on latest position
     latest_pos = positions[-1][1]
-    line_color = _GREEN if latest_pos <= 4 else _GOLD if latest_pos <= 8 else _AMBER if latest_pos <= 14 else _RED
+    latest_color = (_GREEN if latest_pos <= 4 else _GOLD if latest_pos <= 8
+                    else _AMBER if latest_pos <= 14 else _RED)
 
-    line = ft.LineChartData(
-        data_points=data_points,
-        stroke_width=2.5,
-        color=line_color,
-        curved=True,
-        stroke_cap_round=True,
-        below_line_gradient=ft.LinearGradient(
-            colors=[ft.Colors.with_opacity(0.15, line_color),
-                    ft.Colors.with_opacity(0.0, line_color)],
-            begin=ft.Alignment(0, -1),
-            end=ft.Alignment(0, 1),
+    return ft.Container(
+        content=ft.Column(
+            spacing=6,
+            controls=[
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    controls=[
+                        ft.Text("Position History", size=10, color=_TEXT_MUTED),
+                        ft.Container(
+                            content=ft.Text(
+                                f"{latest_pos}{_ordinal(latest_pos)}",
+                                size=12, color=latest_color,
+                                weight=ft.FontWeight.BOLD),
+                            padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                            border_radius=8,
+                            bgcolor=ft.Colors.with_opacity(0.12, latest_color),
+                        ),
+                    ],
+                ),
+                ft.Row(
+                    spacing=2,
+                    scroll=ft.ScrollMode.AUTO,
+                    controls=badges,
+                ),
+            ],
         ),
-    )
-
-    chart = ft.LineChart(
-        data_series=[line],
         width=width,
-        height=height,
-        min_x=0,
-        max_x=max(len(positions) - 1, 1),
-        min_y=0,
-        max_y=total_teams + 1,
-        bgcolor="transparent",
-        border=ft.border.all(1, _GRID),
-        horizontal_grid_lines=ft.ChartGridLines(
-            interval=total_teams // 3, color=_GRID, width=0.5,
-        ),
-        left_axis=ft.ChartAxis(
-            labels_size=28,
-            labels=[
-                ft.ChartAxisLabel(
-                    value=total_teams + 1 - v,
-                    label=ft.Text(f"{v}", size=9, color=_TEXT_MUTED),
-                )
-                for v in [1, total_teams // 3, 2 * total_teams // 3, total_teams]
-            ],
-        ),
-        bottom_axis=ft.ChartAxis(
-            labels_size=22,
-            labels=[
-                ft.ChartAxisLabel(
-                    value=i,
-                    label=ft.Text(f"{md}", size=8, color=_TEXT_MUTED),
-                )
-                for i, (md, _) in enumerate(positions)
-                if i % max(1, len(positions) // 5) == 0 or i == len(positions) - 1
-            ],
-        ),
-        tooltip_bgcolor=_BG_SURFACE,
+        padding=ft.padding.only(top=4),
     )
-
-    return ft.Container(content=chart, padding=ft.padding.only(right=8, top=4))
 
 
 def club_form_trend_line(
@@ -289,59 +245,65 @@ def club_form_trend_line(
     width: int = 340,
     height: int = 100,
 ) -> ft.Container:
-    """
-    Mini trend line mapping W=3, D=1, L=0 over recent matches.
-
-    Args:
-        results: list of "W", "D", "L" strings, most recent first.
-    """
+    """Mini trend visualization for W/D/L as colored blocks."""
     if not results:
         return ft.Container()
 
-    # Reverse so oldest is first (left side of chart)
     ordered = list(reversed(results))
+    color_map = {"W": _GREEN, "D": _AMBER, "L": _RED}
+    height_map = {"W": 40, "D": 22, "L": 8}
+    label_map = {"W": "Win", "D": "Draw", "L": "Loss"}
 
-    points_map = {"W": 3, "D": 1, "L": 0}
-    data_points = [
-        ft.LineChartDataPoint(
-            x=i,
-            y=points_map.get(r, 0),
-            tooltip=f"{'Win' if r == 'W' else 'Draw' if r == 'D' else 'Loss'}",
+    blocks = []
+    for r in ordered:
+        color = color_map.get(r, _TEXT_MUTED)
+        h = height_map.get(r, 15)
+        blocks.append(
+            ft.Tooltip(
+                message=label_map.get(r, r),
+                content=ft.Container(
+                    content=ft.Text(r[0], size=9, color=ft.Colors.WHITE,
+                                    weight=ft.FontWeight.BOLD,
+                                    text_align=ft.TextAlign.CENTER),
+                    width=max(20, (width - 20) // max(len(ordered), 1) - 4),
+                    height=h,
+                    border_radius=ft.border_radius.only(top_left=4, top_right=4),
+                    bgcolor=color,
+                    alignment=ft.Alignment(0, 0),
+                ),
+            )
         )
-        for i, r in enumerate(ordered)
-    ]
 
-    line = ft.LineChartData(
-        data_points=data_points,
-        stroke_width=2,
-        color=_GOLD,
-        curved=True,
-        stroke_cap_round=True,
-    )
+    wins = sum(1 for r in results if r == "W")
+    draws = sum(1 for r in results if r == "D")
+    losses = sum(1 for r in results if r == "L")
 
-    chart = ft.LineChart(
-        data_series=[line],
-        width=width,
-        height=height,
-        min_x=0,
-        max_x=max(len(ordered) - 1, 1),
-        min_y=-0.5,
-        max_y=3.5,
-        bgcolor="transparent",
-        border=ft.border.all(1, _GRID),
-        left_axis=ft.ChartAxis(
-            labels_size=22,
-            labels=[
-                ft.ChartAxisLabel(value=0, label=ft.Text("L", size=9, color=_RED)),
-                ft.ChartAxisLabel(value=1, label=ft.Text("D", size=9, color=_AMBER)),
-                ft.ChartAxisLabel(value=3, label=ft.Text("W", size=9, color=_GREEN)),
+    return ft.Container(
+        content=ft.Column(
+            spacing=4,
+            controls=[
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    controls=[
+                        ft.Text("Form Trend", size=10, color=_TEXT_MUTED),
+                        ft.Row(spacing=8, tight=True, controls=[
+                            ft.Text(f"W{wins}", size=10, color=_GREEN),
+                            ft.Text(f"D{draws}", size=10, color=_AMBER),
+                            ft.Text(f"L{losses}", size=10, color=_RED),
+                        ]),
+                    ],
+                ),
+                ft.Row(
+                    spacing=3,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    vertical_alignment=ft.CrossAxisAlignment.END,
+                    controls=blocks,
+                ),
             ],
         ),
-        bottom_axis=ft.ChartAxis(labels_size=0),
-        tooltip_bgcolor=_BG_SURFACE,
+        width=width,
+        padding=ft.padding.only(top=4),
     )
-
-    return ft.Container(content=chart)
 
 
 def _ordinal(n: int) -> str:
@@ -349,4 +311,3 @@ def _ordinal(n: int) -> str:
     if 11 <= n % 100 <= 13:
         return "th"
     return {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
-

@@ -149,18 +149,115 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                           on_click=mark_all_read)
         )
 
-    # Unread pill
-    unread_pill = []
-    if unread > 0:
-        unread_pill.append(
-            ft.Container(
-                content=ft.Text(f"{unread} unread", size=CAPTION_SIZE,
-                                color=ACCENT, weight=ft.FontWeight.W_500),
-                padding=ft.padding.symmetric(horizontal=10, vertical=4),
-                border_radius=12,
-                bgcolor=ACCENT_BG,
-            )
+    # Category filter chips
+    active_filter = ["all"]
+    msg_tiles_col = ft.Column(spacing=4, controls=msg_tiles)
+
+    def _apply_filter(category):
+        def handler(e):
+            active_filter[0] = category
+            msg_tiles_col.controls.clear()
+            for msg in messages:
+                if category != "all" and msg.category != category:
+                    continue
+                cat_color = _CAT_COLORS.get(msg.category, ft.Colors.GREY_400)
+                cat_icon = _CAT_ICONS.get(msg.category, ft.Icons.MAIL)
+                icon_color = cat_color if not msg.is_read else TEXT_MUTED
+                title_weight = ft.FontWeight.W_600 if not msg.is_read else ft.FontWeight.NORMAL
+
+                def make_handler(m=msg):
+                    def h(e):
+                        _show_message_detail(page, conn, m)
+                    return h
+
+                unread_badge = []
+                if not msg.is_read:
+                    unread_badge.append(
+                        ft.Container(
+                            content=ft.Text("NEW", size=8, color=ft.Colors.WHITE,
+                                            weight=ft.FontWeight.BOLD),
+                            bgcolor=ft.Colors.RED_400,
+                            padding=ft.padding.symmetric(horizontal=5, vertical=2),
+                            border_radius=4,
+                        )
+                    )
+
+                msg_tiles_col.controls.append(
+                    ft.Container(
+                        content=ft.Row(
+                            spacing=10,
+                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                            controls=[
+                                ft.Container(
+                                    content=ft.Icon(cat_icon, size=18, color=icon_color),
+                                    width=36, height=36, border_radius=18,
+                                    bgcolor=ft.Colors.with_opacity(0.12, cat_color),
+                                    alignment=ft.Alignment(0, 0),
+                                ),
+                                ft.Column(spacing=2, expand=True, controls=[
+                                    ft.Row(spacing=4, tight=True, controls=[
+                                        ft.Text(msg.subject, size=BODY_SIZE, weight=title_weight,
+                                                max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
+                                                expand=True),
+                                        *unread_badge,
+                                    ]),
+                                    ft.Text(
+                                        f"{msg.date.strftime('%d %b')} — {msg.body}",
+                                        size=CAPTION_SIZE, color=TEXT_SECONDARY,
+                                        max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
+                                    ),
+                                ]),
+                                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=16, color=ACCENT),
+                            ],
+                        ),
+                        padding=ft.padding.symmetric(horizontal=12, vertical=10),
+                        border_radius=CARD_RADIUS_SM,
+                        bgcolor=CARD_GLASS_STRONG if not msg.is_read else CARD_GLASS,
+                        border=ft.border.only(
+                            left=ft.BorderSide(3, cat_color),
+                            top=ft.BorderSide(1, GOLD_BORDER),
+                            right=ft.BorderSide(1, GOLD_BORDER),
+                            bottom=ft.BorderSide(1, GOLD_BORDER),
+                        ),
+                        on_click=make_handler(),
+                        ink=True,
+                    )
+                )
+            if not msg_tiles_col.controls:
+                msg_tiles_col.controls.append(
+                    ft.Text("No messages in this category.", size=12, color=TEXT_SECONDARY))
+            # Update chip styles
+            for chip_cat, chip_ctrl in filter_chips:
+                if chip_cat == category:
+                    chip_ctrl.bgcolor = ft.Colors.with_opacity(0.15, ACCENT)
+                    chip_ctrl.border = ft.border.all(1, ACCENT)
+                else:
+                    chip_ctrl.bgcolor = CARD_GLASS
+                    chip_ctrl.border = ft.border.all(1, GOLD_BORDER)
+            page.update()
+        return handler
+
+    # Build filter chip controls
+    categories = ["all", "match", "board", "transfer", "media", "general"]
+    cat_labels = {"all": "All", "match": "⚽ Match", "board": "🏛️ Board",
+                  "transfer": "💰 Transfer", "media": "📰 Media", "general": "📧 Other"}
+    filter_chips = []
+    for cat in categories:
+        chip = ft.Container(
+            content=ft.Text(cat_labels.get(cat, cat.title()), size=10,
+                            weight=ft.FontWeight.W_500,
+                            color=ACCENT if cat == "all" else TEXT_SECONDARY),
+            padding=ft.padding.symmetric(horizontal=10, vertical=5),
+            border_radius=12,
+            bgcolor=ft.Colors.with_opacity(0.15, ACCENT) if cat == "all" else CARD_GLASS,
+            border=ft.border.all(1, ACCENT if cat == "all" else GOLD_BORDER),
+            on_click=_apply_filter(cat),
+            ink=True,
         )
+        filter_chips.append((cat, chip))
+
+    filter_row = ft.Row(spacing=4, scroll=ft.ScrollMode.AUTO,
+                        controls=[c for _, c in filter_chips])
 
     return ft.Column(
         expand=True,
@@ -178,8 +275,8 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                             page=page,
                             extra_controls=header_extra,
                         ),
-                        *unread_pill,
-                        ft.Column(spacing=4, controls=msg_tiles),
+                        filter_row,
+                        msg_tiles_col,
                     ],
                 ),
             ),
