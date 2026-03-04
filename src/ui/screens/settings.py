@@ -71,14 +71,14 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
             app_state.game_state = None
             delete_save("default")
             navigate(page, "/")
-            show_snackbar(page, "🗑️ Save deleted!")
+            show_snackbar(page, f"🗑️ {t('save_deleted')}")
 
         page.show_dialog(ft.AlertDialog(
-            title=ft.Text("⚠️ Delete Save?"),
-            content=ft.Text("This will permanently delete your current save game.\nAre you sure?"),
+            title=ft.Text(f"⚠️ {t('delete_save')}?"),
+            content=ft.Text(t("delete_save_confirm")),
             actions=[
-                ft.TextButton("Cancel", on_click=lambda e2: page.pop_dialog()),
-                ft.ElevatedButton("Delete", on_click=confirm_delete,
+                ft.TextButton(t("cancel"), on_click=lambda e2: page.pop_dialog()),
+                ft.ElevatedButton(t("delete"), on_click=confirm_delete,
                     style=DANGER_BTN_STYLE),
             ],
         ))

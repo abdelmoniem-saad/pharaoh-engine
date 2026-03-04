@@ -43,18 +43,18 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = build_nav_bar(page, 2)
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text("No game loaded")])
+        return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
 
     conn = app_state.db_conn
     gs = app_state.game_state
     club = queries.get_club(conn, gs.user_club_id)
     if not club:
-        return ft.Column(controls=[ft.Text("Club not found")])
+        return ft.Column(controls=[ft.Text(t("club_not_found_msg"))])
 
     squad = queries.get_players_by_club(conn, club.id)
     fixture = queries.get_user_next_fixture(conn, gs.user_club_id)
     if not fixture:
-        return ft.Column(controls=[ft.Text("No upcoming match")])
+        return ft.Column(controls=[ft.Text(t("no_upcoming_match"))])
 
     is_home = fixture.home_club_id == gs.user_club_id
     opp_name = fixture.away_club_name if is_home else fixture.home_club_name
@@ -311,14 +311,14 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                                 bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.RED),
                             )] if (injured_players or suspended_players) else []
                         ),
-                        ft.Text("Tap a starter, then tap a bench player to swap",
+                        ft.Text(t("tap_to_swap"),
                                  size=10, color=ft.Colors.GREY_600, italic=True),
                         ft.Divider(height=1),
                         # Pitch
                         pitch_stack,
                         ft.Divider(height=1),
                         # Bench
-                        ft.Text("🪑 Bench", size=14, weight=ft.FontWeight.W_500),
+                        ft.Text(f"🪑 {t('bench')}", size=14, weight=ft.FontWeight.W_500),
                         bench_col,
                         ft.Container(height=10),
                         ft.ElevatedButton(

@@ -20,7 +20,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = None  # Full-screen experience
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text("No game loaded")])
+        return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
 
     conn = app_state.db_conn
     gs = app_state.game_state
@@ -33,8 +33,8 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             expand=True,
             controls=[
-                ft.Text("No match data available.", size=16, color=ft.Colors.GREY_400),
-                ft.ElevatedButton("Back", on_click=lambda e: navigate(page, "/match_day")),
+                ft.Text(t("no_data"), size=16, color=ft.Colors.GREY_400),
+                ft.ElevatedButton(t("back"), on_click=lambda e: navigate(page, "/match_day")),
             ],
         )
 
@@ -47,15 +47,15 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
 
     # Result type
     if user_goals > opp_goals:
-        result_text = "VICTORY!"
+        result_text = t("victory").upper()
         result_color = ft.Colors.GREEN_400
         result_icon = ft.Icons.CELEBRATION
     elif user_goals < opp_goals:
-        result_text = "DEFEAT"
+        result_text = t("defeat").upper()
         result_color = ft.Colors.RED_400
         result_icon = ft.Icons.SENTIMENT_DISSATISFIED
     else:
-        result_text = "DRAW"
+        result_text = t("draw").upper()
         result_color = ft.Colors.YELLOW_400
         result_icon = ft.Icons.HANDSHAKE
 
@@ -87,7 +87,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
         side_icon = "🏠" if g.club_id == result.home_club_id else "✈️"
         is_user_goal = g.club_id == gs.user_club_id
         goal_color = ft.Colors.GREEN_300 if is_user_goal else ft.Colors.RED_300
-        assist_text = f" (assist: {g.second_player_name})" if g.second_player_name else ""
+        assist_text = f" ({t('assist')}: {g.second_player_name})" if g.second_player_name else ""
         goal_widgets.append(
             ft.Container(
                 content=ft.Row(spacing=6, controls=[
@@ -101,7 +101,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
             )
         )
     if not goal_widgets:
-        goal_widgets.append(ft.Text("No goals scored", size=12, color=ft.Colors.GREY_500))
+        goal_widgets.append(ft.Text(t("no_goals_scored"), size=12, color=ft.Colors.GREY_500))
 
     # ── Cards & injuries ────────────────────────────────────────────
     cards = [e for e in result.events
@@ -117,13 +117,13 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
 
     # ── Stats comparison ────────────────────────────────────────────
     stats_data = [
-        ("Possession", f"{result.home_stats.possession:.0f}%", f"{result.away_stats.possession:.0f}%"),
-        ("Shots", str(result.home_stats.shots), str(result.away_stats.shots)),
-        ("On Target", str(result.home_stats.shots_on_target), str(result.away_stats.shots_on_target)),
-        ("Corners", str(result.home_stats.corners), str(result.away_stats.corners)),
-        ("Fouls", str(result.home_stats.fouls), str(result.away_stats.fouls)),
-        ("Yellow Cards", str(result.home_stats.yellow_cards), str(result.away_stats.yellow_cards)),
-        ("Saves", str(result.home_stats.saves), str(result.away_stats.saves)),
+        (t("possession"), f"{result.home_stats.possession:.0f}%", f"{result.away_stats.possession:.0f}%"),
+        (t("shots"), str(result.home_stats.shots), str(result.away_stats.shots)),
+        (t("on_target"), str(result.home_stats.shots_on_target), str(result.away_stats.shots_on_target)),
+        (t("corners"), str(result.home_stats.corners), str(result.away_stats.corners)),
+        (t("fouls"), str(result.home_stats.fouls), str(result.away_stats.fouls)),
+        (t("yellow_cards"), str(result.home_stats.yellow_cards), str(result.away_stats.yellow_cards)),
+        (t("saves"), str(result.home_stats.saves), str(result.away_stats.saves)),
     ]
 
     def _stat_bar(home_val_str, away_val_str, label):
@@ -259,7 +259,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
 
     def _press_conference(e):
         if press_done[0]:
-            show_snackbar(page, "Press conference already done.")
+            show_snackbar(page, f"{t('press_conference')} ✅")
             return
         _show_press_conference(page, conn, gs, result, is_home)
         press_done[0] = True
@@ -297,7 +297,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                     ft.Text(result.score_display, size=20, weight=ft.FontWeight.W_500,
                             text_align=ft.TextAlign.CENTER),
                     pos_widget,
-                    ft.Text(f"🏟️ Attendance: {outcome.attendance:,}" if outcome.attendance > 0 else "",
+                    ft.Text(f"🏟️ {t('attendance')}: {outcome.attendance:,}" if outcome.attendance > 0 else "",
                             size=11, color=ft.Colors.GREY_500),
                 ],
             ),
@@ -319,7 +319,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                     controls=[
                         ft.Icon(ft.Icons.STAR, size=28, color=ft.Colors.AMBER_400),
                         ft.Column(spacing=0, controls=[
-                            ft.Text("Man of the Match", size=10, color=ft.Colors.AMBER_300),
+                            ft.Text(t("man_of_the_match"), size=10, color=ft.Colors.AMBER_300),
                             ft.Text(motm_player.name, size=16, weight=ft.FontWeight.BOLD),
                         ]),
                         ft.Container(
@@ -343,14 +343,14 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
 
     # Goals section
     sections.extend([
-        ft.Text("⚽ Goals", size=15, weight=ft.FontWeight.W_500),
+        ft.Text(f"⚽ {t('goals_label')}", size=15, weight=ft.FontWeight.W_500),
         *goal_widgets,
         ft.Divider(height=1),
     ])
 
     # Stats section
     sections.extend([
-        ft.Text("📊 Match Statistics", size=15, weight=ft.FontWeight.W_500),
+        ft.Text(f"📊 {t('match_stats')}", size=15, weight=ft.FontWeight.W_500),
         ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
             ft.Text(result.home_club_name, size=11, weight=ft.FontWeight.BOLD,
                     expand=True, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
@@ -366,14 +366,14 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
     # Incidents
     if incident_widgets:
         sections.extend([
-            ft.Text("📋 Cards & Injuries", size=15, weight=ft.FontWeight.W_500),
+            ft.Text(f"📋 {t('cards_injuries')}", size=15, weight=ft.FontWeight.W_500),
             *incident_widgets,
             ft.Divider(height=1),
         ])
 
     # Top 10 Ratings
     sections.extend([
-        ft.Text("📊 Top Performers", size=15, weight=ft.FontWeight.W_500),
+        ft.Text(f"📊 {t('top_performers')}", size=15, weight=ft.FontWeight.W_500),
         *rating_widgets,
         ft.Divider(height=1),
     ])
@@ -412,7 +412,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                 )
         if ach_widgets:
             sections.extend([
-                ft.Text("🏆 Achievements Unlocked!", size=15, weight=ft.FontWeight.W_500,
+                ft.Text(f"🏆 {t('achievements_unlocked')}", size=15, weight=ft.FontWeight.W_500,
                          color=ft.Colors.AMBER_400),
                 *ach_widgets,
                 ft.Divider(height=1),
@@ -422,7 +422,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
     sections.extend([
         ft.Container(height=8),
         ft.ElevatedButton(
-            "🎤 Press Conference",
+            f"🎤 {t('press_conference')}",
             width=280, height=48,
             style=ft.ButtonStyle(
                 bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.WHITE),
@@ -435,7 +435,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
         ),
         ft.Container(height=6),
         ft.ElevatedButton(
-            "➡️ Continue",
+            f"➡️ {t('continue_btn')}",
             width=280, height=50,
             style=ft.ButtonStyle(
                 bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
@@ -447,7 +447,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
             on_click=go_match_day,
         ),
         ft.Container(height=4),
-        ft.OutlinedButton("📊 View Table", width=280, height=42,
+        ft.OutlinedButton(f"📊 {t('view_final_table')}", width=280, height=42,
                           on_click=go_table,
                           style=ft.ButtonStyle(
                               shape=ft.RoundedRectangleBorder(radius=12),
@@ -555,7 +555,7 @@ def _show_press_conference(page, conn, gs, result, is_home):
             ))
 
             page.pop_dialog()
-            show_snackbar(page, "🎤 Press conference complete!")
+            show_snackbar(page, f"🎤 {t('press_conference')}!")
 
         return handler
 
@@ -576,9 +576,9 @@ def _show_press_conference(page, conn, gs, result, is_home):
 
     dlg = ft.AlertDialog(
         title=ft.Column(spacing=4, controls=[
-            ft.Text("🎤 Press Conference", size=16,
+            ft.Text(f"🎤 {t('press_conference')}", size=16,
                      weight=ft.FontWeight.BOLD, color="#FFD54F"),
-            ft.Text("A journalist asks:", size=11, color=ft.Colors.GREY_400),
+            ft.Text(t("journalist_asks"), size=11, color=ft.Colors.GREY_400),
         ]),
         content=ft.Container(
             content=ft.Column(
@@ -591,14 +591,14 @@ def _show_press_conference(page, conn, gs, result, is_home):
                         border_radius=8,
                         border=ft.border.all(1, ft.Colors.with_opacity(0.15, ft.Colors.BLUE_300)),
                     ),
-                    ft.Text("Choose your response:", size=12, color=ft.Colors.GREY_400),
+                    ft.Text(t("choose_your_response"), size=12, color=ft.Colors.GREY_400),
                     *answer_buttons,
                 ],
             ),
             width=290, height=320,
         ),
         actions=[
-            ft.TextButton("Skip", on_click=lambda e: page.pop_dialog()),
+            ft.TextButton(t("skip_to_end"), on_click=lambda e: page.pop_dialog()),
         ],
     )
     page.show_dialog(dlg)

@@ -12,7 +12,7 @@ from src.core.player import calculate_overall_rating
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.widgets.stat_bar import stat_bar
 from src.utils.config import Position
-from src.utils.localization import t
+from src.utils.localization import t, t_format
 from src.ui.theme import (
     header_bar, GOLD_BORDER, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS_SM,
     TEXT_SECONDARY, TEXT_MUTED, ACCENT,
@@ -33,7 +33,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     gs = app_state.game_state
     club = queries.get_club(conn, gs.user_club_id)
     if not club:
-        return ft.Column(controls=[ft.Text("Club not found")])
+        return ft.Column(controls=[ft.Text(t("club_not_found_msg"))])
 
     # ── Shortlist (in-memory for session) ────────────────────────────
     if not hasattr(app_state, "_shortlist"):
@@ -41,15 +41,15 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     shortlist: set = app_state._shortlist
 
     # ── Search controls ──────────────────────────────────────────────
-    name_field = ft.TextField(label="Name", expand=True, text_size=13,
-                               hint_text="Search by name…")
+    name_field = ft.TextField(label=t("name"), expand=True, text_size=13,
+                               hint_text=t("search_by_name"))
     pos_dd = ft.Dropdown(
-        label="Position", width=90,
-        options=[ft.dropdown.Option("Any")] + [ft.dropdown.Option(p.value) for p in Position],
-        value="Any",
+        label=t("position"), width=90,
+        options=[ft.dropdown.Option(t("any"))] + [ft.dropdown.Option(p.value) for p in Position],
+        value=t("any"),
     )
-    max_age_field = ft.TextField(label="Max Age", width=65, value="35", text_size=13)
-    min_ovr_field = ft.TextField(label="Min OVR", width=65, value="", text_size=13)
+    max_age_field = ft.TextField(label=f"{t('age')} ≤", width=65, value="35", text_size=13)
+    min_ovr_field = ft.TextField(label=f"{t('overall')} ≥", width=65, value="", text_size=13)
 
     results_list = ft.Column(spacing=4)
 
@@ -129,10 +129,10 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
         results_list.controls.clear()
         if not players:
             results_list.controls.append(
-                ft.Text("No players available.", size=13, color=ft.Colors.GREY_500))
+                ft.Text(t("no_players_available"), size=13, color=ft.Colors.GREY_500))
         else:
             results_list.controls.append(
-                ft.Text(f"Top {len(players)} available players", size=11,
+                ft.Text(f"{len(players)} {t('available')}", size=11,
                          color=ft.Colors.GREY_500))
             for p in players:
                 value = estimate_player_value(p, current_date=gs.current_date)
@@ -163,10 +163,10 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
 
         if not players:
             results_list.controls.append(
-                ft.Text("No players found.", size=13, color=ft.Colors.GREY_500))
+                ft.Text(t("no_players_found"), size=13, color=ft.Colors.GREY_500))
         else:
             results_list.controls.append(
-                ft.Text(f"Found {len(players)} players", size=11, color=ft.Colors.GREY_500))
+                ft.Text(f"{len(players)} {t('available')}", size=11, color=ft.Colors.GREY_500))
             for p in players:
                 value = estimate_player_value(p, current_date=gs.current_date)
                 p_club = queries.get_club(conn, p.club_id) if p.club_id else None
@@ -179,7 +179,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     def _build_shortlist_content():
         items = []
         if not shortlist:
-            items.append(ft.Text("No players shortlisted yet.\nSearch and tap ⭐ to add.",
+            items.append(ft.Text(t("no_players_shortlisted"),
                                   size=13, color=ft.Colors.GREY_500, text_align=ft.TextAlign.CENTER))
         else:
             for pid in list(shortlist):
@@ -271,7 +271,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
         frees = [p for p in queries.search_players(conn, limit=200) if p.club_id == 0 or p.club_id is None]
         if not frees:
             free_agents_list.controls.append(
-                ft.Text("No free agents available.", size=13, color=ft.Colors.GREY_500))
+                ft.Text(t("no_players_available"), size=13, color=ft.Colors.GREY_500))
         else:
             free_agents_list.controls.append(
                 ft.Text(f"{len(frees)} free agent(s)", size=11, color=ft.Colors.GREY_500))
@@ -327,7 +327,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
             ft.Row(
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
-                    ft.Text("💰 Transfer Budget", size=12, color=ft.Colors.GREY_400),
+                    ft.Text(f"💰 {t('transfer_budget')}", size=12, color=ft.Colors.GREY_400),
                     ft.Text(f"{club.finances.transfer_budget:,} EGP", size=13,
                              weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_400),
                 ],
@@ -335,14 +335,14 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
             ft.Row(
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
-                    ft.Text("💵 Weekly Wages", size=11, color=ft.Colors.GREY_500),
+                    ft.Text(f"💵 {t('weekly_wage_bill')}", size=11, color=ft.Colors.GREY_500),
                     ft.Text(f"{weekly_wage:,} EGP/wk", size=11, color=ft.Colors.GREY_400),
                 ],
             ),
             ft.Row(
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
-                    ft.Text("👤 Squad Size", size=11, color=ft.Colors.GREY_500),
+                    ft.Text(f"👤 {t('squad_size')}", size=11, color=ft.Colors.GREY_500),
                     ft.Text(f"{len(my_players)} players", size=11, color=ft.Colors.GREY_400),
                 ],
             ),
@@ -470,7 +470,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
             # Row 2: Age + OVR + Search button
             ft.Row(spacing=6, controls=[
                 max_age_field, min_ovr_field,
-                ft.ElevatedButton("🔍 Search", on_click=do_search,
+                ft.ElevatedButton(f"🔍 {t('search')}", on_click=do_search,
                                    expand=True, height=44),
             ]),
             ft.Divider(height=1),
@@ -482,7 +482,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
         spacing=4, visible=False,
         scroll=ft.ScrollMode.AUTO,
         controls=[
-            ft.Text("Tap a player to list/unlist or set asking price", size=11,
+            ft.Text(t("tap_to_list"), size=11,
                      color=ft.Colors.GREY_500, italic=True),
             sell_list,
         ],
@@ -493,7 +493,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     free_content = ft.Column(
         spacing=4, visible=False,
         controls=[
-            ft.ElevatedButton("🔄 Load Free Agents", on_click=load_free_agents, width=180),
+            ft.ElevatedButton(f"🔄 {t('free_agent')}", on_click=load_free_agents, width=180),
             free_agents_list,
         ],
     )
@@ -551,7 +551,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     from src.ui.widgets.cards import collapsible_section
 
     budget_section = collapsible_section(
-        "💰 Transfer Budget",
+        f"💰 {t('transfer_budget')}",
         [budget_bar],
         initially_expanded=False,
         title_color=ft.Colors.GREEN_400,

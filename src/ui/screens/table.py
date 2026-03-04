@@ -8,7 +8,7 @@ import flet as ft
 from src.data import queries
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.widgets.cards import section_card, info_tile, action_card
-from src.utils.localization import t
+from src.utils.localization import t, t_format
 from src.ui.theme import (
     ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
     TEXT_SUCCESS, TEXT_WARNING, TEXT_DANGER,
@@ -48,7 +48,7 @@ def build_table_screen(page: ft.Page) -> ft.Column:
             controls=[
                 ft.Text("#", size=TINY_SIZE, color=TEXT_MUTED, width=22,
                         text_align=ft.TextAlign.CENTER),
-                ft.Text("Team", size=TINY_SIZE, color=TEXT_MUTED, expand=True),
+                ft.Text(t("team"), size=TINY_SIZE, color=TEXT_MUTED, expand=True),
                 ft.Text("P", size=TINY_SIZE, color=TEXT_MUTED, width=22,
                         text_align=ft.TextAlign.CENTER),
                 ft.Text("W", size=TINY_SIZE, color=TEXT_MUTED, width=22,
@@ -158,7 +158,7 @@ def build_table_screen(page: ft.Page) -> ft.Column:
             ]),
             ft.Row(spacing=4, tight=True, controls=[
                 ft.Container(width=10, height=10, bgcolor=ft.Colors.RED_400, border_radius=2),
-                ft.Text("Relegation", size=TINY_SIZE, color=TEXT_MUTED),
+                ft.Text(t("relegation"), size=TINY_SIZE, color=TEXT_MUTED),
             ]),
         ],
     )
@@ -174,8 +174,8 @@ def build_table_screen(page: ft.Page) -> ft.Column:
                     controls=[
                         # Header
                         header_bar(
-                            title="Egyptian Premier League",
-                            subtitle=f"Season {gs.season_year}/{gs.season_year + 1}  •  Matchday {current_md}",
+                            title=t("egyptian_premier_league"),
+                            subtitle=f"{t_format('season_label', y1=gs.season_year, y2=gs.season_year + 1)}  •  {t('matchday')} {current_md}",
                             icon=ft.Icons.LEADERBOARD,
                             page=page,
                         ),
@@ -183,7 +183,7 @@ def build_table_screen(page: ft.Page) -> ft.Column:
                         # User position callout
                         *([ ft.Container(
                             content=ft.Column(spacing=2, controls=[
-                                ft.Text(f"📍 You are {user_pos}{pos_suffix}", size=BODY_SIZE,
+                                ft.Text(f"📍 {t_format('you_are_pos', pos=f'{user_pos}{pos_suffix}')}", size=BODY_SIZE,
                                         weight=ft.FontWeight.W_600, color=TEXT_SUCCESS),
                                 ft.Text(user_pts_text, size=CAPTION_SIZE, color=TEXT_SECONDARY),
                             ]),
@@ -204,14 +204,14 @@ def build_table_screen(page: ft.Page) -> ft.Column:
 
                         # Quick nav
                         ft.Row(spacing=6, controls=[
-                            ft.OutlinedButton("📅 Fixtures", height=32,
+                            ft.OutlinedButton(f"📅 {t('fixtures_btn')}", height=32,
                                               on_click=lambda e: navigate(page, "/fixtures"),
                                               style=ft.ButtonStyle(
                                                   padding=ft.padding.symmetric(horizontal=12),
                                                   shape=ft.RoundedRectangleBorder(radius=10),
                                                   side=ft.BorderSide(1, GOLD_BORDER),
                                               )),
-                            ft.OutlinedButton("🏟️ My Club", height=32,
+                            ft.OutlinedButton(f"🏟️ {t('my_club')}", height=32,
                                               on_click=lambda e: navigate(page, "/club"),
                                               style=ft.ButtonStyle(
                                                   padding=ft.padding.symmetric(horizontal=12),

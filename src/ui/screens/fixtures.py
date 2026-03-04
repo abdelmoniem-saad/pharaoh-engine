@@ -7,7 +7,7 @@ import flet as ft
 
 from src.data import queries
 from src.ui.widgets.nav_bar import build_nav_bar
-from src.utils.localization import t
+from src.utils.localization import t, t_format
 from src.ui.theme import (
     header_bar, GOLD_BORDER, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS_SM,
     TEXT_SECONDARY, TEXT_MUTED, ACCENT, PAGE_PADDING,
@@ -36,9 +36,9 @@ def build_fixtures_screen(page: ft.Page) -> ft.Column:
             controls=[
                 ft.Icon(ft.Icons.CALENDAR_MONTH, size=48, color=ft.Colors.GREY_700),
                 ft.Container(height=10),
-                ft.Text("No matches played yet", size=16, color=ft.Colors.GREY_400),
+                ft.Text(t("no_matches_played"), size=16, color=ft.Colors.GREY_400),
                 ft.Container(height=20),
-                ft.ElevatedButton("← Back to Table", width=200,
+                ft.ElevatedButton(f"← {t('league_table')}", width=200,
                                    on_click=lambda e: navigate(page, "/table"),
                                    style=ft.ButtonStyle(
                                        shape=ft.RoundedRectangleBorder(radius=12),
@@ -74,7 +74,7 @@ def build_fixtures_screen(page: ft.Page) -> ft.Column:
                     spacing=8,
                     controls=[
                         header_bar(
-                            title="Fixture Results",
+                            title=t("fixture_results"),
                             icon=ft.Icons.CALENDAR_MONTH,
                             page=page,
                             back_route="/table",
@@ -83,14 +83,14 @@ def build_fixtures_screen(page: ft.Page) -> ft.Column:
                             spacing=10,
                             controls=[
                                 ft.Dropdown(
-                                    label="Matchday",
+                                    label=t("matchday"),
                                     value=str(selected_md),
                                     options=md_options,
                                     on_select=on_matchday_select,
                                     width=160,
                                 ),
                                 ft.ElevatedButton(
-                                    "← Table",
+                                    f"← {t('league_table')}",
                                     on_click=lambda e: navigate(page, "/table"),
                                     style=ft.ButtonStyle(
                                         shape=ft.RoundedRectangleBorder(radius=10),
@@ -116,7 +116,7 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
     # Played
     if results:
         column.controls.append(
-            ft.Text(f"Matchday {matchday} — {len(results)} of {len(all_fixtures)} played",
+            ft.Text(f"{t('matchday')} {matchday} — {len(results)} / {len(all_fixtures)}",
                      size=13, color=ft.Colors.GREY_500))
 
         for fixture in results:
@@ -172,7 +172,7 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
     if unplayed:
         column.controls.append(ft.Container(height=8))
         column.controls.append(
-            ft.Text("Upcoming", size=12, color=ft.Colors.GREY_600, weight=ft.FontWeight.W_500))
+            ft.Text(t("upcoming"), size=12, color=ft.Colors.GREY_600, weight=ft.FontWeight.W_500))
         for f in unplayed:
             column.controls.append(
                 ft.Container(
@@ -195,5 +195,4 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
 
     if not results and not unplayed:
         column.controls.append(
-            ft.Text("No fixtures found for this matchday.", size=13, color=ft.Colors.GREY_500))
-
+            ft.Text(t("no_fixtures_matchday"), size=13, color=ft.Colors.GREY_500))

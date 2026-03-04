@@ -13,7 +13,7 @@ from src.ui.widgets.cards import (
     section_card, info_tile, player_card_h, position_group_header,
     action_card, form_chips, kv_row, collapsible_section,
 )
-from src.utils.localization import t
+from src.utils.localization import t, t_format
 from src.ui.theme import (
     ACCENT, TEXT_SECONDARY, TEXT_MUTED,
     CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS, PAGE_PADDING, SECTION_SPACING,
@@ -44,10 +44,10 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
     sort_options = {
         t("position") + ":": lambda p: (p.position.value, -calculate_overall_rating(p)),
         t("overall") + " ↓": lambda p: -calculate_overall_rating(p),
-        "Age": lambda p: p.age,
-        "Fitness": lambda p: -p.fitness,
-        "Form ↓": lambda p: -p.form,
-        "Morale": lambda p: -p.morale,
+        t("age"): lambda p: p.age,
+        t("fitness"): lambda p: -p.fitness,
+        t("form") + " ↓": lambda p: -p.form,
+        t("morale"): lambda p: -p.morale,
     }
     default_sort = list(sort_options.keys())[0]
     players.sort(key=sort_options[default_sort])
@@ -158,23 +158,23 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                             extra_controls=[
                                 ft.IconButton(icon=ft.Icons.SAVE_OUTLINED, icon_size=18,
                                               icon_color=TEXT_SECONDARY,
-                                              tooltip="Save",
+                                              tooltip=t("save"),
                                               on_click=lambda e: _save_game(page, conn, gs)),
                             ],
                         ),
 
                         # ── Squad Summary (collapsed) ──────────────────
                         collapsible_section(
-                            "📊 Squad Summary",
+                            f"📊 {t('squad_summary')}",
                             [
                                 ft.Row(
                                     spacing=6, scroll=ft.ScrollMode.AUTO,
                                     controls=[
-                                        info_tile("Pos", f"{user_pos}{'st' if user_pos == 1 else 'nd' if user_pos == 2 else 'rd' if user_pos == 3 else 'th'}",
+                                        info_tile(t("pos_label"), f"{user_pos}{'st' if user_pos == 1 else 'nd' if user_pos == 2 else 'rd' if user_pos == 3 else 'th'}",
                                                   icon=ft.Icons.EMOJI_EVENTS),
-                                        info_tile("Points", str(user_pts), icon=ft.Icons.STAR),
-                                        info_tile("Squad", str(len(players)), icon=ft.Icons.PEOPLE),
-                                        info_tile("Avg OVR", f"{avg_ovr:.0f}", icon=ft.Icons.INSIGHTS),
+                                        info_tile(t("points_short"), str(user_pts), icon=ft.Icons.STAR),
+                                        info_tile(t("squad_label"), str(len(players)), icon=ft.Icons.PEOPLE),
+                                        info_tile(t("avg_ovr"), f"{avg_ovr:.0f}", icon=ft.Icons.INSIGHTS),
                                     ],
                                 ),
                                 ft.Container(
@@ -182,7 +182,7 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                                         controls=[
                                             ft.Row(spacing=6, tight=True, controls=[
-                                                ft.Text("Form:", size=CAPTION_SIZE, color=TEXT_MUTED),
+                                                ft.Text(f"{t('form_label')}:", size=CAPTION_SIZE, color=TEXT_MUTED),
                                                 form_chips(form_results),
                                             ]),
                                             ft.Row(spacing=4, tight=True, controls=[

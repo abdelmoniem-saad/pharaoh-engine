@@ -7,7 +7,7 @@ import flet as ft
 
 from src.data import queries
 from src.ui.widgets.nav_bar import build_nav_bar
-from src.utils.localization import t
+from src.utils.localization import t, t_format
 from src.ui.theme import (
     ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
     CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS, CARD_RADIUS_SM,
@@ -57,8 +57,8 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                     controls=[
                         ft.Icon(ft.Icons.INBOX, size=48, color=TEXT_MUTED),
                         ft.Container(height=8),
-                        ft.Text("No messages yet.", size=BODY_SIZE, color=TEXT_SECONDARY),
-                        ft.Text("Play some matches to receive updates!",
+                        ft.Text(t("no_messages_yet"), size=BODY_SIZE, color=TEXT_SECONDARY),
+                        ft.Text(t("play_matches_updates"),
                                 size=CAPTION_SIZE, color=TEXT_MUTED),
                     ],
                 ),
@@ -83,7 +83,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
             if not msg.is_read:
                 unread_badge.append(
                     ft.Container(
-                        content=ft.Text("NEW", size=8, color=ft.Colors.WHITE,
+                        content=ft.Text(t("new_label"), size=8, color=ft.Colors.WHITE,
                                         weight=ft.FontWeight.BOLD),
                         bgcolor=ft.Colors.RED_400,
                         padding=ft.padding.symmetric(horizontal=5, vertical=2),
@@ -142,11 +142,11 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
         def mark_all_read(e):
             from src.ui.app import show_snackbar
             count = queries.mark_all_messages_read(conn)
-            show_snackbar(page, f"✅ {count} message(s) marked as read")
+            show_snackbar(page, f"✅ {t_format('messages_marked_read', n=count)}")
             navigate(page, "/inbox")
 
         header_extra.append(
-            ft.TextButton("Mark all read", icon=ft.Icons.DONE_ALL,
+            ft.TextButton(t("mark_all_read_btn"), icon=ft.Icons.DONE_ALL,
                           on_click=mark_all_read)
         )
 
@@ -175,7 +175,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                 if not msg.is_read:
                     unread_badge.append(
                         ft.Container(
-                            content=ft.Text("NEW", size=8, color=ft.Colors.WHITE,
+                            content=ft.Text(t("new_label"), size=8, color=ft.Colors.WHITE,
                                             weight=ft.FontWeight.BOLD),
                             bgcolor=ft.Colors.RED_400,
                             padding=ft.padding.symmetric(horizontal=5, vertical=2),
@@ -226,7 +226,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                 )
             if not msg_tiles_col.controls:
                 msg_tiles_col.controls.append(
-                    ft.Text("No messages in this category.", size=12, color=TEXT_SECONDARY))
+                    ft.Text(t("no_messages_category"), size=12, color=TEXT_SECONDARY))
             # Update chip styles
             for chip_cat, chip_ctrl in filter_chips:
                 if chip_cat == category:
@@ -240,8 +240,8 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
 
     # Build filter chip controls
     categories = ["all", "match", "board", "transfer", "media", "general"]
-    cat_labels = {"all": "All", "match": "⚽ Match", "board": "🏛️ Board",
-                  "transfer": "💰 Transfer", "media": "📰 Media", "general": "📧 Other"}
+    cat_labels = {"all": t("all_filter"), "match": f"⚽ {t('match_filter')}", "board": f"🏛️ {t('board_filter')}",
+                  "transfer": f"💰 {t('transfer_filter')}", "media": f"📰 {t('media_filter')}", "general": f"📧 {t('other_filter')}"}
     filter_chips = []
     for cat in categories:
         chip = ft.Container(
@@ -271,7 +271,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                     controls=[
                         header_bar(
                             title=t("inbox"),
-                            subtitle=f"{unread} unread" if unread > 0 else "All caught up",
+                            subtitle=f"{unread} {t('unread')}" if unread > 0 else t("all_caught_up"),
                             icon=ft.Icons.MAIL,
                             page=page,
                             extra_controls=header_extra,
@@ -302,7 +302,7 @@ def _show_message_detail(page: ft.Page, conn, msg):
         navigate(page, "/inbox")
 
     # Check if this is a transfer offer with parseable data
-    actions = [ft.TextButton("Close", on_click=close_handler)]
+    actions = [ft.TextButton(t("close_btn"), on_click=close_handler)]
     display_body = msg.body
 
     if msg.category == "transfer" and "TRANSFER_OFFER|" in msg.body:
@@ -327,14 +327,14 @@ def _show_message_detail(page: ft.Page, conn, msg):
                 if not msg.is_read:
                     queries.mark_message_read(conn, msg.id)
                 page.pop_dialog()
-                show_snackbar(page, f"✅ Transfer accepted! Fee: {fee:,} EGP")
+                show_snackbar(page, f"✅ {t_format('transfer_accepted', fee=f'{fee:,}')}")
                 navigate(page, "/inbox")
 
             def decline_offer(e):
                 if not msg.is_read:
                     queries.mark_message_read(conn, msg.id)
                 page.pop_dialog()
-                show_snackbar(page, "❌ Offer declined.")
+                show_snackbar(page, f"❌ {t('offer_declined')}")
                 navigate(page, "/inbox")
 
             actions = [

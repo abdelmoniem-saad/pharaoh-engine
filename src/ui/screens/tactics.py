@@ -11,7 +11,7 @@ from src.utils.config import Mentality, Position, FORMATION_TEMPLATES
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.theme import header_bar, GOLD_BORDER, CARD_GLASS_STRONG
 from src.ui.widgets.cards import collapsible_section
-from src.utils.localization import t
+from src.utils.localization import t, t_format
 
 
 # Position display coordinates on a pitch (x%, y%) from top-left
@@ -48,7 +48,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
     gs = app_state.game_state
     club = queries.get_club(conn, gs.user_club_id)
     if not club:
-        return ft.Column(controls=[ft.Text("Club not found")])
+        return ft.Column(controls=[ft.Text(t("club_not_found_msg"))])
 
     formations = get_available_formations()
     mentality_options = [
@@ -61,7 +61,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
             club_obj.formation = e.control.value
             queries.update_club(conn, club_obj)
             navigate(page, "/tactics")
-            show_snackbar(page, f"Formation set to {e.control.value}")
+            show_snackbar(page, t_format("formation_set", f=e.control.value))
 
     def on_mentality_change(e):
         club_obj = queries.get_club(conn, gs.user_club_id)
@@ -71,7 +71,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                 club_obj.mentality = Mentality[key]
                 queries.update_club(conn, club_obj)
                 navigate(page, "/tactics")
-                show_snackbar(page, f"Mentality set to {e.control.value}")
+                show_snackbar(page, t_format("mentality_set", m=e.control.value))
             except KeyError:
                 pass
 
@@ -88,7 +88,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                 club_obj.defensive_line = preset.defensive_line
                 queries.update_club(conn, club_obj)
                 navigate(page, "/tactics")
-                show_snackbar(page, f"Preset applied: {preset.name}")
+                show_snackbar(page, t_format("preset_applied", p=preset.name))
         return handler
 
     # Visual pitch
@@ -190,14 +190,14 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                             spacing=10,
                             controls=[
                                 ft.Dropdown(
-                                    label="Formation",
+                                    label=t("formation"),
                                     value=club.formation,
                                     options=[ft.dropdown.Option(f) for f in formations],
                                     on_select=on_formation_change,
                                     expand=True,
                                 ),
                                 ft.Dropdown(
-                                    label="Mentality",
+                                    label=t("mentality"),
                                     value=club.mentality.name.replace("_", " ").title(),
                                     options=mentality_options,
                                     on_select=on_mentality_change,
@@ -206,21 +206,21 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                             ],
                         ),
                         # Pitch
-                        ft.Text("Formation View", size=14, weight=ft.FontWeight.W_500),
+                        ft.Text(t("formation"), size=14, weight=ft.FontWeight.W_500),
                         pitch,
 
                         # Tactical Sliders (collapsible, expanded by default)
                         collapsible_section(
-                            "🎛️ Tactical Sliders",
+                            f"🎛️ {t('tactical_sliders')}",
                             [
-                                _slider_row("Pressing Intensity", club.pressing_intensity,
-                                            "pressing_intensity", "Passive", "Aggressive"),
-                                _slider_row("Tempo", club.tempo,
-                                            "tempo", "Slow", "Fast"),
-                                _slider_row("Width", club.width,
-                                            "width", "Narrow", "Wide"),
-                                _slider_row("Defensive Line", club.defensive_line,
-                                            "defensive_line", "Deep", "High"),
+                                _slider_row(t("pressing_intensity"), club.pressing_intensity,
+                                            "pressing_intensity", t("passive"), t("aggressive")),
+                                _slider_row(t("tempo"), club.tempo,
+                                            "tempo", t("slow"), t("fast")),
+                                _slider_row(t("width"), club.width,
+                                            "width", t("narrow"), t("wide")),
+                                _slider_row(t("defensive_line"), club.defensive_line,
+                                            "defensive_line", t("deep"), t("high")),
                             ],
                             initially_expanded=True,
                             title_color=ft.Colors.CYAN_400,
@@ -232,7 +232,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                             preset_cards,
                             initially_expanded=False,
                             title_color=ft.Colors.AMBER_400,
-                            subtitle="Tap to apply a preset formation & mentality",
+                            subtitle=t("tap_to_apply_preset"),
                         ),
                     ],
                 ),

@@ -18,7 +18,7 @@ from src.ui.theme import (
     GOLD_BORDER, header_bar, CARD_GLASS, CARD_GLASS_STRONG,
 )
 from src.utils.config import expectation_display, expectation_description
-from src.utils.localization import t
+from src.utils.localization import t, t_format
 
 
 def build_club_overview_screen(page: ft.Page) -> ft.Column:
@@ -34,7 +34,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
     gs = app_state.game_state
     club = queries.get_club(conn, gs.user_club_id)
     if not club:
-        return ft.Column(controls=[ft.Text("Club not found")])
+        return ft.Column(controls=[ft.Text(t("club_not_found_msg"))])
 
     squad = queries.get_players_by_club(conn, club.id)
 
@@ -91,7 +91,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         *_build_next_match_card(conn, gs, club),
 
         # Season Expectation
-        section_card("🎯 Season Expectation", [
+        section_card(f"🎯 {t('season_expectation_title')}", [
             ft.Text(
                 expectation_display(club.season_expectation),
                 size=15, weight=ft.FontWeight.BOLD, color=ACCENT,
@@ -113,23 +113,23 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
 
     # ── Finances tab ─────────────────────────────────────────────────
     finances_controls = [
-        section_card("💰 Monthly Finances", [
-            kv_row("Balance", f"{club.finances.balance:,} EGP"),
-            kv_row("Monthly Income", f"+{income:,} EGP", TEXT_SUCCESS),
-            kv_row("Monthly Expenses", f"-{expenses:,} EGP", TEXT_DANGER),
-            kv_row("Net Cash Flow", f"{'+' if net >= 0 else ''}{net:,} EGP", net_color),
-            kv_row("Weekly Wage Bill", f"{wage_bill:,} EGP"),
-            kv_row("Transfer Budget", f"{club.finances.transfer_budget:,} EGP"),
+        section_card(f"💰 {t('monthly_finances')}", [
+            kv_row(t("balance"), f"{club.finances.balance:,} EGP"),
+            kv_row(t("monthly_income"), f"+{income:,} EGP", TEXT_SUCCESS),
+            kv_row(t("monthly_expenses"), f"-{expenses:,} EGP", TEXT_DANGER),
+            kv_row(t("net_cash_flow"), f"{'+' if net >= 0 else ''}{net:,} EGP", net_color),
+            kv_row(t("weekly_wage_bill"), f"{wage_bill:,} EGP"),
+            kv_row(t("transfer_budget"), f"{club.finances.transfer_budget:,} EGP"),
         ], title_color=TEXT_SUCCESS),
 
-        section_card("🏟️ Club Info", [
-            kv_row("Stadium", f"{club.stadium_name} ({club.stadium_capacity:,})"),
-            kv_row("City", club.city),
-            kv_row("Reputation", f"{'⭐' * (club.reputation // 40 + 1)} {club.reputation}"),
-            kv_row("Facilities", f"Lv.{club.facilities_level}"),
-            kv_row("Youth Rating", f"Lv.{club.youth_rating}"),
-            kv_row("Squad Size", str(len(squad))),
-            kv_row("Avg Age", f"{avg_age:.1f}"),
+        section_card(f"🏟️ {t('club_info_title')}", [
+            kv_row(t("stadium"), f"{club.stadium_name} ({club.stadium_capacity:,})"),
+            kv_row(t("city"), club.city),
+            kv_row(t("reputation"), f"{'⭐' * (club.reputation // 40 + 1)} {club.reputation}"),
+            kv_row(t("facilities_label"), f"Lv.{club.facilities_level}"),
+            kv_row(t("youth_rating_label"), f"Lv.{club.youth_rating}"),
+            kv_row(t("squad_size"), str(len(squad))),
+            kv_row(t("avg_age"), f"{avg_age:.1f}"),
         ], title_color=ft.Colors.BLUE_400),
     ]
 
@@ -147,10 +147,10 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
             for p in injured_players
         ]
         squad_health_controls.append(
-            section_card("🏥 Injured Players", injury_rows, title_color=TEXT_DANGER))
+            section_card(f"🏥 {t('injured_players')}", injury_rows, title_color=TEXT_DANGER))
     else:
         squad_health_controls.append(
-            ft.Text("No injuries — squad is fully fit! ✅", size=12, color=TEXT_SUCCESS))
+            ft.Text(f"{t('no_injuries')} ✅", size=12, color=TEXT_SUCCESS))
 
     # Suspended players
     suspended_players = [p for p in squad if p.suspension_matches > 0]
@@ -160,7 +160,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
             for p in suspended_players
         ]
         squad_health_controls.append(
-            section_card("🚫 Suspended", susp_rows, title_color=TEXT_WARNING))
+            section_card(f"🚫 {t('suspended_players')}", susp_rows, title_color=TEXT_WARNING))
 
     # Squad top scorers
     if squad_scorers:
@@ -185,7 +185,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
                 )
             )
         squad_health_controls.append(
-            section_card("⚽ Top Scorers", scorer_rows, title_color=ACCENT))
+            section_card(f"⚽ {t('top_scorers_label')}", scorer_rows, title_color=ACCENT))
 
     # League top scorers
     if league_scorers:
@@ -212,7 +212,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
                 )
             )
         squad_health_controls.append(
-            section_card("🏆 League Top Scorers", league_rows))
+            section_card(f"🏆 {t('league_top_scorers')}", league_rows))
 
     squad_health_content = ft.Column(spacing=SECTION_SPACING,
                                       controls=squad_health_controls, visible=False)
@@ -241,17 +241,17 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         return handler
 
     tab_buttons = [
-        ft.ElevatedButton("📋 Overview", on_click=switch_tab(0), height=34,
+        ft.ElevatedButton(f"📋 {t('overview_tab')}", on_click=switch_tab(0), height=34,
                            style=ft.ButtonStyle(
                                bgcolor=ft.Colors.AMBER_800, color=ft.Colors.WHITE,
                                shape=ft.RoundedRectangleBorder(radius=10),
                            )),
-        ft.OutlinedButton("💰 Finances", on_click=switch_tab(1), height=34,
+        ft.OutlinedButton(f"💰 {t('finances_tab_btn')}", on_click=switch_tab(1), height=34,
                            style=ft.ButtonStyle(
                                shape=ft.RoundedRectangleBorder(radius=10),
                                side=ft.BorderSide(1, GOLD_BORDER),
                            )),
-        ft.OutlinedButton("🏥 Squad", on_click=switch_tab(2), height=34,
+        ft.OutlinedButton(f"🏥 {t('squad_tab')}", on_click=switch_tab(2), height=34,
                            style=ft.ButtonStyle(
                                shape=ft.RoundedRectangleBorder(radius=10),
                                side=ft.BorderSide(1, GOLD_BORDER),
@@ -262,11 +262,11 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
     status_strip = ft.Row(
         spacing=6, scroll=ft.ScrollMode.AUTO,
         controls=[
-            info_tile("Board", f"{club.board_confidence}%", icon=ft.Icons.ACCOUNT_BALANCE,
+            info_tile(t("board"), f"{club.board_confidence}%", icon=ft.Icons.ACCOUNT_BALANCE,
                       color=conf_color),
-            info_tile("Fans", f"{club.fan_happiness}%", icon=ft.Icons.PEOPLE,
+            info_tile(t("fans"), f"{club.fan_happiness}%", icon=ft.Icons.PEOPLE,
                       color=fan_color),
-            info_tile("Balance", f"{club.finances.balance // 1000:,}K",
+            info_tile(t("balance"), f"{club.finances.balance // 1000:,}K",
                       icon=ft.Icons.ACCOUNT_BALANCE_WALLET),
         ],
     )
@@ -300,8 +300,8 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
                         squad_health_content,
 
                         # History link (only link kept — not on any tab)
-                        action_card("📜 History & Records",
-                                     subtitle="Past seasons, all-time stats",
+                        action_card(f"📜 {t('history_records')}",
+                                     subtitle=t("past_seasons_stats"),
                                      icon=ft.Icons.HISTORY,
                                      on_click=lambda e: navigate(page, "/history")),
                     ],
@@ -315,15 +315,15 @@ def _build_next_match_card(conn, gs, club) -> list:
     """Build a dashboard card for the next match."""
     fixture = queries.get_user_next_fixture(conn, gs.user_club_id)
     if not fixture:
-        return [ft.Text("No upcoming match", size=13, color=ft.Colors.GREY_500)]
+        return [ft.Text(t("no_upcoming_match"), size=13, color=ft.Colors.GREY_500)]
 
     is_home = fixture.home_club_id == gs.user_club_id
     opp_name = fixture.away_club_name if is_home else fixture.home_club_name
-    venue = "🏟️ HOME" if is_home else "✈️ AWAY"
+    venue = f"🏟️ {t('home').upper()}" if is_home else f"✈️ {t('away').upper()}"
     venue_color = ft.Colors.GREEN_400 if is_home else ft.Colors.ORANGE_400
 
     days_until = (fixture.date - gs.current_date).days if fixture.date else 0
-    when = "TODAY!" if days_until <= 0 else f"in {days_until} day{'s' if days_until != 1 else ''}"
+    when = t("today_label") if days_until <= 0 else t_format("in_days", n=days_until)
 
     # Recent form
     recent = queries.get_user_recent_fixtures(conn, gs.user_club_id, limit=5)
@@ -362,7 +362,7 @@ def _build_next_match_card(conn, gs, club) -> list:
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=6,
                     controls=[
-                        ft.Text("⚽ Next Match", size=14, weight=ft.FontWeight.W_500,
+                        ft.Text(f"⚽ {t('next_match_card')}", size=14, weight=ft.FontWeight.W_500,
                                 color=ft.Colors.AMBER_300),
                         ft.Row(
                             alignment=ft.MainAxisAlignment.CENTER, spacing=15,
@@ -380,7 +380,7 @@ def _build_next_match_card(conn, gs, club) -> list:
                             ft.Text(f"⏰ {when}", size=11, color=ft.Colors.GREY_400),
                         ]),
                         ft.Row(alignment=ft.MainAxisAlignment.CENTER, spacing=5, controls=[
-                            ft.Text("Form:", size=10, color=ft.Colors.GREY_500),
+                            ft.Text(f"{t('form_label')}:", size=10, color=ft.Colors.GREY_500),
                             form_row,
                         ]),
                     ],
@@ -444,12 +444,12 @@ def _build_mini_table(conn, gs) -> list:
         )
 
     return [
-        ft.Text("📊 League Position", size=14, weight=ft.FontWeight.W_500),
+        ft.Text(f"📊 {t('league_position')}", size=14, weight=ft.FontWeight.W_500),
         ft.Container(
             content=ft.Column(spacing=1, controls=[
                 ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
                     ft.Text("#", size=9, width=22, color=ft.Colors.GREY_600),
-                    ft.Text("Team", size=9, color=ft.Colors.GREY_600, expand=True),
+                    ft.Text(t("team"), size=9, color=ft.Colors.GREY_600, expand=True),
                     ft.Text("P", size=9, width=20, color=ft.Colors.GREY_600,
                             text_align=ft.TextAlign.CENTER),
                     ft.Text("GD", size=9, width=25, color=ft.Colors.GREY_600,
@@ -484,7 +484,7 @@ def _build_position_chart(conn, gs) -> list:
     chart = season_position_chart(positions, total_teams=clubs_count, width=320, height=130)
 
     return [
-        section_card("📈 League Position", [chart], title_color=ft.Colors.BLUE_400),
+        section_card(f"📈 {t('league_position')}", [chart], title_color=ft.Colors.BLUE_400),
     ]
 
 
@@ -506,6 +506,6 @@ def _build_form_trend(conn, gs) -> list:
     trend = club_form_trend_line(results, width=320, height=90)
 
     return [
-        section_card("📊 Recent Form", [chips, trend], title_color=ACCENT),
+        section_card(f"📊 {t('recent_form')}", [chips, trend], title_color=ACCENT),
     ]
 

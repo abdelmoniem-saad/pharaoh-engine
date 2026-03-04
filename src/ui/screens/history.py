@@ -86,8 +86,8 @@ def build_history_screen(page: ft.Page) -> ft.Column:
                     spacing=0,
                     controls=[
                         header_bar(
-                            title="📜 History",
-                            subtitle="Past seasons & all-time records",
+                            title=f"📜 {t('history')}",
+                            subtitle=t("past_seasons_stats"),
                             back_route="/club",
                             page=page,
                         ),

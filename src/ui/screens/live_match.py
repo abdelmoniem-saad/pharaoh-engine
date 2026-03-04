@@ -318,7 +318,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         score_text.value = f"{result.home_goals} - {result.away_goals}"
         minute_text.value = "FT"
         progress_bar.value = 1.0
-        status_text.value = "🏁 Full Time"
+        status_text.value = f"🏁 {t('full_time')}"
         status_text.color = ft.Colors.AMBER_300
         skip_btn.visible = False
         subs_btn.visible = False          # ← hide subs at full time
@@ -396,7 +396,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
 
                         # Event feed
                         ft.Container(
-                            content=ft.Text("📜 Match Events", size=14,
+                            content=ft.Text(f"📜 {t('match_commentary')}", size=14,
                                              weight=ft.FontWeight.W_500, color=ft.Colors.GREY_400),
                             padding=ft.padding.only(top=4),
                         ),
@@ -456,7 +456,7 @@ def _show_halftime_talk(page: ft.Page, event_list, halftime_choice):
         talk_controls.append(btn)
 
     header = ft.Container(
-        content=ft.Text("🗣️ Halftime Team Talk — Choose your message:",
+        content=ft.Text(f"🗣️ {t('halftime_team_talk')}",
                         size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_300),
         padding=ft.padding.symmetric(horizontal=8, vertical=4),
     )
@@ -506,15 +506,15 @@ def _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made,
     selected_off = [None]
     selected_on = [None]
 
-    off_label = ft.Text("1. Select player to take OFF:", size=12,
+    off_label = ft.Text(f"1. {t('select_player_off')}:", size=12,
                          color=ft.Colors.RED_300, weight=ft.FontWeight.W_500)
-    on_label = ft.Text("2. Select player to bring ON:", size=12,
+    on_label = ft.Text(f"2. {t('select_player_on')}:", size=12,
                         color=ft.Colors.GREEN_300, weight=ft.FontWeight.W_500)
 
     off_list = ft.Column(spacing=2)
     on_list = ft.Column(spacing=2)
     confirm_btn = ft.ElevatedButton(
-        "✅ Confirm Sub", disabled=True, width=200, height=40,
+        f"✅ {t('confirm')}", disabled=True, width=200, height=40,
         style=ft.ButtonStyle(
             bgcolor=ft.Colors.GREEN_800, color=ft.Colors.WHITE,
             shape=ft.RoundedRectangleBorder(radius=10),
@@ -634,7 +634,7 @@ def _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made,
     confirm_btn.on_click = do_sub
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"🔄 Substitution ({subs_remaining[0]} remaining)",
+        title=ft.Text(f"🔄 {t('substitution')} ({subs_remaining[0]})",
                        size=15, weight=ft.FontWeight.BOLD, color="#FFD54F"),
         content=ft.Container(
             content=ft.Column(
@@ -652,7 +652,7 @@ def _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made,
             width=290, height=380,
         ),
         actions=[
-            ft.TextButton("Cancel", on_click=cancel_sub),
+            ft.TextButton(t("cancel"), on_click=cancel_sub),
             confirm_btn,
         ],
     )
