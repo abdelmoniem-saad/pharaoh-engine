@@ -76,7 +76,7 @@ def build_nav_bar(page: ft.Page, selected_index: int = 0) -> ft.NavigationBar:
                                         label=t("match")),
             ft.NavigationBarDestination(icon=ft.Icons.LEADERBOARD_OUTLINED,
                                         selected_icon=ft.Icons.LEADERBOARD,
-                                        label=t("table")),
+                                        label=t("competition")),
             inbox_dest,
         ],
     )

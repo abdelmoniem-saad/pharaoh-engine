@@ -20,7 +20,7 @@ from src.ui.theme import (
 
 
 def build_table_screen(page: ft.Page) -> ft.Column:
-    """Build the league standings content."""
+    """Build the competition content (League or Cup)."""
     from src.ui.app import app_state, navigate
 
     page.navigation_bar = build_nav_bar(page, 3)
@@ -30,6 +30,78 @@ def build_table_screen(page: ft.Page) -> ft.Column:
 
     conn = app_state.db_conn
     gs = app_state.game_state
+    
+    # Simple state management for switching views
+    active_view = getattr(page, "_comp_view", "league")
+
+    def switch_view(view_name: str):
+        page._comp_view = view_name
+        # Force redraw by re-navigating (same route)
+        navigate(page, "/table")
+
+    # ── Comparison Toggle ───────────────────────────────────────────
+    toggle = ft.Container(
+        content=ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=10,
+            controls=[
+                ft.TextButton(
+                    t("egyptian_premier_league").upper() if len(t("egyptian_premier_league")) < 15 else "LEAGUE",
+                    style=ft.ButtonStyle(
+                        color=ACCENT if active_view == "league" else TEXT_SECONDARY,
+                        bgcolor=ft.Colors.with_opacity(0.1, ACCENT) if active_view == "league" else ft.Colors.TRANSPARENT,
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                    ),
+                    on_click=lambda _: switch_view("league"),
+                ),
+                ft.Icon(ft.Icons.SWAP_HORIZ, size=16, color=TEXT_MUTED),
+                ft.TextButton(
+                    t("egypt_cup").upper(),
+                    style=ft.ButtonStyle(
+                        color=ACCENT if active_view == "cup" else TEXT_SECONDARY,
+                        bgcolor=ft.Colors.with_opacity(0.1, ACCENT) if active_view == "cup" else ft.Colors.TRANSPARENT,
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                    ),
+                    on_click=lambda _: switch_view("cup"),
+                ),
+            ],
+        ),
+        margin=ft.margin.only(bottom=10),
+    )
+
+    if active_view == "cup":
+        content_view = _build_cup_view(page, conn, gs)
+    else:
+        content_view = _build_league_view(page, conn, gs)
+
+    return ft.Column(
+        expand=True,
+        scroll=ft.ScrollMode.AUTO,
+        controls=[
+            ft.Container(
+                padding=ft.padding.all(PAGE_PADDING),
+                content=ft.Column(
+                    spacing=SECTION_SPACING,
+                    controls=[
+                        # Header
+                        header_bar(
+                            title=t("competition"),
+                            subtitle=f"{t_format('season_label', y1=gs.season_year, y2=gs.season_year + 1)}",
+                            icon=ft.Icons.LEADERBOARD,
+                            page=page,
+                        ),
+                        toggle,
+                        content_view,
+                    ],
+                ),
+            ),
+        ],
+    )
+
+
+def _build_league_view(page: ft.Page, conn, gs) -> ft.Column:
+    """Build the standard league table view."""
+    from src.ui.app import navigate
     standings = queries.get_standings(conn)
     current_md = queries.get_current_matchday(conn)
 
@@ -98,13 +170,8 @@ def build_table_screen(page: ft.Page) -> ft.Column:
         gd_val = s.goal_difference
         gd_color = TEXT_SUCCESS if gd_val > 0 else TEXT_DANGER if gd_val < 0 else TEXT_MUTED
 
-        # Use Arabic club name directly if language is Arabic
-        from src.utils.localization import get_language
-        lang = get_language()
-        if lang == "ar" and hasattr(s, "club_name_ar") and s.club_name_ar:
-            club_display = s.club_name_ar
-        else:
-            club_display = s.club_name if hasattr(s, "club_name") else str(s)
+        from src.utils.localization import get_language, display_name
+        club_display = display_name(s.club_name, getattr(s, "club_name_ar", ""))
 
         table_rows.append(
             ft.Container(
@@ -149,89 +216,142 @@ def build_table_screen(page: ft.Page) -> ft.Column:
             f"GD {user_standing.goal_difference:+d}"
         )
 
-    # ── Legend ──────────────────────────────────────────────────────
-    legend = ft.Row(
-        spacing=12,
+    return ft.Column(
+        spacing=SECTION_SPACING,
         controls=[
-            ft.Row(spacing=4, tight=True, controls=[
-                ft.Container(width=10, height=10, bgcolor=ft.Colors.BLUE_400, border_radius=2),
-                ft.Text("CAF CL", size=TINY_SIZE, color=TEXT_MUTED),
+            ft.Text(f"{t('standings')} — {t('matchday')} {current_md}", size=14, color=TEXT_SECONDARY),
+            
+            # User position callout
+            *([ ft.Container(
+                content=ft.Column(spacing=2, controls=[
+                    ft.Text(f"📍 {t_format('you_are_pos', pos=f'{user_pos}{pos_suffix}')}", size=BODY_SIZE,
+                            weight=ft.FontWeight.W_600, color=TEXT_SUCCESS),
+                    ft.Text(user_pts_text, size=CAPTION_SIZE, color=TEXT_SECONDARY),
+                ]),
+                padding=ft.padding.symmetric(horizontal=12, vertical=8),
+                bgcolor=CARD_GLASS_STRONG,
+                border_radius=CARD_RADIUS_SM,
+                border=ft.border.only(
+                    left=ft.BorderSide(3, TEXT_SUCCESS),
+                    top=ft.BorderSide(1, GOLD_BORDER),
+                    right=ft.BorderSide(1, GOLD_BORDER),
+                    bottom=ft.BorderSide(1, GOLD_BORDER),
+                ),
+            )] if user_pos else []),
+
+            # Table
+            header_row,
+            ft.Column(spacing=2, controls=table_rows),
+            
+            # Quick nav
+            ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[
+                ft.OutlinedButton(f"📅 {t('fixtures_btn')}", on_click=lambda e: navigate(page, "/fixtures"),
+                                  style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), side=ft.BorderSide(1, GOLD_BORDER))),
             ]),
-            ft.Row(spacing=4, tight=True, controls=[
-                ft.Container(width=10, height=10, bgcolor=ft.Colors.ORANGE_400, border_radius=2),
-                ft.Text("CAF CC", size=TINY_SIZE, color=TEXT_MUTED),
-            ]),
-            ft.Row(spacing=4, tight=True, controls=[
-                ft.Container(width=10, height=10, bgcolor=ft.Colors.RED_400, border_radius=2),
-                ft.Text(t("relegation"), size=TINY_SIZE, color=TEXT_MUTED),
-            ]),
-        ],
+        ]
     )
 
+
+def _build_cup_view(page: ft.Page, conn, gs) -> ft.Column:
+    """Build the Egypt Cup overview/bracket view."""
+    from src.core.competition import get_cup_state, CUP_ROUNDS
+    from src.utils.localization import get_language
+    
+    cup = get_cup_state(conn, gs.season_year)
+    if not cup:
+        return ft.Column(horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
+            ft.Container(height=40),
+            ft.Icon(ft.Icons.LOCK, size=48, color=TEXT_MUTED),
+            ft.Text(t("no_data"), color=TEXT_MUTED),
+        ])
+
+    lang = get_language()
+    round_cards = []
+    
+    for rnd_name in CUP_ROUNDS:
+        if rnd_name not in cup.rounds:
+            continue
+            
+        rnd = cup.rounds[rnd_name]
+        is_current = cup.current_round == rnd_name
+        
+        matches_summary = []
+        for fid in rnd.fixture_ids:
+            row = conn.execute("SELECT * FROM fixtures WHERE id=?", (fid,)).fetchone()
+            if not row: continue
+            
+            # Manual localization for sqlite row
+            if lang == "ar" and row["home_club_name_ar"]:
+                h_name = row["home_club_name_ar"]
+            else:
+                h_name = row["home_club_name"]
+                
+            if lang == "ar" and row["away_club_name_ar"]:
+                a_name = row["away_club_name_ar"]
+            else:
+                a_name = row["away_club_name"]
+                
+            played = bool(row["played"])
+            
+            if played:
+                score = f"{row['home_goals']} - {row['away_goals']}"
+                if row['penalties_json']:
+                    score += " (P)"
+                score_color = TEXT_PRIMARY
+            else:
+                score = "vs"
+                score_color = TEXT_MUTED
+                
+            is_user_match = row["home_club_id"] == gs.user_club_id or row["away_club_id"] == gs.user_club_id
+            
+            matches_summary.append(
+                ft.Container(
+                    content=ft.Row(
+                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        controls=[
+                            ft.Text(h_name[:14], size=11, color=TEXT_PRIMARY, expand=True, max_lines=1),
+                            ft.Container(
+                                content=ft.Text(score, size=10, weight=ft.FontWeight.BOLD, color=score_color),
+                                bgcolor=CARD_GLASS, padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                                border_radius=4,
+                            ),
+                            ft.Text(a_name[:14], size=11, color=TEXT_PRIMARY, expand=True, text_align=ft.TextAlign.RIGHT, max_lines=1),
+                        ],
+                    ),
+                    padding=4,
+                    border=ft.border.all(1, ft.Colors.with_opacity(0.15, ACCENT)) if is_user_match else None,
+                    bgcolor=ft.Colors.with_opacity(0.08, ACCENT) if is_user_match else None,
+                    border_radius=4,
+                )
+            )
+
+        # Localization for round name
+        rnd_display = t(rnd_name.lower().replace(" ", "_"))
+        if rnd_display == f"[{rnd_name.lower().replace(' ', '_')}]":
+            rnd_display = rnd_name # fallback
+
+        status_text = "Complete" if rnd.is_complete else ("In Progress" if is_current else "Upcoming")
+        status_color = TEXT_SUCCESS if rnd.is_complete else (ACCENT if is_current else TEXT_MUTED)
+
+        card = section_card(
+            title=rnd_display,
+            controls=[
+                ft.Row([ft.Text(status_text, size=10, color=status_color, weight=ft.FontWeight.W_500)]),
+                ft.Column(spacing=4, controls=matches_summary),
+            ]
+        )
+        round_cards.append(card)
+
+    if cup.champion_id:
+        # Get champion name from club_names dict (which stores names)
+        champ_name = cup.club_names.get(cup.champion_id, "Unknown")
+        round_cards.insert(0, action_card(
+            title="🏆 " + t("champion").upper(),
+            subtitle=f"{champ_name} won the Egypt Cup!",
+            on_click=None
+        ))
+
     return ft.Column(
-        expand=True,
-        scroll=ft.ScrollMode.AUTO,
-        controls=[
-            ft.Container(
-                padding=ft.padding.all(PAGE_PADDING),
-                content=ft.Column(
-                    spacing=SECTION_SPACING,
-                    controls=[
-                        # Header
-                        header_bar(
-                            title=t("egyptian_premier_league"),
-                            subtitle=f"{t_format('season_label', y1=gs.season_year, y2=gs.season_year + 1)}  •  {t('matchday')} {current_md}",
-                            icon=ft.Icons.LEADERBOARD,
-                            page=page,
-                        ),
-
-                        # User position callout
-                        *([ ft.Container(
-                            content=ft.Column(spacing=2, controls=[
-                                ft.Text(f"📍 {t_format('you_are_pos', pos=f'{user_pos}{pos_suffix}')}", size=BODY_SIZE,
-                                        weight=ft.FontWeight.W_600, color=TEXT_SUCCESS),
-                                ft.Text(user_pts_text, size=CAPTION_SIZE, color=TEXT_SECONDARY),
-                            ]),
-                            padding=ft.padding.symmetric(horizontal=12, vertical=8),
-                            bgcolor=CARD_GLASS_STRONG,
-                            border_radius=CARD_RADIUS_SM,
-                            border=ft.border.only(
-                                left=ft.BorderSide(3, TEXT_SUCCESS),
-                                top=ft.BorderSide(1, GOLD_BORDER),
-                                right=ft.BorderSide(1, GOLD_BORDER),
-                                bottom=ft.BorderSide(1, GOLD_BORDER),
-                            ),
-                            shadow=ft.BoxShadow(
-                                spread_radius=0, blur_radius=6,
-                                color=ft.Colors.with_opacity(0.08, ft.Colors.GREEN),
-                            ),
-                        )] if user_pos else []),
-
-                        # Quick nav
-                        ft.Row(spacing=6, controls=[
-                            ft.OutlinedButton(f"📅 {t('fixtures_btn')}", height=32,
-                                              on_click=lambda e: navigate(page, "/fixtures"),
-                                              style=ft.ButtonStyle(
-                                                  padding=ft.padding.symmetric(horizontal=12),
-                                                  shape=ft.RoundedRectangleBorder(radius=10),
-                                                  side=ft.BorderSide(1, GOLD_BORDER),
-                                              )),
-                            ft.OutlinedButton(f"🏟️ {t('my_club')}", height=32,
-                                              on_click=lambda e: navigate(page, "/club"),
-                                              style=ft.ButtonStyle(
-                                                  padding=ft.padding.symmetric(horizontal=12),
-                                                  shape=ft.RoundedRectangleBorder(radius=10),
-                                                  side=ft.BorderSide(1, GOLD_BORDER),
-                                              )),
-                        ]),
-
-                        # Table
-                        header_row,
-                        ft.Column(spacing=2, controls=table_rows),
-                        ft.Container(height=4),
-                        legend,
-                    ],
-                ),
-            ),
-        ],
+        spacing=SECTION_SPACING,
+        controls=round_cards
     )

@@ -163,6 +163,17 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                             ],
                         ),
 
+                        # Quick nav
+                        ft.Row(spacing=6, controls=[
+                            ft.OutlinedButton(f"🏟️ {t('my_club')}", height=32,
+                                              on_click=lambda e: navigate(page, "/club"),
+                                              style=ft.ButtonStyle(
+                                                  padding=ft.padding.symmetric(horizontal=12),
+                                                  shape=ft.RoundedRectangleBorder(radius=10),
+                                                  side=ft.BorderSide(1, GOLD_BORDER),
+                                              )),
+                        ]),
+
                         # ── Squad Summary (collapsed) ──────────────────
                         collapsible_section(
                             f"📊 {t('squad_summary')}",

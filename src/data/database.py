@@ -185,8 +185,8 @@ CREATE TABLE IF NOT EXISTS players (
 CREATE TABLE IF NOT EXISTS fixtures (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     matchday INTEGER NOT NULL,
-    home_club_id INTEGER NOT NULL REFERENCES clubs(id),
-    away_club_id INTEGER NOT NULL REFERENCES clubs(id),
+    home_club_id INTEGER NOT NULL,
+    away_club_id INTEGER NOT NULL,
     home_club_name TEXT NOT NULL DEFAULT '',
     away_club_name TEXT NOT NULL DEFAULT '',
     home_club_name_ar TEXT NOT NULL DEFAULT '',
@@ -592,6 +592,15 @@ _MIGRATIONS = [
     ]),
     (7, [
         "ALTER TABLE game_state ADD COLUMN user_club_name_ar TEXT NOT NULL DEFAULT ''",
+    ]),
+    (8, [
+        # RELAX FOREIGN KEY CONSTRAINTS on fixtures to allow virtual Cup clubs (negative IDs)
+        "CREATE TABLE fixtures_new (id INTEGER PRIMARY KEY AUTOINCREMENT, matchday INTEGER NOT NULL, home_club_id INTEGER NOT NULL, away_club_id INTEGER NOT NULL, home_club_name TEXT NOT NULL DEFAULT '', away_club_name TEXT NOT NULL DEFAULT '', home_club_name_ar TEXT NOT NULL DEFAULT '', away_club_name_ar TEXT NOT NULL DEFAULT '', match_date TEXT, played INTEGER NOT NULL DEFAULT 0, home_goals INTEGER DEFAULT NULL, away_goals INTEGER DEFAULT NULL, events_json TEXT NOT NULL DEFAULT '[]', home_stats_json TEXT NOT NULL DEFAULT '{}', away_stats_json TEXT NOT NULL DEFAULT '{}', competition TEXT NOT NULL DEFAULT 'Egyptian Premier League', player_ratings_json TEXT NOT NULL DEFAULT '{}', extra_time INTEGER NOT NULL DEFAULT 0, penalties_json TEXT NOT NULL DEFAULT '')",
+        "INSERT INTO fixtures_new SELECT * FROM fixtures",
+        "DROP TABLE fixtures",
+        "ALTER TABLE fixtures_new RENAME TO fixtures",
+        "CREATE INDEX IF NOT EXISTS idx_fixtures_matchday ON fixtures(matchday)",
+        "CREATE INDEX IF NOT EXISTS idx_fixtures_played ON fixtures(played)",
     ]),
 ]
 

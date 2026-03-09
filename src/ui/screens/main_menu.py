@@ -283,6 +283,10 @@ def _select_club(page: ft.Page, conn, game_state, club: Club, dlg: ft.AlertDialo
     app_state.db_conn = conn
     app_state.game_state = game_state
 
+    # Ensure Cup is initialized (it might have failed in seed_database due to FKs)
+    from src.core.competition import ensure_cup_initialized
+    ensure_cup_initialized(conn, game_state)
+
     page.pop_dialog()
     navigate(page, "/match_day")
     show_snackbar(page, f"🎉 Welcome to {display_name(club)}, {game_state.manager_name}!")
@@ -298,6 +302,12 @@ def _continue_game(page: ft.Page):
         if game_state:
             app_state.db_conn = conn
             app_state.game_state = game_state
+
+            # Repair/Ensure Cup (for existing saves after schema update)
+            from src.core.competition import ensure_cup_initialized
+            if ensure_cup_initialized(conn, game_state):
+                print("DEBUG: Egypt Cup repaired/initialized successfully.")
+
             navigate(page, "/squad")
             show_snackbar(page, f"📂 Welcome back, {game_state.manager_name}!")
         else:

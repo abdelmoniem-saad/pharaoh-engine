@@ -47,6 +47,8 @@ _strings: dict[str, dict[str, str]] = {
         "transfers": "Transfers",
         "club": "Club",
         "history": "History",
+        "competition": "Competition",
+        "competitions": "Competitions",
         "cup": "Cup",
 
         # Match
@@ -268,7 +270,7 @@ _strings: dict[str, dict[str, str]] = {
         "welcome_back": "Welcome back",
         "welcome_to": "Welcome to",
         "match": "Match",
-        "table": "Table",
+        "competition": "Competition",
         "no_game_loaded": "No game loaded",
         "club_not_found": "Club not found",
         "sort_by": "Sort By",
@@ -701,6 +703,8 @@ _strings: dict[str, dict[str, str]] = {
         "transfers": "الانتقالات",
         "club": "النادي",
         "history": "التاريخ",
+        "competition": "البطولة",
+        "competitions": "البطولات",
         "cup": "الكأس",
 
         # Match

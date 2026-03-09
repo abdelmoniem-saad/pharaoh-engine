@@ -203,6 +203,23 @@ def get_cup_state(conn: sqlite3.Connection, season_year: int) -> CupCompetition 
     return CupCompetition.from_db_row(row, conn)
 
 
+def ensure_cup_initialized(conn: sqlite3.Connection, game_state: GameState) -> bool:
+    """Ensure the Egypt Cup exists for the current season; create it if not."""
+    state = get_cup_state(conn, game_state.season_year)
+    if state:
+        return False
+
+    # Create it
+    try:
+        clubs = queries.get_all_clubs(conn)
+        season_start = date(game_state.season_year, 8, 15)
+        create_egypt_cup(conn, clubs, game_state.season_year, season_start)
+        return True
+    except Exception as e:
+        print(f"DEBUG: Failed to initialize cup: {e}")
+        return False
+
+
 def advance_cup_round(
     conn: sqlite3.Connection,
     cup: CupCompetition,
