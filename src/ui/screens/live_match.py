@@ -15,7 +15,7 @@ import flet as ft
 
 from src.utils.config import MatchEventType
 from src.data import queries
-from src.utils.localization import t
+from src.utils.localization import t, display_name, display_home_name, display_away_name, is_rtl
 
 
 # Event icons
@@ -185,7 +185,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                              width=30, text_align=ft.TextAlign.RIGHT),
                     ft.Text(icon, size=14),
                     ft.Text(
-                        ev.description,
+                        ev.description_ar if is_rtl() else ev.description,
                         size=13 if is_major else 11,
                         weight=ft.FontWeight.BOLD if is_goal else ft.FontWeight.NORMAL,
                         color=ft.Colors.GREEN_300 if is_goal else ft.Colors.WHITE,
@@ -365,14 +365,14 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                                         spacing=10,
                                         controls=[
                                             ft.Text(
-                                                result.home_club_name, size=14,
+                                                display_home_name(result), size=14,
                                                 weight=ft.FontWeight.BOLD,
                                                 text_align=ft.TextAlign.RIGHT, expand=True,
                                                 max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                             ),
                                             score_text,
                                             ft.Text(
-                                                result.away_club_name, size=14,
+                                                display_away_name(result), size=14,
                                                 weight=ft.FontWeight.BOLD,
                                                 text_align=ft.TextAlign.LEFT, expand=True,
                                                 max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
@@ -609,7 +609,7 @@ def _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made,
                 ft.Text(f"{current_min}'", size=11, color=ft.Colors.GREY_500,
                          width=30, text_align=ft.TextAlign.RIGHT),
                 ft.Text("🔄", size=14),
-                ft.Text(f"{off_p.name} ⬇️  {on_p.name} ⬆️",
+                ft.Text(f"{display_name(off_p)} ⬇️  {display_name(on_p)} ⬆️",
                          size=12, color=ft.Colors.CYAN_300, weight=ft.FontWeight.W_500,
                          expand=True),
             ]),
@@ -769,7 +769,8 @@ def _restore_page_root(page: ft.Page):
     )
 
     page.controls.clear()
-    page.controls.append(root)
+    # Apply global SafeArea when restoring the root
+    page.controls.append(ft.SafeArea(content=root, expand=True))
     page.update()
 
 

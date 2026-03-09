@@ -1352,18 +1352,42 @@ def t_format(key: str, **kwargs) -> str:
 
 def display_name(entity, lang: str | None = None) -> str:
     """
-    Get the display name for a club or player based on current language.
-
-    Args:
-        entity: A Club or Player model (must have `name` and optionally `name_ar`).
-        lang: Override language; defaults to current language.
+    Get the display name for an entity (Club, Player, Fixture, Standing, etc.)
+    based on the current language and available attributes.
     """
     use_lang = lang or _current_language
     if use_lang == "ar":
-        ar_name = getattr(entity, "name_ar", "")
-        if ar_name:
-            return ar_name
-    return entity.name
+        # Try Arabic attributes first
+        for attr in ["name_ar", "club_name_ar", "player_name_ar"]:
+            val = getattr(entity, attr, "")
+            if val:
+                return val
+    
+    # Fallback to English attributes
+    for attr in ["name", "club_name", "player_name"]:
+        val = getattr(entity, attr, "")
+        if val:
+            return val
+            
+    return getattr(entity, "name", str(entity))
+
+
+def display_home_name(match_entity, lang: str | None = None) -> str:
+    """Get the display name for the home club in a fixture or result."""
+    use_lang = lang or _current_language
+    if use_lang == "ar":
+        val = getattr(match_entity, "home_club_name_ar", "")
+        if val: return val
+    return getattr(match_entity, "home_club_name", "Home")
+
+
+def display_away_name(match_entity, lang: str | None = None) -> str:
+    """Get the display name for the away club in a fixture or result."""
+    use_lang = lang or _current_language
+    if use_lang == "ar":
+        val = getattr(match_entity, "away_club_name_ar", "")
+        if val: return val
+    return getattr(match_entity, "away_club_name", "Away")
 
 
 def is_rtl() -> bool:

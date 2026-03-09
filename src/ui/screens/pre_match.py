@@ -15,7 +15,7 @@ from src.ui.theme import (
     header_bar, GOLD_BORDER, CARD_GLASS, PRIMARY_BTN_STYLE,
 )
 from src.utils.config import Position
-from src.utils.localization import t
+from src.utils.localization import t, display_name, display_home_name, display_away_name
 
 
 # Pitch coordinates for position markers
@@ -57,7 +57,7 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
         return ft.Column(controls=[ft.Text(t("no_upcoming_match"))])
 
     is_home = fixture.home_club_id == gs.user_club_id
-    opp_name = fixture.away_club_name if is_home else fixture.home_club_name
+    opp_name = display_away_name(fixture) if is_home else display_home_name(fixture)
 
     # Count unavailable players
     injured_players = [p for p in squad if p.injury_days_remaining > 0]
@@ -166,7 +166,7 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                             alignment=ft.Alignment(0, 0),
                             border=border,
                         ),
-                        ft.Text(p.name.split()[-1][:8], size=8,
+                        ft.Text(display_name(p).split()[-1][:12], size=8,
                                  color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER),
                     ],
                 ),
@@ -201,7 +201,7 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                         page.update()
                 return handler
 
-            bench_label_parts = [p.name]
+            bench_label_parts = [display_name(p)]
             if p.injury_days_remaining > 0:
                 bench_label_parts.append("🏥")
             if p.suspension_matches > 0:
@@ -244,26 +244,54 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
 
     # Play match button
     def play_match(e):
-        # Simulate the full match
-        outcome = simulate_user_match(conn, gs)
-        if outcome:
-            # Navigate to live match screen for FIFA-style replay
-            from src.ui.screens.live_match import build_live_match_screen
-            page.navigation_bar = None
-            page.controls.clear()
-            live_content = build_live_match_screen(page, outcome)
-            safe = ft.SafeArea(
-                content=live_content,
-                avoid_intrusions_top=True,
-                avoid_intrusions_bottom=True,
-                avoid_intrusions_left=True,
-                avoid_intrusions_right=True,
-                minimum_padding=ft.Padding(top=4, bottom=0, left=0, right=0),
-            )
-            page.controls.append(safe)
-            page.update()
+        # Provide immediate feedback to prevent double-clicks and show activity
+        e.control.disabled = True
+        # Some Flet versions use 'content' for the text if passed as positional arg
+        is_text = hasattr(e.control, "text")
+        orig_text = e.control.text if is_text else e.control.content
+        loading_text = "⏳ " + t("loading")
+        if is_text:
+            e.control.text = loading_text
         else:
-            show_snackbar(page, "Could not simulate match!", bgcolor=ft.Colors.RED_800)
+            e.control.content = loading_text
+        page.update()
+
+        try:
+            # Simulate the full match
+            outcome = simulate_user_match(conn, gs)
+            if outcome:
+                # Navigate to live match screen for FIFA-style replay
+                from src.ui.screens.live_match import build_live_match_screen
+                page.navigation_bar = None
+                page.controls.clear()
+                live_content = build_live_match_screen(page, outcome)
+                # Live match uses its own dedicated SafeArea as it destroys the root stack
+                safe = ft.SafeArea(
+                    content=live_content,
+                    avoid_intrusions_top=True,
+                    avoid_intrusions_bottom=True,
+                    avoid_intrusions_left=True,
+                    avoid_intrusions_right=True,
+                    minimum_padding=ft.Padding(top=4, bottom=0, left=0, right=0),
+                )
+                page.controls.append(safe)
+                page.update()
+            else:
+                show_snackbar(page, "Could not simulate match!", bgcolor=ft.Colors.RED_800)
+                e.control.disabled = False
+                if is_text:
+                    e.control.text = orig_text
+                else:
+                    e.control.content = orig_text
+                page.update()
+        except Exception as ex:
+            show_snackbar(page, f"Simulation Error: {ex}", bgcolor=ft.Colors.RED_800)
+            e.control.disabled = False
+            if is_text:
+                e.control.text = orig_text
+            else:
+                e.control.content = orig_text
+            page.update()
 
     venue = "🏟️ HOME" if is_home else "✈️ AWAY"
 
@@ -292,7 +320,7 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                                     *(
                                         [ft.Text(
                                             f"🏥 {len(injured_players)} injured: " +
-                                            ", ".join(p.name for p in injured_players[:3]) +
+                                            ", ".join(display_name(p) for p in injured_players[:3]) +
                                             ("..." if len(injured_players) > 3 else ""),
                                             size=10, color=ft.Colors.RED_400,
                                         )] if injured_players else []
@@ -300,7 +328,7 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                                     *(
                                         [ft.Text(
                                             f"🚫 {len(suspended_players)} suspended: " +
-                                            ", ".join(p.name for p in suspended_players[:3]) +
+                                            ", ".join(display_name(p) for p in suspended_players[:3]) +
                                             ("..." if len(suspended_players) > 3 else ""),
                                             size=10, color=ft.Colors.ORANGE_400,
                                         )] if suspended_players else []
@@ -327,7 +355,7 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                             style=PRIMARY_BTN_STYLE,
                             on_click=play_match,
                         ),
-                        ft.Container(height=10),
+                        ft.Container(height=60), # Extra space for mobile bottom safe area/nav bar
                     ],
                 ),
             ),

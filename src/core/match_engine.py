@@ -301,10 +301,14 @@ def simulate_match(
                             event_type=MatchEventType.PENALTY,
                             player_id=pen_taker.id,
                             player_name=pen_taker.name,
+                            player_name_ar=pen_taker.name_ar,
                             club_id=pen_club.id,
-                            description=commentary.generate(MatchEventType.GOAL,
+                            description=commentary.generate(MatchEventType.GOAL, lang="en",
                                                             player=pen_taker.name,
                                                             club=pen_club.name) + " (Penalty!)",
+                            description_ar=commentary.generate(MatchEventType.GOAL, lang="ar",
+                                                               player=pen_taker.name_ar,
+                                                               club=pen_club.name_ar) + " (ضربة جزاء!)",
                         ))
                     else:
                         events.append(MatchEvent(
@@ -312,8 +316,10 @@ def simulate_match(
                             event_type=MatchEventType.PENALTY_MISS,
                             player_id=pen_taker.id,
                             player_name=pen_taker.name,
+                            player_name_ar=pen_taker.name_ar,
                             club_id=pen_club.id,
                             description=f"PENALTY MISSED! {pen_taker.name} fails from the spot!",
+                            description_ar=f"ضربة جزاء ضائعة! {pen_taker.name_ar} يخفق في التسجيل من علامة الجزاء!",
                         ))
                         if pen_club.id == home_club.id:
                             home_shots += 1
@@ -335,8 +341,10 @@ def simulate_match(
                         event_type=card_type,
                         player_id=foul_player.id,
                         player_name=foul_player.name,
+                        player_name_ar=foul_player.name_ar,
                         club_id=home_club.id if is_home_foul else away_club.id,
                         description=f"Yellow card for {foul_player.name}",
+                        description_ar=f"بطاقة صفراء لـ {foul_player.name_ar}",
                     ))
 
             # Rare red card (~1% of fouls) — REMOVES PLAYER FROM MATCH
@@ -351,10 +359,14 @@ def simulate_match(
                         event_type=MatchEventType.RED_CARD,
                         player_id=foul_player.id,
                         player_name=foul_player.name,
+                        player_name_ar=foul_player.name_ar,
                         club_id=home_club.id if is_home_foul else away_club.id,
-                        description=commentary.generate(MatchEventType.RED_CARD,
+                        description=commentary.generate(MatchEventType.RED_CARD, lang="en",
                                                          player=foul_player.name,
                                                          club=(home_club.name if is_home_foul else away_club.name)),
+                        description_ar=commentary.generate(MatchEventType.RED_CARD, lang="ar",
+                                                            player=foul_player.name_ar,
+                                                            club=(home_club.name_ar if is_home_foul else away_club.name_ar)),
                     ))
                     # Remove from active XI — team plays with fewer players
                     if is_home_foul and foul_player.id in home_active_xi:
@@ -379,12 +391,19 @@ def simulate_match(
                     event_type=MatchEventType.INJURY,
                     player_id=inj_player.id,
                     player_name=inj_player.name,
+                    player_name_ar=inj_player.name_ar,
                     club_id=inj_club.id,
                     description=commentary.generate(
-                        MatchEventType.INJURY,
+                        MatchEventType.INJURY, lang="en",
                         player=inj_player.name,
                         club=inj_club.name,
                         detail=inj_type.lower(),
+                    ),
+                    description_ar=commentary.generate(
+                        MatchEventType.INJURY, lang="ar",
+                        player=inj_player.name_ar,
+                        club=inj_club.name_ar,
+                        detail=inj_type.lower(), # injury types are technical
                     ),
                 ))
 
@@ -392,8 +411,13 @@ def simulate_match(
     events.append(MatchEvent(
         minute=90, event_type=MatchEventType.FULL_TIME,
         description=commentary.generate(
-            MatchEventType.FULL_TIME,
+            MatchEventType.FULL_TIME, lang="en",
             home=home_club.name, away=away_club.name,
+            home_goals=home_goals, away_goals=away_goals,
+        ),
+        description_ar=commentary.generate(
+            MatchEventType.FULL_TIME, lang="ar",
+            home=home_club.name_ar, away=away_club.name_ar,
             home_goals=home_goals, away_goals=away_goals,
         ),
     ))
@@ -413,6 +437,8 @@ def simulate_match(
         away_club_id=away_club.id,
         home_club_name=home_club.name,
         away_club_name=away_club.name,
+        home_club_name_ar=home_club.name_ar,
+        away_club_name_ar=away_club.name_ar,
         home_goals=home_goals,
         away_goals=away_goals,
         events=events,
@@ -480,6 +506,7 @@ def _simulate_attack(
                 minute=minute, event_type=MatchEventType.CORNER,
                 club_id=attacking_club.id,
                 description=f"Corner for {attacking_club.name}",
+                description_ar=f"ركنية لـ {attacking_club.name_ar}",
             )
         return None
 
@@ -509,8 +536,10 @@ def _simulate_attack(
         return MatchEvent(
             minute=minute, event_type=MatchEventType.SHOT_OFF_TARGET,
             player_id=shooter.id, player_name=shooter.name,
+            player_name_ar=shooter.name_ar,
             club_id=attacking_club.id,
             description=f"{shooter.name} shoots wide!",
+            description_ar=f"{shooter.name_ar} يسدد بعيداً!",
         )
 
     # On target — GK save?
@@ -524,8 +553,10 @@ def _simulate_attack(
         return MatchEvent(
             minute=minute, event_type=MatchEventType.SHOT_ON_TARGET,
             player_id=shooter.id, player_name=shooter.name,
+            player_name_ar=shooter.name_ar,
             club_id=attacking_club.id,
             description=f"{shooter.name} forces a save!",
+            description_ar=f"{shooter.name_ar} يجبر الحارس على التصدي!",
         )
 
     # GOAL!
@@ -535,13 +566,17 @@ def _simulate_attack(
     event = MatchEvent(
         minute=minute, event_type=MatchEventType.GOAL,
         player_id=shooter.id, player_name=shooter.name,
+        player_name_ar=shooter.name_ar,
         club_id=attacking_club.id,
         description=f"GOAL! {shooter.name} scores for {attacking_club.name}!",
+        description_ar=f"جووووووول! {shooter.name_ar} يسجل لـ {attacking_club.name_ar}!",
     )
     if assister:
         event.second_player_id = assister.id
         event.second_player_name = assister.name
+        event.second_player_name_ar = assister.name_ar
         event.description += f" (Assisted by {assister.name})"
+        event.description_ar += f" (صناعة {assister.name_ar})"
 
     return event
 

@@ -13,7 +13,7 @@ from src.ui.widgets.cards import (
     section_card, info_tile, player_card_h, position_group_header,
     action_card, form_chips, kv_row, collapsible_section,
 )
-from src.utils.localization import t, t_format
+from src.utils.localization import t, t_format, display_name
 from src.ui.theme import (
     ACCENT, TEXT_SECONDARY, TEXT_MUTED,
     CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS, PAGE_PADDING, SECTION_SPACING,
@@ -76,11 +76,11 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
             grp = POSITION_GROUP_MAP.get(player.position, PositionGroup.MIDFIELDER)
             if grp.value != current_group:
                 current_group = grp.value
-                display_name = {
-                    "GK": "GK", "DEF": "DEF", "MID": "MID", "ATT": "FWD",
+                group_label = {
+                    "GK": t("GK"), "DEF": t("DEF"), "MID": t("MID"), "ATT": t("FWD"),
                 }.get(current_group, current_group)
                 cards.append(position_group_header(
-                    display_name, group_counter.get(current_group, 0)
+                    group_label, group_counter.get(current_group, 0)
                 ))
 
             ovr = calculate_overall_rating(player)
@@ -91,7 +91,7 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                 return handler
 
             cards.append(player_card_h(
-                name=player.name,
+                name=display_name(player),
                 position=player.position.value,
                 ovr=ovr,
                 age=player.age,
@@ -151,7 +151,7 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                     controls=[
                         # ── Header (minimal) ────────────────────────────
                         header_bar(
-                            title=gs.user_club_name,
+                            title=display_name(queries.get_club(conn, gs.user_club_id)),
                             subtitle=f"👤 {gs.manager_name}  •  📅 {gs.current_date.strftime('%d %b %Y')}",
                             icon=ft.Icons.SHIELD,
                             page=page,
@@ -918,12 +918,12 @@ def _show_compare_dialog(page, p1, p2):
     ovr2 = calculate_overall_rating(p2)
 
     attrs_to_compare = [
-        ("Finishing", "finishing"), ("Passing", "passing"), ("Dribbling", "dribbling"),
-        ("First Touch", "first_touch"), ("Crossing", "crossing"), ("Heading", "heading"),
-        ("Pace", "pace"), ("Stamina", "stamina"), ("Strength", "strength"),
-        ("Agility", "agility"), ("Composure", "composure"), ("Vision", "vision"),
-        ("Tackling", "tackling"), ("Marking", "marking"), ("Work Rate", "work_rate"),
-        ("Positioning", "positioning"),
+        (t("finishing"), "finishing"), (t("passing"), "passing"), (t("dribbling"), "dribbling"),
+        (t("first_touch"), "first_touch"), (t("crossing"), "crossing"), (t("heading"), "heading"),
+        (t("pace"), "pace"), (t("stamina"), "stamina"), (t("strength"), "strength"),
+        (t("agility"), "agility"), (t("composure"), "composure"), (t("vision"), "vision"),
+        (t("tackling"), "tackling"), (t("marking"), "marking"), (t("work_rate"), "work_rate"),
+        (t("positioning"), "positioning")
     ]
 
     rows = []

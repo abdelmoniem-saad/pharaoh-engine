@@ -78,9 +78,6 @@ def build_table_screen(page: ft.Page) -> ft.Column:
             bg = CARD_BG_HIGHLIGHT
             left_border = ft.border.only(
                 left=ft.BorderSide(3, TEXT_SUCCESS),
-                top=ft.BorderSide(1, ft.Colors.with_opacity(0.2, ft.Colors.GREEN)),
-                right=ft.BorderSide(1, ft.Colors.with_opacity(0.2, ft.Colors.GREEN)),
-                bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.2, ft.Colors.GREEN)),
             )
         elif pos <= 2:
             bg = ft.Colors.with_opacity(0.08, ft.Colors.BLUE)
@@ -101,6 +98,14 @@ def build_table_screen(page: ft.Page) -> ft.Column:
         gd_val = s.goal_difference
         gd_color = TEXT_SUCCESS if gd_val > 0 else TEXT_DANGER if gd_val < 0 else TEXT_MUTED
 
+        # Use Arabic club name directly if language is Arabic
+        from src.utils.localization import get_language
+        lang = get_language()
+        if lang == "ar" and hasattr(s, "club_name_ar") and s.club_name_ar:
+            club_display = s.club_name_ar
+        else:
+            club_display = s.club_name if hasattr(s, "club_name") else str(s)
+
         table_rows.append(
             ft.Container(
                 content=ft.Row(
@@ -109,7 +114,7 @@ def build_table_screen(page: ft.Page) -> ft.Column:
                                 text_align=ft.TextAlign.CENTER,
                                 weight=ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL,
                                 color=ACCENT if is_user else TEXT_SECONDARY),
-                        ft.Text(s.club_name[:16], size=12, expand=True,
+                        ft.Text(club_display[:16], size=12, expand=True,
                                 weight=name_weight,
                                 color=TEXT_SUCCESS if is_user else TEXT_PRIMARY,
                                 max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),

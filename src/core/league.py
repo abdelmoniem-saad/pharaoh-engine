@@ -33,6 +33,7 @@ def generate_fixtures(conn: sqlite3.Connection, clubs: list[Club],
 
     club_ids = [c.id for c in clubs]
     club_names = {c.id: c.name for c in clubs}
+    club_names_ar = {c.id: c.name_ar for c in clubs}
 
     # Shuffle for random fixture order each season
     rng.shuffle(club_ids)
@@ -51,6 +52,8 @@ def generate_fixtures(conn: sqlite3.Connection, clubs: list[Club],
                 away_club_id=away_id,
                 home_club_name=club_names[home_id],
                 away_club_name=club_names[away_id],
+                home_club_name_ar=club_names_ar[home_id],
+                away_club_name_ar=club_names_ar[away_id],
                 date=matchday_date,
                 competition=COMPETITION_NAME,
             )
@@ -68,6 +71,8 @@ def generate_fixtures(conn: sqlite3.Connection, clubs: list[Club],
                 away_club_id=home_id,    # Reversed
                 home_club_name=club_names[away_id],
                 away_club_name=club_names[home_id],
+                home_club_name_ar=club_names_ar[away_id],
+                away_club_name_ar=club_names_ar[home_id],
                 date=matchday_date,
                 competition=COMPETITION_NAME,
             )

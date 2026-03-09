@@ -143,6 +143,9 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
     for key, preset in PRESETS.items():
         is_active = (preset.formation == club.formation and
                      preset.mentality == club.mentality)
+        # Use t() for preset name and description
+        preset_name = t(key) if t(key) != f"[{key}]" else preset.name
+        preset_desc = t(f"{key}_desc") if t(f"{key}_desc") != f"[{key}_desc]" else preset.description
         preset_cards.append(
             ft.Card(
                 content=ft.Container(
@@ -151,10 +154,10 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                             ft.Icons.CHECK_CIRCLE if is_active else ft.Icons.PLAY_ARROW,
                             color=ft.Colors.GREEN_400 if is_active else ft.Colors.GREY_500,
                         ),
-                        title=ft.Text(preset.name, weight=ft.FontWeight.W_500,
+                        title=ft.Text(preset_name, weight=ft.FontWeight.W_500,
                                       size=13),
                         subtitle=ft.Text(
-                            f"{preset.formation} | {preset.description[:50]}",
+                            f"{preset.formation} | {preset_desc[:50]}",
                             size=10, color=ft.Colors.GREY_400,
                         ),
                         on_click=make_preset_handler(key),

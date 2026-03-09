@@ -188,10 +188,13 @@ class MatchEvent(BaseModel):
     event_type: MatchEventType
     player_id: Optional[int] = None
     player_name: str = ""
+    player_name_ar: str = ""
     second_player_id: Optional[int] = None   # e.g., assist provider
     second_player_name: str = ""
+    second_player_name_ar: str = ""
     club_id: Optional[int] = None
     description: str = ""
+    description_ar: str = ""
 
 
 class MatchStats(BaseModel):
@@ -215,6 +218,8 @@ class MatchResult(BaseModel):
     away_club_id: int
     home_club_name: str = ""
     away_club_name: str = ""
+    home_club_name_ar: str = ""
+    away_club_name_ar: str = ""
     home_goals: int = 0
     away_goals: int = 0
     events: list[MatchEvent] = Field(default_factory=list)
@@ -236,6 +241,7 @@ class LeagueStanding(BaseModel):
     """A single row in the league table."""
     club_id: int
     club_name: str
+    club_name_ar: str = ""
     played: int = 0
     won: int = 0
     drawn: int = 0
@@ -260,6 +266,8 @@ class Fixture(BaseModel):
     away_club_id: int
     home_club_name: str = ""
     away_club_name: str = ""
+    home_club_name_ar: str = ""
+    away_club_name_ar: str = ""
     date: Optional[_dt.date] = None
     played: bool = False
     result: Optional[MatchResult] = None
@@ -312,6 +320,7 @@ class GameState(BaseModel):
     current_date: _dt.date = Field(default_factory=lambda: _dt.date(2025, 8, 15))
     user_club_id: int = 0
     user_club_name: str = ""
+    user_club_name_ar: str = ""
     manager_name: str = "Manager"
     rng_seed: int = 42
     day_count: int = 0
@@ -372,8 +381,10 @@ class PlayerSeasonArchive(BaseModel):
     season_year: int
     player_id: int
     player_name: str = ""
+    player_name_ar: str = ""
     club_id: Optional[int] = None
     club_name: str = ""
+    club_name_ar: str = ""
     position: str = ""
     age: int = 0
     appearances: int = 0
@@ -393,6 +404,7 @@ class ClubSeasonArchive(BaseModel):
     season_year: int
     club_id: int
     club_name: str = ""
+    club_name_ar: str = ""
     position_finish: int = 0
     played: int = 0
     won: int = 0

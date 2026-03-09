@@ -36,7 +36,7 @@ def connect(save_name: str = "default") -> sqlite3.Connection:
     _db_connection.execute("PRAGMA foreign_keys=ON")
 
     # Always run migrations so existing saves get new tables/columns
-    _migrate_schema(_db_connection)
+    init_schema(_db_connection)
 
     return _db_connection
 
@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS game_state (
     current_date TEXT NOT NULL DEFAULT '2025-08-15',
     user_club_id INTEGER NOT NULL DEFAULT 0,
     user_club_name TEXT NOT NULL DEFAULT '',
+    user_club_name_ar TEXT NOT NULL DEFAULT '',
     manager_name TEXT NOT NULL DEFAULT 'Manager',
     rng_seed INTEGER NOT NULL DEFAULT 42,
     day_count INTEGER NOT NULL DEFAULT 0
@@ -109,7 +110,11 @@ CREATE TABLE IF NOT EXISTS clubs (
     defensive_line INTEGER NOT NULL DEFAULT 5,
     is_user_controlled INTEGER NOT NULL DEFAULT 0,
     season_expectation TEXT NOT NULL DEFAULT 'mid_table',
-    youth_promoted_count INTEGER NOT NULL DEFAULT 0
+    youth_promoted_count INTEGER NOT NULL DEFAULT 0,
+    name_ar TEXT NOT NULL DEFAULT '',
+    short_name_ar TEXT NOT NULL DEFAULT '',
+    city_ar TEXT NOT NULL DEFAULT '',
+    stadium_name_ar TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS players (
@@ -173,7 +178,8 @@ CREATE TABLE IF NOT EXISTS players (
     injury_type TEXT NOT NULL DEFAULT '',
     suspension_matches INTEGER NOT NULL DEFAULT 0,
     training_focus TEXT NOT NULL DEFAULT '',
-    matches_benched_streak INTEGER NOT NULL DEFAULT 0
+    matches_benched_streak INTEGER NOT NULL DEFAULT 0,
+    name_ar TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS fixtures (
@@ -183,6 +189,8 @@ CREATE TABLE IF NOT EXISTS fixtures (
     away_club_id INTEGER NOT NULL REFERENCES clubs(id),
     home_club_name TEXT NOT NULL DEFAULT '',
     away_club_name TEXT NOT NULL DEFAULT '',
+    home_club_name_ar TEXT NOT NULL DEFAULT '',
+    away_club_name_ar TEXT NOT NULL DEFAULT '',
     match_date TEXT,
     played INTEGER NOT NULL DEFAULT 0,
     home_goals INTEGER DEFAULT NULL,
@@ -190,13 +198,17 @@ CREATE TABLE IF NOT EXISTS fixtures (
     events_json TEXT NOT NULL DEFAULT '[]',
     home_stats_json TEXT NOT NULL DEFAULT '{}',
     away_stats_json TEXT NOT NULL DEFAULT '{}',
-    competition TEXT NOT NULL DEFAULT 'Egyptian Premier League'
+    competition TEXT NOT NULL DEFAULT 'Egyptian Premier League',
+    player_ratings_json TEXT NOT NULL DEFAULT '{}',
+    extra_time INTEGER NOT NULL DEFAULT 0,
+    penalties_json TEXT NOT NULL DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS standings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     club_id INTEGER NOT NULL REFERENCES clubs(id),
     club_name TEXT NOT NULL,
+    club_name_ar TEXT NOT NULL DEFAULT '',
     played INTEGER NOT NULL DEFAULT 0,
     won INTEGER NOT NULL DEFAULT 0,
     drawn INTEGER NOT NULL DEFAULT 0,
@@ -224,7 +236,8 @@ CREATE TABLE IF NOT EXISTS game_settings (
     match_speed INTEGER NOT NULL DEFAULT 3,
     auto_save INTEGER NOT NULL DEFAULT 1,
     auto_save_interval INTEGER NOT NULL DEFAULT 7,
-    difficulty TEXT NOT NULL DEFAULT 'normal'
+    difficulty TEXT NOT NULL DEFAULT 'normal',
+    language TEXT NOT NULL DEFAULT 'en'
 );
 
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -294,6 +307,95 @@ CREATE TABLE IF NOT EXISTS head_to_head (
     UNIQUE(club_a_id, club_b_id)
 );
 
+CREATE TABLE IF NOT EXISTS season_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    season_year INTEGER NOT NULL UNIQUE,
+    champion_club_id INTEGER,
+    champion_club_name TEXT NOT NULL DEFAULT '',
+    user_club_id INTEGER,
+    user_position INTEGER NOT NULL DEFAULT 0,
+    total_goals INTEGER NOT NULL DEFAULT 0,
+    total_matches INTEGER NOT NULL DEFAULT 0,
+    golden_boot_player TEXT NOT NULL DEFAULT '',
+    golden_boot_goals INTEGER NOT NULL DEFAULT 0,
+    golden_glove_player TEXT NOT NULL DEFAULT '',
+    golden_glove_clean_sheets INTEGER NOT NULL DEFAULT 0,
+    young_player_name TEXT NOT NULL DEFAULT '',
+    most_assists_player TEXT NOT NULL DEFAULT '',
+    most_assists_count INTEGER NOT NULL DEFAULT 0,
+    cup_winner_club_id INTEGER,
+    cup_winner_club_name TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS player_season_archive (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    season_year INTEGER NOT NULL,
+    player_id INTEGER NOT NULL,
+    player_name TEXT NOT NULL DEFAULT '',
+    player_name_ar TEXT NOT NULL DEFAULT '',
+    club_id INTEGER,
+    club_name TEXT NOT NULL DEFAULT '',
+    club_name_ar TEXT NOT NULL DEFAULT '',
+    position TEXT NOT NULL DEFAULT '',
+    age INTEGER NOT NULL DEFAULT 0,
+    appearances INTEGER NOT NULL DEFAULT 0,
+    goals INTEGER NOT NULL DEFAULT 0,
+    assists INTEGER NOT NULL DEFAULT 0,
+    clean_sheets INTEGER NOT NULL DEFAULT 0,
+    yellow_cards INTEGER NOT NULL DEFAULT 0,
+    red_cards INTEGER NOT NULL DEFAULT 0,
+    minutes_played INTEGER NOT NULL DEFAULT 0,
+    average_rating REAL NOT NULL DEFAULT 0.0,
+    man_of_the_match INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(season_year, player_id)
+);
+
+CREATE TABLE IF NOT EXISTS club_season_archive (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    season_year INTEGER NOT NULL,
+    club_id INTEGER NOT NULL,
+    club_name TEXT NOT NULL DEFAULT '',
+    club_name_ar TEXT NOT NULL DEFAULT '',
+    position_finish INTEGER NOT NULL DEFAULT 0,
+    played INTEGER NOT NULL DEFAULT 0,
+    won INTEGER NOT NULL DEFAULT 0,
+    drawn INTEGER NOT NULL DEFAULT 0,
+    lost INTEGER NOT NULL DEFAULT 0,
+    goals_for INTEGER NOT NULL DEFAULT 0,
+    goals_against INTEGER NOT NULL DEFAULT 0,
+    points INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(season_year, club_id)
+);
+
+CREATE TABLE IF NOT EXISTS cup_state (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    competition_name TEXT NOT NULL DEFAULT 'Egypt Cup',
+    season_year INTEGER NOT NULL,
+    current_round TEXT NOT NULL DEFAULT '',
+    rounds_json TEXT NOT NULL DEFAULT '{}',
+    champion_club_id INTEGER,
+    champion_club_name TEXT NOT NULL DEFAULT '',
+    is_complete INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(competition_name, season_year)
+);
+
+CREATE TABLE IF NOT EXISTS rivalries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    club_a_id INTEGER NOT NULL,
+    club_b_id INTEGER NOT NULL,
+    rivalry_name TEXT NOT NULL DEFAULT '',
+    rivalry_name_ar TEXT NOT NULL DEFAULT '',
+    intensity INTEGER NOT NULL DEFAULT 3,
+    description TEXT NOT NULL DEFAULT '',
+    description_ar TEXT NOT NULL DEFAULT '',
+    UNIQUE(club_a_id, club_b_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_player_archive_season ON player_season_archive(season_year);
+CREATE INDEX IF NOT EXISTS idx_player_archive_player ON player_season_archive(player_id);
+CREATE INDEX IF NOT EXISTS idx_club_archive_season ON club_season_archive(season_year);
+CREATE INDEX IF NOT EXISTS idx_club_archive_club ON club_season_archive(club_id);
+
 CREATE TABLE IF NOT EXISTS manager_career (
     id INTEGER PRIMARY KEY DEFAULT 1,
     total_wins INTEGER NOT NULL DEFAULT 0,
@@ -337,8 +439,13 @@ def _migrate_schema(conn: sqlite3.Connection) -> None:
         for sql in sqls:
             try:
                 conn.execute(sql)
-            except sqlite3.OperationalError:
-                pass  # Column/table already exists
+            except sqlite3.OperationalError as e:
+                msg = str(e).lower()
+                if "already exists" in msg or "duplicate column name" in msg:
+                    pass  # Column/table already exists
+                else:
+                    # Log or raise other errors
+                    raise e
         conn.execute("INSERT OR REPLACE INTO schema_version (version) VALUES (?)", (ver,))
 
     conn.commit()
@@ -460,6 +567,31 @@ _MIGRATIONS = [
         # ── Cup winner in season history ─────────────────────────────
         "ALTER TABLE season_history ADD COLUMN cup_winner_club_id INTEGER",
         "ALTER TABLE season_history ADD COLUMN cup_winner_club_name TEXT NOT NULL DEFAULT ''",
+    ]),
+    (5, [
+        # REPAIR: Ensure critical columns exist (might have been skipped due to bug in migration runner)
+        "ALTER TABLE fixtures ADD COLUMN player_ratings_json TEXT NOT NULL DEFAULT '{}'",
+        "ALTER TABLE fixtures ADD COLUMN extra_time INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE fixtures ADD COLUMN penalties_json TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE clubs ADD COLUMN name_ar TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE clubs ADD COLUMN short_name_ar TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE clubs ADD COLUMN city_ar TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE clubs ADD COLUMN stadium_name_ar TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE players ADD COLUMN name_ar TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE game_settings ADD COLUMN language TEXT NOT NULL DEFAULT 'en'",
+        "ALTER TABLE season_history ADD COLUMN cup_winner_club_id INTEGER",
+        "ALTER TABLE season_history ADD COLUMN cup_winner_club_name TEXT NOT NULL DEFAULT ''",
+    ]),
+    (6, [
+        "ALTER TABLE fixtures ADD COLUMN home_club_name_ar TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE fixtures ADD COLUMN away_club_name_ar TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE standings ADD COLUMN club_name_ar TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE player_season_archive ADD COLUMN player_name_ar TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE player_season_archive ADD COLUMN club_name_ar TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE club_season_archive ADD COLUMN club_name_ar TEXT NOT NULL DEFAULT ''",
+    ]),
+    (7, [
+        "ALTER TABLE game_state ADD COLUMN user_club_name_ar TEXT NOT NULL DEFAULT ''",
     ]),
 ]
 

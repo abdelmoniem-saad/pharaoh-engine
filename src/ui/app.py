@@ -280,8 +280,8 @@ def main(page: ft.Page):
         color_scheme_seed=ft.Colors.AMBER,
         font_family="Roboto",
     )
-    # Top padding accounts for the mobile status/notification bar
-    page.padding = ft.Padding(top=40, bottom=0, left=0, right=0)
+    # Safe area accounts for mobile status bar and home indicator
+    page.padding = 0
     page.spacing = 0
 
     app_state._page_ref = page
@@ -322,7 +322,8 @@ def main(page: ft.Page):
         expand=True,
     )
 
-    page.controls.append(root)
+    # Wrap root in SafeArea to handle mobile intrusions (notches, home indicators)
+    page.controls.append(ft.SafeArea(content=root, expand=True))
     page.update()
 
     # ── Load language preference (once, at startup) ────────────────────

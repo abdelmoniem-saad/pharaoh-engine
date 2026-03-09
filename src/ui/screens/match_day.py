@@ -25,7 +25,7 @@ from src.ui.theme import (
     PRIMARY_BTN_STYLE, SECONDARY_BTN_STYLE,
 )
 from src.utils.config import MatchEventType, expectation_display
-from src.utils.localization import t, t_format
+from src.utils.localization import t, t_format, display_name, display_home_name, display_away_name
 
 
 def build_match_day_screen(page: ft.Page) -> ft.Column:
@@ -64,7 +64,7 @@ def build_match_day_screen(page: ft.Page) -> ft.Column:
     # Check if season is complete
     if is_season_complete(conn):
         champ = get_champion(conn)
-        champ_name = champ.club_name if champ else "Unknown"
+        champ_name = display_name(champ) if champ else "Unknown"
         champ_pts = champ.points if champ else 0
         is_user_champ = champ and champ.club_id == gs.user_club_id
 
@@ -128,6 +128,8 @@ def _build_match_preview(page, conn, gs, fixture):
     user_club = queries.get_club(conn, gs.user_club_id)
     opp_id = fixture.away_club_id if is_home else fixture.home_club_id
     opp_club = queries.get_club(conn, opp_id)
+
+    opp_name = display_away_name(fixture) if is_home else display_home_name(fixture)
 
     days_until = (match_date - gs.current_date).days if match_date else 0
 

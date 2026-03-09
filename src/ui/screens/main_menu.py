@@ -5,13 +5,14 @@ from __future__ import annotations
 
 import flet as ft
 
+from src.data.models import Club
 from src.data.database import connect, delete_save
 from src.data.seed import seed_database
 from src.data import queries
 from src.core.league import create_league_season
 from src.utils import rng
 from src.utils.config import APP_VERSION, expectation_display
-from src.utils.localization import t
+from src.utils.localization import t, display_name
 
 
 def build_main_menu(page: ft.Page) -> ft.Column:
@@ -206,7 +207,7 @@ def _show_club_selection(page: ft.Page, manager_name: str):
     for club in clubs:
         def make_handler(c=club):
             def handler(e):
-                _select_club(page, conn, game_state, c.id, c.name, dlg)
+                _select_club(page, conn, game_state, c, dlg)
             return handler
 
         # Color indicator dot
@@ -218,7 +219,7 @@ def _show_club_selection(page: ft.Page, manager_name: str):
                     border_radius=16,
                     content=ft.Icon(ft.Icons.SPORTS_SOCCER, size=16, color=ft.Colors.WHITE),
                 ),
-                title=ft.Text(club.name, weight=ft.FontWeight.W_500),
+                title=ft.Text(display_name(club), weight=ft.FontWeight.W_500),
                 subtitle=ft.Text(
                     f"{club.city} — ⭐ {club.reputation} — 🎯 {expectation_display(club.season_expectation)}",
                     size=12, color=ft.Colors.GREY_400,
@@ -245,17 +246,16 @@ def _show_club_selection(page: ft.Page, manager_name: str):
     page.show_dialog(dlg)
 
 
-def _select_club(page: ft.Page, conn, game_state, club_id: int,
-                  club_name: str, dlg: ft.AlertDialog):
+def _select_club(page: ft.Page, conn, game_state, club: Club, dlg: ft.AlertDialog):
     """Handle club selection."""
     from src.ui.app import app_state, navigate, show_snackbar
 
-    game_state.user_club_id = club_id
-    game_state.user_club_name = club_name
+    game_state.user_club_id = club.id
+    game_state.user_club_name = club.name
+    game_state.user_club_name_ar = club.name_ar
     queries.save_game_state(conn, game_state)
 
     # Mark club as user controlled
-    club = queries.get_club(conn, club_id)
     if club:
         club.is_user_controlled = True
         queries.update_club(conn, club)
@@ -285,7 +285,7 @@ def _select_club(page: ft.Page, conn, game_state, club_id: int,
 
     page.pop_dialog()
     navigate(page, "/match_day")
-    show_snackbar(page, f"🎉 Welcome to {club_name}, {game_state.manager_name}!")
+    show_snackbar(page, f"🎉 Welcome to {display_name(club)}, {game_state.manager_name}!")
 
 
 def _continue_game(page: ft.Page):

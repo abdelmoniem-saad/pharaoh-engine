@@ -24,11 +24,11 @@ def save_game_state(conn: sqlite3.Connection, state: GameState) -> None:
     """Insert or update the game state."""
     conn.execute("""
         INSERT OR REPLACE INTO game_state (id, save_name, season_year, current_date,
-            user_club_id, user_club_name, manager_name, rng_seed, day_count)
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
+            user_club_id, user_club_name, user_club_name_ar, manager_name, rng_seed, day_count)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (state.save_name, state.season_year, state.current_date.isoformat(),
-          state.user_club_id, state.user_club_name, state.manager_name,
-          state.rng_seed, state.day_count))
+          state.user_club_id, state.user_club_name, state.user_club_name_ar,
+          state.manager_name, state.rng_seed, state.day_count))
     conn.commit()
 
 
@@ -39,12 +39,20 @@ def load_game_state(conn: sqlite3.Connection) -> GameState | None:
         return None
     # Backward compat: manager_name may not exist in old saves
     manager_name = row["manager_name"] if "manager_name" in row.keys() else "Manager"
+    def _safe_str(col, default=""):
+        try:
+            val = row[col]
+            return val if val is not None else default
+        except (IndexError, KeyError):
+            return default
+
     return GameState(
         save_name=row["save_name"],
         season_year=row["season_year"],
         current_date=date.fromisoformat(row["current_date"]),
         user_club_id=row["user_club_id"],
         user_club_name=row["user_club_name"],
+        user_club_name_ar=_safe_str("user_club_name_ar"),
         manager_name=manager_name,
         rng_seed=row["rng_seed"],
         day_count=row["day_count"],
@@ -63,8 +71,9 @@ def insert_club(conn: sqlite3.Connection, club: Club) -> int:
             sponsorship_income_yearly, tv_revenue_yearly,
             board_confidence, fan_happiness, formation, mentality,
             pressing_intensity, tempo, width, defensive_line,
-            is_user_controlled, season_expectation)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            is_user_controlled, season_expectation,
+            name_ar, short_name_ar, city_ar, stadium_name_ar)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (club.name, club.short_name, club.city, club.governorate, club.reputation,
           club.facilities_level, club.youth_rating, club.stadium_name, club.stadium_capacity,
           club.primary_color, club.secondary_color,
@@ -76,7 +85,8 @@ def insert_club(conn: sqlite3.Connection, club: Club) -> int:
           int(club.mentality),
           club.pressing_intensity, club.tempo, club.width, club.defensive_line,
           int(club.is_user_controlled),
-          club.season_expectation))
+          club.season_expectation,
+          club.name_ar, club.short_name_ar, club.city_ar, club.stadium_name_ar))
     conn.commit()
     return cursor.lastrowid
 
@@ -102,7 +112,8 @@ def update_club(conn: sqlite3.Connection, club: Club) -> None:
             pressing_intensity=?, tempo=?, width=?, defensive_line=?,
             board_confidence=?, fan_happiness=?, is_user_controlled=?,
             balance=?, transfer_budget=?, wage_budget_weekly=?, wage_bill_weekly=?,
-            season_expectation=?, matchday_income=?
+            season_expectation=?, matchday_income=?,
+            name_ar=?, short_name_ar=?, city_ar=?, stadium_name_ar=?
         WHERE id=?
     """, (club.name, club.short_name, club.formation, int(club.mentality),
           club.pressing_intensity, club.tempo, club.width, club.defensive_line,
@@ -110,6 +121,7 @@ def update_club(conn: sqlite3.Connection, club: Club) -> None:
           club.finances.balance, club.finances.transfer_budget,
           club.finances.wage_budget_weekly, club.finances.wage_bill_weekly,
           club.season_expectation, club.finances.matchday_income,
+          club.name_ar, club.short_name_ar, club.city_ar, club.stadium_name_ar,
           club.id))
     conn.commit()
 
@@ -128,16 +140,27 @@ def _row_to_club(row: sqlite3.Row) -> Club:
         except (IndexError, KeyError):
             return default
 
+    def _safe_str(col, default=""):
+        try:
+            val = row[col]
+            return val if val is not None else default
+        except (IndexError, KeyError):
+            return default
+
     return Club(
         id=row["id"],
         name=row["name"],
+        name_ar=_safe_str("name_ar"),
         short_name=row["short_name"],
+        short_name_ar=_safe_str("short_name_ar"),
         city=row["city"],
+        city_ar=_safe_str("city_ar"),
         governorate=row["governorate"],
         reputation=row["reputation"],
         facilities_level=row["facilities_level"],
         youth_rating=row["youth_rating"],
         stadium_name=row["stadium_name"],
+        stadium_name_ar=_safe_str("stadium_name_ar"),
         stadium_capacity=row["stadium_capacity"],
         primary_color=row["primary_color"],
         secondary_color=row["secondary_color"],
@@ -173,7 +196,7 @@ def insert_player(conn: sqlite3.Connection, player: Player) -> int:
     sec_pos = json.dumps([p.value for p in player.secondary_positions])
 
     cursor = conn.execute("""
-        INSERT INTO players (name, age, nationality, governorate, position,
+        INSERT INTO players (name, name_ar, age, nationality, governorate, position,
             secondary_positions, preferred_foot, current_ability, potential_ability,
             club_id, morale, fitness, form, is_captain, shirt_number, transfer_listed,
             finishing, passing, dribbling, first_touch, crossing, heading,
@@ -184,14 +207,14 @@ def insert_player(conn: sqlite3.Connection, player: Player) -> int:
             wage_weekly, contract_expiry, release_clause,
             appearances, goals, assists, clean_sheets, yellow_cards, red_cards,
             minutes_played, average_rating, man_of_the_match)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?,
                 ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (player.name, player.age, player.nationality, player.governorate,
+    """, (player.name, player.name_ar, player.age, player.nationality, player.governorate,
           player.position.value, sec_pos, player.preferred_foot.value,
           player.current_ability, player.potential_ability,
           player.club_id, player.morale, player.fitness, player.form,
@@ -341,10 +364,12 @@ def insert_fixture(conn: sqlite3.Connection, fixture: Fixture) -> int:
     """Insert a fixture and return its ID."""
     cursor = conn.execute("""
         INSERT INTO fixtures (matchday, home_club_id, away_club_id,
-            home_club_name, away_club_name, match_date, played, competition)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            home_club_name, away_club_name, home_club_name_ar, away_club_name_ar,
+            match_date, played, competition)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (fixture.matchday, fixture.home_club_id, fixture.away_club_id,
           fixture.home_club_name, fixture.away_club_name,
+          fixture.home_club_name_ar, fixture.away_club_name_ar,
           fixture.date.isoformat() if fixture.date else None,
           int(fixture.played), fixture.competition))
     conn.commit()
@@ -405,6 +430,13 @@ def get_user_next_fixture(conn: sqlite3.Connection, user_club_id: int) -> Fixtur
 def _row_to_fixture(row: sqlite3.Row) -> Fixture:
     """Convert a DB row to a Fixture model."""
     result = None
+    def _safe_str(col, default=""):
+        try:
+            val = row[col]
+            return val if val is not None else default
+        except (IndexError, KeyError):
+            return default
+
     if row["played"]:
         events = []
         if row["events_json"]:
@@ -429,6 +461,8 @@ def _row_to_fixture(row: sqlite3.Row) -> Fixture:
             away_club_id=row["away_club_id"],
             home_club_name=row["home_club_name"],
             away_club_name=row["away_club_name"],
+            home_club_name_ar=_safe_str("home_club_name_ar"),
+            away_club_name_ar=_safe_str("away_club_name_ar"),
             home_goals=row["home_goals"] or 0,
             away_goals=row["away_goals"] or 0,
             events=events,
@@ -444,6 +478,8 @@ def _row_to_fixture(row: sqlite3.Row) -> Fixture:
         away_club_id=row["away_club_id"],
         home_club_name=row["home_club_name"],
         away_club_name=row["away_club_name"],
+        home_club_name_ar=_safe_str("home_club_name_ar"),
+        away_club_name_ar=_safe_str("away_club_name_ar"),
         date=date.fromisoformat(row["match_date"]) if row["match_date"] else None,
         played=bool(row["played"]),
         result=result,
@@ -457,9 +493,9 @@ def init_standings(conn: sqlite3.Connection, clubs: list[Club]) -> None:
     """Initialize league standings for all clubs."""
     for club in clubs:
         conn.execute("""
-            INSERT OR IGNORE INTO standings (club_id, club_name)
-            VALUES (?, ?)
-        """, (club.id, club.name))
+            INSERT OR IGNORE INTO standings (club_id, club_name, club_name_ar)
+            VALUES (?, ?, ?)
+        """, (club.id, club.name, club.name_ar))
     conn.commit()
 
 
@@ -473,9 +509,18 @@ def get_standings(conn: sqlite3.Connection) -> list[LeagueStanding]:
             goals_for DESC,
             club_name ASC
     """).fetchall()
+
+    def _safe_str(row, col, default=""):
+        try:
+            val = row[col]
+            return val if val is not None else default
+        except (IndexError, KeyError):
+            return default
+
     return [LeagueStanding(
         club_id=row["club_id"],
         club_name=row["club_name"],
+        club_name_ar=_safe_str(row, "club_name_ar"),
         played=row["played"],
         won=row["won"],
         drawn=row["drawn"],
@@ -992,11 +1037,11 @@ def archive_all_player_stats(conn: sqlite3.Connection, season_year: int) -> None
     """Archive every player's current season stats before they get reset."""
     conn.execute("""
         INSERT OR REPLACE INTO player_season_archive
-        (season_year, player_id, player_name, club_id, club_name, position, age,
-         appearances, goals, assists, clean_sheets, yellow_cards, red_cards,
+        (season_year, player_id, player_name, player_name_ar, club_id, club_name, club_name_ar,
+         position, age, appearances, goals, assists, clean_sheets, yellow_cards, red_cards,
          minutes_played, average_rating, man_of_the_match)
-        SELECT ?, p.id, p.name, p.club_id, COALESCE(c.name, ''), p.position, p.age,
-               p.appearances, p.goals, p.assists, p.clean_sheets,
+        SELECT ?, p.id, p.name, p.name_ar, p.club_id, COALESCE(c.name, ''), COALESCE(c.name_ar, ''),
+               p.position, p.age, p.appearances, p.goals, p.assists, p.clean_sheets,
                p.yellow_cards, p.red_cards, p.minutes_played,
                p.average_rating, p.man_of_the_match
         FROM players p
@@ -1010,9 +1055,9 @@ def archive_all_club_standings(conn: sqlite3.Connection, season_year: int) -> No
     """Archive every club's final standings before they get reset."""
     conn.execute("""
         INSERT OR REPLACE INTO club_season_archive
-        (season_year, club_id, club_name, position_finish, played, won, drawn, lost,
+        (season_year, club_id, club_name, club_name_ar, position_finish, played, won, drawn, lost,
          goals_for, goals_against, points)
-        SELECT ?, s.club_id, s.club_name,
+        SELECT ?, s.club_id, s.club_name, s.club_name_ar,
                ROW_NUMBER() OVER (ORDER BY (s.won * 3 + s.drawn) DESC,
                                   (s.goals_for - s.goals_against) DESC,
                                   s.goals_for DESC),
@@ -1159,13 +1204,22 @@ def get_season_player_stats(conn: sqlite3.Connection,
 
 def _row_to_player_archive(row: sqlite3.Row) -> PlayerSeasonArchive:
     """Convert a DB row to a PlayerSeasonArchive model."""
+    def _safe_str(col, default=""):
+        try:
+            val = row[col]
+            return val if val is not None else default
+        except (IndexError, KeyError):
+            return default
+
     return PlayerSeasonArchive(
         id=row["id"],
         season_year=row["season_year"],
         player_id=row["player_id"],
         player_name=row["player_name"],
+        player_name_ar=_safe_str("player_name_ar"),
         club_id=row["club_id"],
         club_name=row["club_name"],
+        club_name_ar=_safe_str("club_name_ar"),
         position=row["position"],
         age=row["age"],
         appearances=row["appearances"],
