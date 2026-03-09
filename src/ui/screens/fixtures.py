@@ -26,9 +26,9 @@ def build_fixtures_screen(page: ft.Page) -> ft.Column:
     conn = app_state.db_conn
     gs = app_state.game_state
 
-    played_matchdays = queries.get_all_matchdays_played(conn)
+    all_matchdays = queries.get_all_matchdays(conn)
 
-    if not played_matchdays:
+    if not all_matchdays:
         return ft.Column(
             expand=True,
             alignment=ft.MainAxisAlignment.CENTER,
@@ -48,11 +48,18 @@ def build_fixtures_screen(page: ft.Page) -> ft.Column:
             ],
         )
 
-    # Default to most recent played matchday
-    selected_md = played_matchdays[0]
+    # Default to current matchday or most recent
+    current_md = queries.get_current_matchday(conn)
+    if current_md in all_matchdays:
+        selected_md = current_md
+    else:
+        selected_md = all_matchdays[0] if all_matchdays else 1
 
     # Build matchday selector options
-    md_options = [ft.dropdown.Option(str(md)) for md in played_matchdays]
+    md_options = []
+    for md in all_matchdays:
+        label = t("cup") if md == 0 else f"{t('matchday')} {md}"
+        md_options.append(ft.dropdown.Option(key=str(md), text=label))
 
     # Build results for default matchday
     results_column = ft.Column(spacing=4)
@@ -115,8 +122,9 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
 
     # Played
     if results:
+        label = t("cup") if matchday == 0 else f"{t('matchday')} {matchday}"
         column.controls.append(
-            ft.Text(f"{t('matchday')} {matchday} — {len(results)} / {len(all_fixtures)}",
+            ft.Text(f"{label} — {len(results)} / {len(all_fixtures)}",
                      size=13, color=ft.Colors.GREY_500))
 
         for fixture in results:
@@ -171,9 +179,15 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
     unplayed = [f for f in all_fixtures if not f.played]
     if unplayed:
         column.controls.append(ft.Container(height=8))
+        label = t("cup") if matchday == 0 else f"{t('matchday')} {matchday}"
+        if not results:
+            column.controls.append(
+                ft.Text(f"{label} — 0 / {len(all_fixtures)}",
+                         size=13, color=ft.Colors.GREY_500))
         column.controls.append(
             ft.Text(t("upcoming"), size=12, color=ft.Colors.GREY_600, weight=ft.FontWeight.W_500))
         for f in unplayed:
+            date_str = f.date.strftime("%d %b %Y") if f.date else ""
             column.controls.append(
                 ft.Container(
                     content=ft.Row(
@@ -183,7 +197,14 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
                             ft.Text(f.home_club_name, size=11,
                                      text_align=ft.TextAlign.RIGHT, expand=True,
                                      max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                            ft.Text("vs", size=11, color=ft.Colors.GREY_600),
+                            ft.Column(
+                                spacing=0,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                controls=[
+                                    ft.Text("vs", size=11, color=ft.Colors.GREY_600),
+                                    ft.Text(date_str, size=9, color=ft.Colors.GREY_500) if date_str else ft.Container()
+                                ]
+                            ),
                             ft.Text(f.away_club_name, size=11,
                                      text_align=ft.TextAlign.LEFT, expand=True,
                                      max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),

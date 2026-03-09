@@ -420,7 +420,7 @@ def get_user_next_fixture(conn: sqlite3.Connection, user_club_id: int) -> Fixtur
     row = conn.execute("""
         SELECT * FROM fixtures
         WHERE played = 0 AND (home_club_id = ? OR away_club_id = ?)
-        ORDER BY matchday LIMIT 1
+        ORDER BY match_date ASC LIMIT 1
     """, (user_club_id, user_club_id)).fetchone()
     if row is None:
         return None
@@ -620,7 +620,7 @@ def get_user_recent_fixtures(conn: sqlite3.Connection, user_club_id: int,
 def get_current_matchday(conn: sqlite3.Connection) -> int:
     """Get the current (next unplayed) matchday number."""
     row = conn.execute(
-        "SELECT MIN(matchday) as md FROM fixtures WHERE played = 0"
+        "SELECT MIN(matchday) as md FROM fixtures WHERE played = 0 AND matchday > 0"
     ).fetchone()
     if row and row["md"] is not None:
         return row["md"]
@@ -656,6 +656,14 @@ def get_all_matchdays_played(conn: sqlite3.Connection) -> list[int]:
     """Get all matchday numbers that have at least one played fixture."""
     rows = conn.execute(
         "SELECT DISTINCT matchday FROM fixtures WHERE played = 1 ORDER BY matchday DESC"
+    ).fetchall()
+    return [row["matchday"] for row in rows]
+
+
+def get_all_matchdays(conn: sqlite3.Connection) -> list[int]:
+    """Get all matchday numbers that exist in fixtures."""
+    rows = conn.execute(
+        "SELECT DISTINCT matchday FROM fixtures ORDER BY matchday DESC"
     ).fetchall()
     return [row["matchday"] for row in rows]
 
