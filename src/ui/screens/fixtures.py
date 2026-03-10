@@ -17,6 +17,7 @@ from src.ui.theme import (
 def build_fixtures_screen(page: ft.Page) -> ft.Column:
     """Build the fixtures/results browser."""
     from src.ui.app import app_state, navigate
+    from src.ui.theme import ACCENT
 
     page.navigation_bar = build_nav_bar(page, 3)
 
@@ -26,50 +27,95 @@ def build_fixtures_screen(page: ft.Page) -> ft.Column:
     conn = app_state.db_conn
     gs = app_state.game_state
 
+    # Competition view state (shared with table screen state if possible)
+    active_comp = getattr(page, "_comp_view", "league")
     all_matchdays = queries.get_all_matchdays(conn)
 
-    if not all_matchdays:
-        return ft.Column(
-            expand=True,
-            alignment=ft.MainAxisAlignment.CENTER,
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            controls=[
-                ft.Icon(ft.Icons.CALENDAR_MONTH, size=48, color=ft.Colors.GREY_700),
-                ft.Container(height=10),
-                ft.Text(t("no_matches_played"), size=16, color=ft.Colors.GREY_400),
-                ft.Container(height=20),
-                ft.ElevatedButton(f"← {t('league_table')}", width=200,
-                                   on_click=lambda e: navigate(page, "/table"),
-                                   style=ft.ButtonStyle(
-                                       shape=ft.RoundedRectangleBorder(radius=12),
-                                       bgcolor=ft.Colors.AMBER_700,
-                                       color=ft.Colors.WHITE,
-                                   )),
-            ],
-        )
-
-    # Default to current matchday or most recent
-    current_md = queries.get_current_matchday(conn)
-    if current_md in all_matchdays:
-        selected_md = current_md
-    else:
-        selected_md = all_matchdays[0] if all_matchdays else 1
-
-    # Build matchday selector options
-    md_options = []
-    for md in all_matchdays:
-        label = t("cup") if md == 0 else f"{t('matchday')} {md}"
-        md_options.append(ft.dropdown.Option(key=str(md), text=label))
-
-    # Build results for default matchday
+    # ── State Management ──────────────────────────────────────────
     results_column = ft.Column(spacing=4)
-    _populate_results(conn, gs, selected_md, results_column)
+    md_dropdown = ft.Dropdown(width=160)
 
-    def on_matchday_select(e):
-        md = int(e.control.value)
+    def update_view():
+        comp = page._comp_view
+        
+        # Filter matchdays
+        if comp == "cup":
+            filtered_mds = [0] if 0 in all_matchdays else []
+            selected_md = 0
+        else:
+            filtered_mds = [md for md in all_matchdays if md > 0]
+            current_md = queries.get_current_matchday(conn)
+            selected_md = current_md if current_md in filtered_mds else (filtered_mds[0] if filtered_mds else 1)
+
+        # Update Dropdown
+        md_dropdown.options = [
+            ft.dropdown.Option(key=str(md), text=t("cup") if md == 0 else f"{t('matchday')} {md}")
+            for md in filtered_mds
+        ]
+        md_dropdown.value = str(selected_md)
+        md_dropdown.visible = len(filtered_mds) > 1 or (comp == "league" and len(filtered_mds) > 0)
+        
+        # Update results
         results_column.controls.clear()
-        _populate_results(conn, gs, md, results_column)
+        _populate_results(conn, gs, selected_md, results_column)
         page.update()
+
+    def switch_comp(comp_name: str):
+        page._comp_view = comp_name
+        update_view()
+
+    # ── UI Components ─────────────────────────────────────────────
+    toggle = ft.Container(
+        content=ft.Row(
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=10,
+            controls=[
+                ft.TextButton(
+                    t("league").upper(),
+                    style=ft.ButtonStyle(
+                        color=ACCENT if active_comp == "league" else TEXT_SECONDARY,
+                        bgcolor=ft.Colors.with_opacity(0.1, ACCENT) if active_comp == "league" else ft.Colors.TRANSPARENT,
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                    ),
+                    on_click=lambda _: switch_comp("league"),
+                ),
+                ft.Icon(ft.Icons.SWAP_HORIZ, size=16, color=TEXT_MUTED),
+                ft.TextButton(
+                    t("cup").upper(),
+                    style=ft.ButtonStyle(
+                        color=ACCENT if active_comp == "cup" else TEXT_SECONDARY,
+                        bgcolor=ft.Colors.with_opacity(0.1, ACCENT) if active_comp == "cup" else ft.Colors.TRANSPARENT,
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                    ),
+                    on_click=lambda _: switch_comp("cup"),
+                ),
+            ],
+        ),
+        margin=ft.margin.only(bottom=10),
+    )
+
+    md_dropdown.on_change = lambda e: (
+        results_column.controls.clear(),
+        _populate_results(conn, gs, int(e.control.value), results_column),
+        page.update()
+    )
+
+    # Initial population
+    # Use a small delay/timeout or just set values directly if we're inside build
+    filtered_mds = [md for md in all_matchdays if (md == 0 if active_comp == "cup" else md > 0)]
+    if active_comp == "cup":
+        selected_md = 0
+    else:
+        current_md = queries.get_current_matchday(conn)
+        selected_md = current_md if current_md in filtered_mds else (filtered_mds[0] if filtered_mds else 1)
+
+    md_dropdown.options = [
+        ft.dropdown.Option(key=str(md), text=t("cup") if md == 0 else f"{t('matchday')} {md}")
+        for md in filtered_mds
+    ]
+    md_dropdown.value = str(selected_md)
+    md_dropdown.visible = (active_comp == "league")
+    _populate_results(conn, gs, selected_md, results_column)
 
     return ft.Column(
         expand=True,
@@ -86,18 +132,13 @@ def build_fixtures_screen(page: ft.Page) -> ft.Column:
                             page=page,
                             back_route="/table",
                         ),
+                        toggle,
                         ft.Row(
-                            spacing=10,
+                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
-                                ft.Dropdown(
-                                    label=t("matchday"),
-                                    value=str(selected_md),
-                                    options=md_options,
-                                    on_select=on_matchday_select,
-                                    width=160,
-                                ),
-                                ft.ElevatedButton(
-                                    f"← {t('league_table')}",
+                                md_dropdown,
+                                ft.OutlinedButton(
+                                    f"← {t('competition')}",
                                     on_click=lambda e: navigate(page, "/table"),
                                     style=ft.ButtonStyle(
                                         shape=ft.RoundedRectangleBorder(radius=10),

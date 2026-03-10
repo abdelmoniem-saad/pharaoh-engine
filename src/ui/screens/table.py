@@ -353,5 +353,12 @@ def _build_cup_view(page: ft.Page, conn, gs) -> ft.Column:
 
     return ft.Column(
         spacing=SECTION_SPACING,
-        controls=round_cards
+        controls=[
+            *round_cards,
+            # Quick nav
+            ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[
+                ft.OutlinedButton(f"📅 {t('fixtures_btn')}", on_click=lambda e: navigate(page, "/fixtures"),
+                                  style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), side=ft.BorderSide(1, GOLD_BORDER))),
+            ]),
+        ]
     )
