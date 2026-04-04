@@ -19,7 +19,7 @@ def build_fixtures_screen(page: ft.Page) -> ft.Column:
     from src.ui.app import app_state, navigate
     from src.ui.theme import ACCENT
 
-    page.navigation_bar = build_nav_bar(page, 4)
+    page.navigation_bar = build_nav_bar(page, 3)
 
     if not app_state.db_conn or not app_state.game_state:
         return ft.Column(controls=[ft.Text(t("no_game_loaded"))])

@@ -172,6 +172,13 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                                                   shape=ft.RoundedRectangleBorder(radius=10),
                                                   side=ft.BorderSide(1, GOLD_BORDER),
                                               )),
+                            ft.OutlinedButton(f"🔁 {t('transfers')}", height=32,
+                                              on_click=lambda e: navigate(page, "/transfers"),
+                                              style=ft.ButtonStyle(
+                                                  padding=ft.padding.symmetric(horizontal=12),
+                                                  shape=ft.RoundedRectangleBorder(radius=10),
+                                                  side=ft.BorderSide(1, GOLD_BORDER),
+                                              )),
                         ]),
 
                         # ── Squad Summary (collapsed) ──────────────────

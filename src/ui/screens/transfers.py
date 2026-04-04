@@ -24,7 +24,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     """Build the transfer market screen."""
     from src.ui.app import app_state, navigate, show_snackbar
 
-    page.navigation_bar = build_nav_bar(page, 2)
+    page.navigation_bar = build_nav_bar(page, 0)
 
     if not app_state.db_conn or not app_state.game_state:
         return ft.Column(controls=[ft.Text(t("no_game_loaded"))])

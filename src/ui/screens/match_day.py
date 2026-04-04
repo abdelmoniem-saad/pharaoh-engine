@@ -31,7 +31,7 @@ from src.utils.localization import t, t_format, display_name, display_home_name,
 def build_match_day_screen(page: ft.Page) -> ft.Column:
     """Build the match day content."""
     from src.ui.app import app_state, navigate
-    page.navigation_bar = build_nav_bar(page, 3)
+    page.navigation_bar = build_nav_bar(page, 2)
 
     if not app_state.db_conn or not app_state.game_state:
         return ft.Column(

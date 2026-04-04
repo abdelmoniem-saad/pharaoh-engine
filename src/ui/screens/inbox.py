@@ -38,7 +38,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
     """Build the inbox/messages content with mobile card layout."""
     from src.ui.app import app_state, navigate
 
-    page.navigation_bar = build_nav_bar(page, 5)
+    page.navigation_bar = build_nav_bar(page, 4)
 
     if not app_state.db_conn or not app_state.game_state:
         return ft.Column(controls=[ft.Text(t("no_game_loaded"))])

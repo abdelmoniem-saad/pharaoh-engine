@@ -25,7 +25,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
     """Build the club overview / hub screen."""
     from src.ui.app import app_state, navigate
 
-    page.navigation_bar = build_nav_bar(page, 4)  # table index since accessed from there
+    page.navigation_bar = build_nav_bar(page, 3)  # table index since accessed from there
 
     if not app_state.db_conn or not app_state.game_state:
         return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
