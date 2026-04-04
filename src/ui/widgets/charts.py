@@ -260,18 +260,17 @@ def club_form_trend_line(
         color = color_map.get(r, _TEXT_MUTED)
         h = height_map.get(r, 15)
         blocks.append(
-            ft.Tooltip(
-                message=label_map.get(r, r),
-                content=ft.Container(
-                    content=ft.Text(r[0], size=9, color=ft.Colors.WHITE,
-                                    weight=ft.FontWeight.BOLD,
-                                    text_align=ft.TextAlign.CENTER),
-                    width=max(20, (width - 20) // max(len(ordered), 1) - 4),
-                    height=h,
-                    border_radius=ft.border_radius.only(top_left=4, top_right=4),
-                    bgcolor=color,
-                    alignment=ft.Alignment(0, 0),
-                ),
+            ft.Container(
+                content=ft.Text(r[0], size=9, color=ft.Colors.WHITE,
+                                weight=ft.FontWeight.BOLD,
+                                text_align=ft.TextAlign.CENTER),
+                width=max(20, (width - 20) // max(len(ordered), 1) - 4),
+                height=h,
+                border_radius=ft.border_radius.only(top_left=4, top_right=4),
+                bgcolor=color,
+                alignment=ft.Alignment(0, 0),
+                # Flet 0.8x exposes tooltip on controls; Tooltip(content=...) is unsupported.
+                tooltip=label_map.get(r, r),
             )
         )
 

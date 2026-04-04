@@ -39,6 +39,10 @@ def build_nav_bar(page: ft.Page, selected_index: int = 0) -> ft.NavigationBar:
     def on_nav(e):
         from src.ui.app import navigate
 
+        # Flet may fire on_change once on initial mount; ignore no-op changes.
+        if e.control.selected_index == selected_index:
+            return
+
         target = route_map.get(e.control.selected_index, "/squad")
         navigate(page, target)
 
