@@ -200,6 +200,9 @@ def show_snackbar(page: ft.Page, message: str,
                   color: str = ft.Colors.WHITE,
                   bgcolor: str = "#141e33") -> None:
     """Show a brief snackbar notification at the bottom of the screen."""
+    # Clear any existing snackbars to avoid overlay pile-up
+    page.overlay[:] = [ctrl for ctrl in page.overlay if not isinstance(ctrl, ft.SnackBar)]
+
     sb = ft.SnackBar(
         content=ft.Text(message, color=color, size=14),
         bgcolor=bgcolor,
@@ -252,6 +255,12 @@ def navigate(page: ft.Page, route: str):
     builder = builders.get(route, build_main_menu)
     new_content = builder(page)
 
+    try:
+        from src.utils.audio import play_click
+        play_click()
+    except Exception:
+        pass
+
     tc = app_state._transition_container
     if tc is not None:
         # Swap content directly (no fade-out/fade-in race condition).
@@ -284,6 +293,12 @@ def main(page: ft.Page):
     page.padding = 0
     page.spacing = 0
 
+    try:
+        from src.utils.audio import init_audio
+        init_audio(page)
+    except Exception:
+        pass
+
     app_state._page_ref = page
 
     # ── Transition container — wraps every screen for smooth fades ───────
@@ -306,8 +321,7 @@ def main(page: ft.Page):
 
     notification_overlay = ft.Container(
         content=notification_col,
-        alignment=ft.Alignment(0, -0.85),  # top center
-        expand=True,
+        alignment=ft.Alignment(0, -1),
     )
 
     # Stack: transition_container (full screen) + notification overlay on top
@@ -317,7 +331,12 @@ def main(page: ft.Page):
     root = ft.Stack(
         controls=[
             transition_container,
-            ft.TransparentPointer(content=notification_overlay),
+            ft.TransparentPointer(
+                content=notification_overlay,
+                top=10,
+                left=0,
+                right=0,
+            ),
         ],
         expand=True,
     )
@@ -329,6 +348,7 @@ def main(page: ft.Page):
     # ── Load language preference (once, at startup) ────────────────────
     try:
         from src.utils.localization import set_language, get_language, is_rtl
+        from src.utils.audio import set_audio_enabled
         _lang_conn = app_state.db_conn
         if _lang_conn is None:
             try:
@@ -344,13 +364,14 @@ def main(page: ft.Page):
                 )
                 _lang_conn.commit()
                 row = _lang_conn.execute(
-                    "SELECT language FROM game_settings WHERE id=1"
+                    "SELECT language, sound_enabled FROM game_settings WHERE id=1"
                 ).fetchone()
                 if row and row["language"] and row["language"] != "en":
                     set_language(row["language"])
                     page.rtl = is_rtl()
                     page.update()
                     print(f"DEBUG: Startup language loaded from DB: '{row['language']}'")
+                set_audio_enabled(bool(row["sound_enabled"])) if row and "sound_enabled" in row.keys() else set_audio_enabled(True)
             except Exception as ex:
                 print(f"DEBUG: Startup language load skipped: {ex}")
     except Exception:

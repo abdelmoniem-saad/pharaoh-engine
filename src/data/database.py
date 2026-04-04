@@ -227,17 +227,14 @@ CREATE TABLE IF NOT EXISTS inbox (
     is_read INTEGER NOT NULL DEFAULT 0
 );
 
-CREATE INDEX IF NOT EXISTS idx_players_club ON players(club_id);
-CREATE INDEX IF NOT EXISTS idx_fixtures_matchday ON fixtures(matchday);
-CREATE INDEX IF NOT EXISTS idx_fixtures_played ON fixtures(played);
-
 CREATE TABLE IF NOT EXISTS game_settings (
     id INTEGER PRIMARY KEY DEFAULT 1,
     match_speed INTEGER NOT NULL DEFAULT 3,
     auto_save INTEGER NOT NULL DEFAULT 1,
     auto_save_interval INTEGER NOT NULL DEFAULT 7,
     difficulty TEXT NOT NULL DEFAULT 'normal',
-    language TEXT NOT NULL DEFAULT 'en'
+    language TEXT NOT NULL DEFAULT 'en',
+    sound_enabled INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -601,6 +598,9 @@ _MIGRATIONS = [
         "ALTER TABLE fixtures_new RENAME TO fixtures",
         "CREATE INDEX IF NOT EXISTS idx_fixtures_matchday ON fixtures(matchday)",
         "CREATE INDEX IF NOT EXISTS idx_fixtures_played ON fixtures(played)",
+    ]),
+    (9, [
+        "ALTER TABLE game_settings ADD COLUMN sound_enabled INTEGER NOT NULL DEFAULT 1",
     ]),
 ]
 

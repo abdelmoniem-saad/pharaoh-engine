@@ -31,9 +31,10 @@ def build_nav_bar(page: ft.Page, selected_index: int = 0) -> ft.NavigationBar:
     route_map = {
         0: "/squad",
         1: "/tactics",
-        2: "/match_day",
-        3: "/table",
-        4: "/inbox",
+        2: "/transfers",
+        3: "/match_day",
+        4: "/table",
+        5: "/inbox",
     }
 
     def on_nav(e):
@@ -71,6 +72,9 @@ def build_nav_bar(page: ft.Page, selected_index: int = 0) -> ft.NavigationBar:
             ft.NavigationBarDestination(icon=ft.Icons.TUNE_OUTLINED,
                                         selected_icon=ft.Icons.TUNE,
                                         label=t("tactics")),
+            ft.NavigationBarDestination(icon=ft.Icons.SWAP_HORIZ,
+                                        selected_icon=ft.Icons.SWAP_HORIZ,
+                                        label=t("transfers")),
             ft.NavigationBarDestination(icon=ft.Icons.SPORTS_SOCCER_OUTLINED,
                                         selected_icon=ft.Icons.SPORTS_SOCCER,
                                         label=t("match")),

@@ -16,6 +16,7 @@ import flet as ft
 from src.utils.config import MatchEventType
 from src.data import queries
 from src.utils.localization import t, display_name, display_home_name, display_away_name, is_rtl
+from src.utils.audio import play_goal, play_full_time
 
 
 # Event icons
@@ -263,6 +264,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                     else:
                         away_goals[0] += 1
                     score_text.value = f"{home_goals[0]} - {away_goals[0]}"
+                    play_goal()
 
                 if ev.event_type == MatchEventType.HALF_TIME:
                     status_text.value = "⏸️ Half Time"
@@ -292,6 +294,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                 elif ev.event_type == MatchEventType.FULL_TIME:
                     status_text.value = "🏁 Full Time"
                     status_text.color = ft.Colors.AMBER_300
+                    play_full_time()
 
                 event_list.controls.append(_make_event_row(ev))
                 page.update()
@@ -756,14 +759,18 @@ def _restore_page_root(page: ft.Page):
 
     notification_overlay = ft.Container(
         content=nc,
-        alignment=ft.Alignment(0, -0.85),
-        expand=True,
+        alignment=ft.Alignment(0, -1),
     )
 
     root = ft.Stack(
         controls=[
             tc,
-            ft.TransparentPointer(content=notification_overlay),
+            ft.TransparentPointer(
+                content=notification_overlay,
+                top=10,
+                left=0,
+                right=0,
+            ),
         ],
         expand=True,
     )

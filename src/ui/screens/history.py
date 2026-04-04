@@ -22,7 +22,7 @@ def build_history_screen(page: ft.Page) -> ft.Column:
     """Build the History / Records screen."""
     from src.ui.app import app_state
 
-    page.navigation_bar = build_nav_bar(page, 3)  # same slot as table
+    page.navigation_bar = build_nav_bar(page, 4)  # same slot as table
 
     if not app_state.db_conn or not app_state.game_state:
         return ft.Column(controls=[ft.Text(t("no_game_loaded"))])

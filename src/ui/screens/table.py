@@ -23,7 +23,7 @@ def build_table_screen(page: ft.Page) -> ft.Column:
     """Build the competition content (League or Cup)."""
     from src.ui.app import app_state, navigate
 
-    page.navigation_bar = build_nav_bar(page, 3)
+    page.navigation_bar = build_nav_bar(page, 4)
 
     if not app_state.db_conn or not app_state.game_state:
         return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
@@ -254,6 +254,7 @@ def _build_league_view(page: ft.Page, conn, gs) -> ft.Column:
 
 def _build_cup_view(page: ft.Page, conn, gs) -> ft.Column:
     """Build the Egypt Cup overview/bracket view."""
+    from src.ui.app import navigate
     from src.core.competition import get_cup_state, CUP_ROUNDS
     from src.utils.localization import get_language
     
