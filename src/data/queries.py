@@ -384,6 +384,25 @@ def get_fixtures_by_matchday(conn: sqlite3.Connection, matchday: int) -> list[Fi
     return [_row_to_fixture(row) for row in rows]
 
 
+def get_fixture_by_id(conn: sqlite3.Connection, fixture_id: int) -> Fixture | None:
+    """Get a fixture by its ID regardless of played state."""
+    row = conn.execute("SELECT * FROM fixtures WHERE id = ?", (fixture_id,)).fetchone()
+    if row is None:
+        return None
+    return _row_to_fixture(row)
+
+
+def get_unplayed_fixture_by_id(conn: sqlite3.Connection, fixture_id: int) -> Fixture | None:
+    """Get a fixture by ID only if it is still unplayed."""
+    row = conn.execute(
+        "SELECT * FROM fixtures WHERE id = ? AND played = 0",
+        (fixture_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return _row_to_fixture(row)
+
+
 def get_next_unplayed_matchday(conn: sqlite3.Connection) -> int | None:
     """Get the next league matchday that has unplayed fixtures (cup excluded)."""
     row = conn.execute(

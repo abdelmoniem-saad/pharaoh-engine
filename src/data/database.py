@@ -14,6 +14,7 @@ from pathlib import Path
 # Default DB path — will be set to app storage dir on mobile
 _DEFAULT_DB_DIR = Path(__file__).parent.parent.parent / "saves"
 _db_connection: sqlite3.Connection | None = None
+_active_save_name: str | None = None
 
 
 def get_db_path(save_name: str = "default") -> Path:
@@ -25,9 +26,13 @@ def get_db_path(save_name: str = "default") -> Path:
 
 def connect(save_name: str = "default") -> sqlite3.Connection:
     """Open or return an existing database connection."""
-    global _db_connection
-    if _db_connection is not None:
+    global _db_connection, _active_save_name
+    if _db_connection is not None and _active_save_name == save_name:
         return _db_connection
+
+    # Save slot changed: close old connection to avoid cross-save reads/writes.
+    if _db_connection is not None and _active_save_name != save_name:
+        close()
 
     db_path = get_db_path(save_name)
     _db_connection = sqlite3.connect(str(db_path))
@@ -37,16 +42,23 @@ def connect(save_name: str = "default") -> sqlite3.Connection:
 
     # Always run migrations so existing saves get new tables/columns
     init_schema(_db_connection)
+    _active_save_name = save_name
 
     return _db_connection
 
 
 def close() -> None:
     """Close the current database connection."""
-    global _db_connection
+    global _db_connection, _active_save_name
     if _db_connection is not None:
         _db_connection.close()
         _db_connection = None
+    _active_save_name = None
+
+
+def get_active_save_name() -> str | None:
+    """Return the currently connected save slot name, if any."""
+    return _active_save_name
 
 
 def delete_save(save_name: str) -> None:
@@ -62,6 +74,11 @@ def init_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA_SQL)
     conn.commit()
     _migrate_schema(conn)
+    _repair_schema_drift(conn)
+
+
+def ensure_runtime_schema(conn: sqlite3.Connection) -> None:
+    """Run lightweight schema drift repairs for legacy/externally edited saves."""
     _repair_schema_drift(conn)
 
 

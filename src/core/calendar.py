@@ -345,6 +345,7 @@ def simulate_user_match(conn: sqlite3.Connection,
             opp_tactics, user_team_tactics,
         )
 
+    user_result.match_id = fixture.fixture_id
     user_result.matchday = fixture.matchday
     user_result.date = fixture.date
 
@@ -359,6 +360,7 @@ def simulate_user_match(conn: sqlite3.Connection,
     # In live mode we defer persistence until the user finishes the live screen.
     if not commit:
         return MatchdayOutcome(
+            fixture_id=fixture.fixture_id,
             user_result=user_result,
             other_results=[],
             matchday=fixture.matchday,
@@ -517,6 +519,7 @@ def simulate_user_match(conn: sqlite3.Connection,
     queries.insert_message(conn, roundup_msg)
 
     return MatchdayOutcome(
+        fixture_id=fixture.fixture_id,
         user_result=user_result,
         other_results=other_results,
         matchday=fixture.matchday,
@@ -533,11 +536,32 @@ def finalize_user_matchday(conn: sqlite3.Connection,
                            game_state: GameState,
                            outcome: MatchdayOutcome) -> MatchdayOutcome | None:
     """Persist a live-played user matchday result and process remaining fixtures."""
-    fixture = queries.get_user_next_fixture(conn, game_state.user_club_id)
+    requested_fixture_id = getattr(outcome, "fixture_id", 0) or getattr(outcome.user_result, "match_id", 0)
+
+    fixture = None
+    if requested_fixture_id:
+        fixture = queries.get_unplayed_fixture_by_id(conn, requested_fixture_id)
+
+    if fixture is None and requested_fixture_id:
+        # Already finalized once: treat duplicate finalize calls as a safe no-op.
+        existing = queries.get_fixture_by_id(conn, requested_fixture_id)
+        if existing is not None and existing.played:
+            return outcome
+
     if fixture is None:
-        return None
+        # Legacy fallback for outcomes created before fixture_id was added.
+        fixture = queries.get_user_next_fixture(conn, game_state.user_club_id)
+        if fixture is None:
+            return None
+        # Never finalize onto the wrong future fixture when we know the intended one.
+        if requested_fixture_id and fixture.fixture_id != requested_fixture_id:
+            return outcome
+
+    if not (fixture.home_club_id == game_state.user_club_id or fixture.away_club_id == game_state.user_club_id):
+        return outcome
 
     user_result = outcome.user_result
+    user_result.match_id = fixture.fixture_id
     user_result.matchday = fixture.matchday
     user_result.date = fixture.date
 
@@ -707,6 +731,7 @@ def finalize_user_matchday(conn: sqlite3.Connection,
     queries.insert_message(conn, roundup_msg)
 
     return MatchdayOutcome(
+        fixture_id=fixture.fixture_id,
         user_result=user_result,
         other_results=other_results,
         matchday=fixture.matchday,

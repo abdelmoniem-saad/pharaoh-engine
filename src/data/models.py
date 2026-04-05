@@ -342,6 +342,7 @@ class InboxMessage(BaseModel):
 
 class MatchdayOutcome(BaseModel):
     """Result of simulating a full matchday (user match + all others)."""
+    fixture_id: int = 0
     user_result: MatchResult
     other_results: list[MatchResult] = Field(default_factory=list)
     matchday: int = 0

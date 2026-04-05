@@ -53,12 +53,32 @@ _MAJOR_EVENTS = {
 }
 
 
+def _compute_target_minute(elapsed_seconds: float, seconds_per_minute: float, total_minutes: int) -> int:
+    """Map elapsed wall time to an in-match minute index, clamped to bounds."""
+    if total_minutes <= 1:
+        return 0
+    if seconds_per_minute <= 0:
+        return total_minutes - 1
+    if elapsed_seconds <= 0:
+        return 0
+    return min(total_minutes - 1, int(elapsed_seconds / seconds_per_minute))
+
+
+def _next_minute_to_render(last_rendered: int, target_minute: int, total_minutes: int) -> int | None:
+    """Return the next minute to render, or None when already caught up."""
+    nxt = last_rendered + 1
+    if nxt > target_minute or nxt >= total_minutes:
+        return None
+    return nxt
+
+
 def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
     """Build the live match simulation view."""
     from src.ui.app import app_state, navigate
 
     # Store outcome for the post-match screen
     app_state._last_outcome = outcome
+    app_state._post_match_nav_in_progress = False
 
     result = outcome.user_result
     conn = app_state.db_conn
@@ -148,28 +168,45 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         skip_flag[0] = True
 
     def on_continue(e):
+        if getattr(app_state, "_post_match_nav_in_progress", False):
+            return
+        app_state._post_match_nav_in_progress = True
+        continue_btn.disabled = True
+        continue_btn.text = "⏳ Continuing..."
+        page.update()
+
+        from src.ui.app import show_snackbar
+
         # ── Apply halftime team talk effects to player morale ────────
-        _apply_team_talk(conn, gs, halftime_choice[0], result)
+        try:
+            _apply_team_talk(conn, gs, halftime_choice[0], result)
 
-        # Persist the live-edited result (including substitutions) now.
-        finalized = finalize_user_matchday(conn, gs, outcome)
-        if finalized:
-            outcome.user_result = finalized.user_result
-            outcome.other_results = finalized.other_results
-            outcome.position_before = finalized.position_before
-            outcome.position_after = finalized.position_after
-            outcome.attendance = finalized.attendance
-            outcome.newly_unlocked = finalized.newly_unlocked
+            # Persist the live-edited result (including substitutions) now.
+            finalized = finalize_user_matchday(conn, gs, outcome)
+            if finalized:
+                outcome.fixture_id = finalized.fixture_id
+                outcome.user_result = finalized.user_result
+                outcome.other_results = finalized.other_results
+                outcome.position_before = finalized.position_before
+                outcome.position_after = finalized.position_after
+                outcome.attendance = finalized.attendance
+                outcome.newly_unlocked = finalized.newly_unlocked
 
-        # ── Restore root page structure ──────────────────────────────
-        # play_match() in pre_match.py cleared page.controls and added
-        # the live-match content directly, which orphaned the
-        # transition_container / notification overlay Stack.  We must
-        # rebuild it before calling navigate() so the transition
-        # container is back in the page's control tree.
-        _restore_page_root(page)
+            # ── Restore root page structure ──────────────────────────────
+            # play_match() in pre_match.py cleared page.controls and added
+            # the live-match content directly, which orphaned the
+            # transition_container / notification overlay Stack.  We must
+            # rebuild it before calling navigate() so the transition
+            # container is back in the page's control tree.
+            _restore_page_root(page)
 
-        navigate(page, "/post_match")
+            navigate(page, "/post_match")
+        except Exception as ex:
+            app_state._post_match_nav_in_progress = False
+            continue_btn.disabled = False
+            continue_btn.text = "Continue ➡️"
+            page.update()
+            show_snackbar(page, f"{t('error')}: {ex}", bgcolor=ft.Colors.RED_800)
 
     def on_subs(e):
         if subs_remaining[0] <= 0 or sub_pending[0]:

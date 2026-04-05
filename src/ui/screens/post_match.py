@@ -25,6 +25,9 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
     conn = app_state.db_conn
     gs = app_state.game_state
 
+    # Reset transient nav guard when this screen mounts.
+    app_state._post_match_nav_in_progress = False
+
     # Get the last match outcome stored on app_state
     outcome: MatchdayOutcome | None = getattr(app_state, '_last_outcome', None)
     if not outcome:
@@ -266,6 +269,11 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
 
     # ── Navigation ──────────────────────────────────────────────────
     def go_match_day(e):
+        if getattr(app_state, "_post_match_nav_in_progress", False):
+            return
+        app_state._post_match_nav_in_progress = True
+        e.control.disabled = True
+        page.update()
         app_state._last_outcome = None
         navigate(page, "/match_day")
 
