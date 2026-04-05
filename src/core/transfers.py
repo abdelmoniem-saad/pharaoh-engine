@@ -23,6 +23,26 @@ from src.utils.config import (
 )
 
 
+def negotiation_response_eta_days(neg: Negotiation, current_date: date) -> int:
+    """Return days until a negotiation response is due (0 when due today/overdue)."""
+    return max(0, (date.fromisoformat(neg.respond_date) - current_date).days)
+
+
+def negotiation_pacing_hint(neg: Negotiation, current_date: date) -> str:
+    """Human-readable pacing hint for transfer UI and inbox messaging."""
+    eta_days = negotiation_response_eta_days(neg, current_date)
+    if eta_days == 0:
+        eta_text = "due today"
+    elif eta_days == 1:
+        eta_text = "response expected tomorrow"
+    else:
+        eta_text = f"response expected in {eta_days} days"
+
+    attempts_left = max(0, neg.max_attempts - neg.attempt)
+    phase_text = "fee" if neg.phase == "fee" else "personal terms"
+    return f"{phase_text.title()} phase, {eta_text}, {attempts_left} fee attempt(s) remaining"
+
+
 # ── Transfer Window ─────────────────────────────────────────────────────────
 
 def is_transfer_window_open(current_date: date) -> bool:
@@ -330,8 +350,20 @@ def submit_transfer_offer(conn: sqlite3.Connection, gs: GameState,
     ))
     conn.commit()
     neg_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    neg = _get_negotiation(conn, neg_id)
 
-    return _get_negotiation(conn, neg_id)
+    queries.insert_message(conn, InboxMessage(
+        date=gs.current_date,
+        subject=f"📨 Offer Sent: {player.name}",
+        body=(
+            f"You submitted a transfer offer of {offer:,} EGP for {player.name}.\n"
+            f"Valuation guide: {asking:,} EGP\n"
+            f"{negotiation_pacing_hint(neg, gs.current_date)}"
+        ),
+        category="transfer",
+    ))
+
+    return neg
 
 
 def submit_counter_response(conn: sqlite3.Connection, gs: GameState,
@@ -339,6 +371,7 @@ def submit_counter_response(conn: sqlite3.Connection, gs: GameState,
     """
     Submit a revised offer (counter-to-counter). Response comes next day.
     """
+    before = _get_negotiation(conn, neg_id)
     respond = (gs.current_date + timedelta(days=1)).isoformat()
     conn.execute("""
         UPDATE transfer_negotiations
@@ -348,6 +381,17 @@ def submit_counter_response(conn: sqlite3.Connection, gs: GameState,
         WHERE id = ?
     """, (new_offer, gs.current_date.isoformat(), respond, neg_id))
     conn.commit()
+
+    updated = _get_negotiation(conn, neg_id)
+    queries.insert_message(conn, InboxMessage(
+        date=gs.current_date,
+        subject=f"📨 Revised Offer Sent: {updated.player_name}",
+        body=(
+            f"You revised your bid from {before.current_offer:,} EGP to {new_offer:,} EGP.\n"
+            f"{negotiation_pacing_hint(updated, gs.current_date)}"
+        ),
+        category="transfer",
+    ))
 
 
 def submit_wage_offer(conn: sqlite3.Connection, gs: GameState,
@@ -363,6 +407,17 @@ def submit_wage_offer(conn: sqlite3.Connection, gs: GameState,
         WHERE id = ?
     """, (wage, gs.current_date.isoformat(), respond, neg_id))
     conn.commit()
+
+    updated = _get_negotiation(conn, neg_id)
+    queries.insert_message(conn, InboxMessage(
+        date=gs.current_date,
+        subject=f"💬 Personal Terms Sent: {updated.player_name}",
+        body=(
+            f"You offered {wage:,} EGP/week to {updated.player_name}.\n"
+            f"{negotiation_pacing_hint(updated, gs.current_date)}"
+        ),
+        category="transfer",
+    ))
 
 
 def accept_negotiation(conn: sqlite3.Connection, neg: Negotiation,
@@ -470,7 +525,8 @@ def _process_fee_response(conn: sqlite3.Connection, gs: GameState,
             f"✅ {neg.from_club_name} have accepted your offer of "
             f"{neg.current_offer:,} EGP for {neg.player_name}!\n\n"
             f"You now need to agree personal terms with the player.\n"
-            f"Go to Transfer Market → 📋 Negotiations to offer wages.\n\n"
+            f"Go to Transfer Market → 📋 Negotiations to offer wages.\n"
+            f"Personal terms can be agreed over multiple rounds.\n\n"
             f"FEE_AGREED|{neg.id}"
         )
         queries.insert_message(conn, InboxMessage(
@@ -511,7 +567,7 @@ def _process_fee_response(conn: sqlite3.Connection, gs: GameState,
             f"↩️ {neg.from_club_name} have rejected your offer of "
             f"{neg.current_offer:,} EGP for {neg.player_name}.\n\n"
             f"They counter-offer: {counter:,} EGP\n"
-            f"(Attempt {neg.attempt}/{neg.max_attempts})\n\n"
+            f"(Attempt {neg.attempt}/{neg.max_attempts}; {max(0, neg.max_attempts - neg.attempt)} attempt(s) left after this)\n\n"
             f"Go to Transfer Market → 📋 Negotiations to respond.\n\n"
             f"COUNTER_OFFER|{neg.id}|{counter}"
         )
@@ -569,7 +625,8 @@ def _process_wage_response(conn: sqlite3.Connection, gs: GameState,
             f"{neg.wage_offer:,} EGP/wk.\n\n"
             f"The player wants at least {wanted:,} EGP/wk.\n"
             f"The transfer fee ({neg.current_offer:,} EGP) is still agreed.\n\n"
-            f"Go to Transfer Market → 📋 Negotiations to revise your offer.\n\n"
+            f"Go to Transfer Market → 📋 Negotiations to revise your offer.\n"
+            f"Keep terms competitive to avoid missing the window.\n\n"
             f"WAGE_REJECTED|{neg.id}|{wanted}"
         )
         queries.insert_message(conn, InboxMessage(

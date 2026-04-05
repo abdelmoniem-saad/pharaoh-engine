@@ -63,9 +63,55 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
     injured_players = [p for p in squad if p.injury_days_remaining > 0]
     suspended_players = [p for p in squad if p.suspension_matches > 0]
 
-    # Auto-select starting XI
+    # Auto-select starting XI (fallback baseline)
     xi_ids, bench_ids = auto_select_xi(squad, club.formation)
     player_map = {p.id: p for p in squad}
+
+    # Restore submitted lineup for this fixture if present and still valid.
+    available_ids = {
+        p.id for p in squad
+        if p.injury_days_remaining <= 0 and p.suspension_matches <= 0
+    }
+
+    def _clean_ids(ids: list[int] | None) -> list[int]:
+        cleaned: list[int] = []
+        seen: set[int] = set()
+        for pid in (ids or []):
+            if pid in seen or pid not in available_ids:
+                continue
+            cleaned.append(pid)
+            seen.add(pid)
+        return cleaned
+
+    saved_xi = _clean_ids(getattr(fixture, "submitted_starting_xi", []))
+    saved_bench = _clean_ids(getattr(fixture, "submitted_bench", []))
+
+    if saved_xi:
+        used = set(saved_xi)
+        for pid in xi_ids:
+            if len(saved_xi) >= 11:
+                break
+            if pid in used or pid not in available_ids:
+                continue
+            saved_xi.append(pid)
+            used.add(pid)
+
+        merged_bench: list[int] = []
+        for pid in saved_bench:
+            if pid not in used:
+                merged_bench.append(pid)
+                used.add(pid)
+            if len(merged_bench) >= 7:
+                break
+        for pid in bench_ids:
+            if pid in used or pid not in available_ids:
+                continue
+            merged_bench.append(pid)
+            used.add(pid)
+            if len(merged_bench) >= 7:
+                break
+
+        xi_ids, bench_ids = saved_xi, merged_bench
 
     # Mutable state for swaps
     current_xi = list(xi_ids)
@@ -257,8 +303,17 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
         page.update()
 
         try:
-            # Simulate the full match
-            outcome = simulate_user_match(conn, gs)
+            # Persist this fixture's submitted lineup so it survives navigation/reload.
+            queries.save_submitted_lineup(conn, fixture.fixture_id, list(current_xi), list(current_bench))
+
+            # Simulate the full match using the XI/bench selected on this screen.
+            outcome = simulate_user_match(
+                conn,
+                gs,
+                user_starting_xi=list(current_xi),
+                user_bench=list(current_bench),
+                commit=False,
+            )
             if outcome:
                 # Navigate to live match screen for FIFA-style replay
                 from src.ui.screens.live_match import build_live_match_screen

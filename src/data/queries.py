@@ -415,6 +415,42 @@ def mark_fixture_played(conn: sqlite3.Connection, fixture_id: int,
     conn.commit()
 
 
+def save_submitted_lineup(conn: sqlite3.Connection, fixture_id: int,
+                          starting_xi: list[int], bench: list[int]) -> None:
+    """Persist the user's submitted lineup for a specific upcoming fixture."""
+    try:
+        conn.execute(
+            """
+            UPDATE fixtures
+            SET submitted_starting_xi_json = ?, submitted_bench_json = ?
+            WHERE id = ?
+            """,
+            (json.dumps(starting_xi), json.dumps(bench), fixture_id),
+        )
+        conn.commit()
+    except sqlite3.OperationalError as e:
+        # Graceful fallback for legacy saves until schema self-heal runs.
+        if "submitted_starting_xi_json" not in str(e) and "submitted_bench_json" not in str(e):
+            raise
+
+
+def clear_submitted_lineup(conn: sqlite3.Connection, fixture_id: int) -> None:
+    """Clear persisted submitted lineup for a fixture (usually after match is played)."""
+    try:
+        conn.execute(
+            """
+            UPDATE fixtures
+            SET submitted_starting_xi_json = '[]', submitted_bench_json = '[]'
+            WHERE id = ?
+            """,
+            (fixture_id,),
+        )
+        conn.commit()
+    except sqlite3.OperationalError as e:
+        if "submitted_starting_xi_json" not in str(e) and "submitted_bench_json" not in str(e):
+            raise
+
+
 def get_user_next_fixture(conn: sqlite3.Connection, user_club_id: int) -> Fixture | None:
     """Get the next unplayed fixture for the user's club."""
     row = conn.execute("""
@@ -471,6 +507,21 @@ def _row_to_fixture(row: sqlite3.Row) -> Fixture:
             player_ratings=player_ratings,
         )
 
+    submitted_starting_xi: list[int] = []
+    submitted_bench: list[int] = []
+    try:
+        raw_xi = row["submitted_starting_xi_json"]
+        if raw_xi:
+            submitted_starting_xi = [int(pid) for pid in json.loads(raw_xi)]
+    except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError):
+        submitted_starting_xi = []
+    try:
+        raw_bench = row["submitted_bench_json"]
+        if raw_bench:
+            submitted_bench = [int(pid) for pid in json.loads(raw_bench)]
+    except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError):
+        submitted_bench = []
+
     return Fixture(
         fixture_id=row["id"],
         matchday=row["matchday"],
@@ -484,6 +535,8 @@ def _row_to_fixture(row: sqlite3.Row) -> Fixture:
         played=bool(row["played"]),
         result=result,
         competition=row["competition"],
+        submitted_starting_xi=submitted_starting_xi,
+        submitted_bench=submitted_bench,
     )
 
 

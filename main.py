@@ -8,24 +8,51 @@ import sys
 # Ensure project root is on the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# ── Suppress harmless Windows asyncio shutdown noise ─────────────────────────
-# On Windows the ProactorEventLoop sometimes raises ConnectionResetError when
-# the Flet subprocess pipe is torn down.  This is cosmetic — the game has
-# already saved and closed — so we silence it.
-if sys.platform == "win32":
-    import asyncio
 
-    _original_er = asyncio.proactor_events._ProactorBasePipeTransport  # type: ignore[attr-defined]
+def apply_windows_asyncio_shutdown_patch() -> None:
+    """Silence known benign Windows Proactor pipe teardown errors."""
+    if sys.platform != "win32":
+        return
 
-    _orig_call_connection_lost = _original_er._call_connection_lost
+    # Allow troubleshooting by disabling the patch at runtime.
+    if os.getenv("PHARAOH_DISABLE_WIN_ASYNCIO_PATCH", "").lower() in {"1", "true", "yes"}:
+        return
 
-    def _quiet_connection_lost(self, exc=None):
-        try:
-            _orig_call_connection_lost(self, exc)
-        except (ConnectionResetError, OSError):
-            pass
+    try:
+        import asyncio
 
-    _original_er._call_connection_lost = _quiet_connection_lost
+        proactor_events = getattr(asyncio, "proactor_events", None)
+        transport_cls = getattr(proactor_events, "_ProactorBasePipeTransport", None)
+        if transport_cls is None:
+            return
+
+        if getattr(transport_cls, "__pharaoh_patch_applied__", False):
+            return
+
+        original_call_connection_lost = getattr(transport_cls, "_call_connection_lost", None)
+        if original_call_connection_lost is None:
+            return
+
+        def _quiet_connection_lost(self, exc=None):
+            try:
+                original_call_connection_lost(self, exc)
+            except ConnectionResetError:
+                pass
+            except OSError as err:
+                # Only suppress common Windows teardown noise.
+                if getattr(err, "winerror", None) in {64, 995, 10054}:
+                    pass
+                else:
+                    raise
+
+        transport_cls._call_connection_lost = _quiet_connection_lost
+        transport_cls.__pharaoh_patch_applied__ = True
+    except Exception:
+        # Fallback to default asyncio behavior if internals differ.
+        return
+
+
+apply_windows_asyncio_shutdown_patch()
 
 from src.ui.app import run_app
 

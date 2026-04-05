@@ -6,15 +6,110 @@ of each season.  The board judges performance against that expectation.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from src.data.models import Club, BoardObjective
 from src.utils.config import (
     BoardConfidence,
     SEASON_EXPECTATIONS,
     expectation_display,
-    expectation_description,
     expectation_target_position,
 )
 from src.utils.rng import clamp
+
+
+@dataclass
+class ObjectiveProgressSnapshot:
+    """Live objective status used for mid-season board briefings."""
+    description: str
+    status: str
+    detail: str
+
+
+def evaluate_objective_progress(
+    club: Club,
+    position: int,
+    total_teams: int = 18,
+    goals_for: int = 0,
+    goal_difference: int = 0,
+    season_progress: float = 0.0,
+) -> list[ObjectiveProgressSnapshot]:
+    """Evaluate objective trajectory during the season (without changing confidence)."""
+    snapshots: list[ObjectiveProgressSnapshot] = []
+    progress = clamp(season_progress, 0.0, 1.0)
+    # Early season allows more table volatility before flagging a target as off-track.
+    table_slack = max(1, int((1.0 - progress) * 4) + 1)
+
+    for obj in club.board_objectives:
+        if obj.target in SEASON_EXPECTATIONS:
+            required_pos = expectation_target_position(obj.target)
+            if position <= required_pos:
+                snapshots.append(ObjectiveProgressSnapshot(
+                    description=obj.description,
+                    status="on_track",
+                    detail=f"League position {position} (target: top {required_pos}).",
+                ))
+            elif position <= required_pos + table_slack:
+                snapshots.append(ObjectiveProgressSnapshot(
+                    description=obj.description,
+                    status="at_risk",
+                    detail=(
+                        f"League position {position}; need top {required_pos}. "
+                        "Within reach with a short run of results."
+                    ),
+                ))
+            else:
+                snapshots.append(ObjectiveProgressSnapshot(
+                    description=obj.description,
+                    status="off_track",
+                    detail=f"League position {position}; currently below target of top {required_pos}.",
+                ))
+            continue
+
+        if obj.target == "score_50_goals":
+            projected = goals_for / progress if progress > 0 else goals_for
+            if goals_for >= 50:
+                status = "achieved"
+                detail = f"{goals_for} goals scored already."
+            elif projected >= 50:
+                status = "on_track"
+                detail = f"{goals_for} goals scored; projected pace is {int(projected)}."
+            elif projected >= 42:
+                status = "at_risk"
+                detail = f"{goals_for} goals scored; attacking output needs a lift."
+            else:
+                status = "off_track"
+                detail = f"{goals_for} goals scored; far below 50-goal pace."
+            snapshots.append(ObjectiveProgressSnapshot(obj.description, status, detail))
+            continue
+
+        if obj.target == "positive_gd":
+            if goal_difference > 0:
+                status = "on_track"
+                detail = f"Goal difference is +{goal_difference}."
+            elif goal_difference == 0:
+                status = "at_risk"
+                detail = "Goal difference is level; one poor run could flip it negative."
+            else:
+                status = "off_track"
+                detail = f"Goal difference is {goal_difference}; defensive record needs improving."
+            snapshots.append(ObjectiveProgressSnapshot(obj.description, status, detail))
+            continue
+
+        if obj.target == "develop_youth":
+            promoted = getattr(club, "youth_promoted_count", 0)
+            if promoted >= 1:
+                status = "achieved"
+                detail = f"{promoted} youth player(s) have already broken through."
+            elif progress < 0.6:
+                status = "at_risk"
+                detail = "No youth breakthrough yet, but there is still time to integrate prospects."
+            else:
+                status = "off_track"
+                detail = "No youth breakthrough yet late in the season."
+            snapshots.append(ObjectiveProgressSnapshot(obj.description, status, detail))
+
+    return snapshots
 
 
 def get_confidence_level(confidence: int) -> BoardConfidence:

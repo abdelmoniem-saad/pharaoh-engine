@@ -272,6 +272,8 @@ class Fixture(BaseModel):
     played: bool = False
     result: Optional[MatchResult] = None
     competition: str = "Egyptian Premier League"
+    submitted_starting_xi: list[int] = Field(default_factory=list)
+    submitted_bench: list[int] = Field(default_factory=list)
 
 
 class LeagueSeason(BaseModel):
@@ -347,6 +349,8 @@ class MatchdayOutcome(BaseModel):
     position_after: int = 0     # league position after this matchday
     attendance: int = 0         # match attendance
     newly_unlocked: list[str] = Field(default_factory=list)  # achievement keys
+    home_starting_xi: list[int] = Field(default_factory=list)
+    away_starting_xi: list[int] = Field(default_factory=list)
 
 
 

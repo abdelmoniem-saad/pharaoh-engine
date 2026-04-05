@@ -14,9 +14,13 @@ import asyncio
 import flet as ft
 
 from src.utils.config import MatchEventType
+from src.data.models import MatchEvent
 from src.data import queries
+from src.core import club as club_module, match_engine
+from src.core.calendar import finalize_user_matchday
 from src.utils.localization import t, display_name, display_home_name, display_away_name, is_rtl
 from src.utils.audio import play_goal, play_full_time
+from src.utils import rng
 
 
 # Event icons
@@ -59,6 +63,15 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
     result = outcome.user_result
     conn = app_state.db_conn
     gs = app_state.game_state
+    user_is_home = result.home_club_id == gs.user_club_id
+
+    # Mutable active XI state used for live substitution resimulation.
+    active_user_xi = [list(outcome.home_starting_xi if user_is_home else outcome.away_starting_xi)]
+    if not active_user_xi[0] and conn and gs:
+        club = queries.get_club(conn, gs.user_club_id)
+        squad = queries.get_players_by_club(conn, gs.user_club_id)
+        if club and squad:
+            active_user_xi[0] = list(club_module.prepare_team_for_match(club, squad).starting_xi)
 
     # ── Pre-index events by minute ───────────────────────────────────
     events_by_minute: dict[int, list] = {}
@@ -138,6 +151,16 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         # ── Apply halftime team talk effects to player morale ────────
         _apply_team_talk(conn, gs, halftime_choice[0], result)
 
+        # Persist the live-edited result (including substitutions) now.
+        finalized = finalize_user_matchday(conn, gs, outcome)
+        if finalized:
+            outcome.user_result = finalized.user_result
+            outcome.other_results = finalized.other_results
+            outcome.position_before = finalized.position_before
+            outcome.position_after = finalized.position_after
+            outcome.attendance = finalized.attendance
+            outcome.newly_unlocked = finalized.newly_unlocked
+
         # ── Restore root page structure ──────────────────────────────
         # play_match() in pre_match.py cleared page.controls and added
         # the live-match content directly, which orphaned the
@@ -152,7 +175,18 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         if subs_remaining[0] <= 0 or sub_pending[0]:
             return
         sub_pending[0] = True
-        _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made, sub_pending, subs_btn, minute_text)
+        _show_sub_dialog(
+            page,
+            outcome,
+            event_list,
+            events_by_minute,
+            active_user_xi,
+            subs_remaining,
+            subs_made,
+            sub_pending,
+            subs_btn,
+            minute_text,
+        )
 
     skip_btn.on_click = on_skip
     continue_btn.on_click = on_continue
@@ -468,7 +502,7 @@ def _show_halftime_talk(page: ft.Page, event_list, halftime_choice):
     event_list.controls.extend(talk_controls)
 
 
-def _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made,
+def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi, subs_remaining, subs_made,
                       sub_pending, subs_btn, minute_text):
     """Show a substitution selection dialog — pick a starter to take OFF, then a bench player ON."""
     from src.ui.app import app_state
@@ -570,7 +604,7 @@ def _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made,
         on_p = selected_on[0]
         subs_remaining[0] -= 1
 
-        # ── Make the substitution count: update player stats ─────
+        # ── Make the substitution count: update the live match state ─────
         # Estimate current match minute from the simulation progress
         try:
             current_min = int(float(minute_text.value.replace("'", "").replace("FT", "90")))
@@ -579,32 +613,77 @@ def _show_sub_dialog(page, outcome, event_list, subs_remaining, subs_made,
 
         subs_made.append((off_p.name, on_p.name, str(current_min)))
 
-        # Reload fresh player data from DB to avoid stale state
-        off_fresh = queries.get_player(conn, off_p.id)
-        on_fresh = queries.get_player(conn, on_p.id)
+        # Update active XI immediately so further substitutions and resim use current state.
+        if off_p.id in active_user_xi[0]:
+            idx = active_user_xi[0].index(off_p.id)
+            active_user_xi[0][idx] = on_p.id
 
-        if off_fresh:
-            # Subbed-off player: reduce minutes (they played ~current_min, not full 90)
-            # The match engine credited them 90 mins — subtract the difference
-            mins_not_played = max(0, 90 - current_min)
-            off_fresh.season_stats.minutes_played = max(0,
-                off_fresh.season_stats.minutes_played - mins_not_played)
-            # Small fitness recovery (they rested the last part)
-            off_fresh.fitness = min(100, off_fresh.fitness + 3)
-            queries.update_player_stats(conn, off_fresh)
+        # Record an actual substitution event in the match result for downstream processing.
+        sub_event = MatchEvent(
+            minute=current_min,
+            event_type=MatchEventType.SUBSTITUTION,
+            player_id=off_p.id,
+            player_name=off_p.name,
+            player_name_ar=off_p.name_ar,
+            second_player_id=on_p.id,
+            second_player_name=on_p.name,
+            second_player_name_ar=on_p.name_ar,
+            club_id=gs.user_club_id,
+            description=f"Substitution: {off_p.name} off, {on_p.name} on",
+            description_ar=f"تبديل: خروج {off_p.name_ar} ودخول {on_p.name_ar}",
+        )
+        result.events.append(sub_event)
+        events_by_minute.setdefault(current_min, []).append(sub_event)
 
-        if on_fresh:
-            # Subbed-on player: gets partial minutes played
-            mins_played = max(0, 90 - current_min)
-            on_fresh.season_stats.minutes_played += mins_played
-            on_fresh.season_stats.appearances += 1
-            # Morale boost from getting on the pitch
-            on_fresh.morale = min(100, on_fresh.morale + 3)
-            # Reset benched streak — they got game time
-            on_fresh.matches_benched_streak = 0
-            # Small fitness cost for playing
-            on_fresh.fitness = max(0, on_fresh.fitness - (mins_played // 10))
-            queries.update_player_stats(conn, on_fresh)
+        # Re-simulate the remaining match window with the updated active XI.
+        if conn and gs:
+            home_club = queries.get_club(conn, result.home_club_id)
+            away_club = queries.get_club(conn, result.away_club_id)
+            if home_club and away_club:
+                home_squad = queries.get_players_by_club(conn, home_club.id)
+                away_squad = queries.get_players_by_club(conn, away_club.id)
+                home_tactics = club_module.prepare_team_for_match(home_club, home_squad)
+                away_tactics = club_module.prepare_team_for_match(away_club, away_squad)
+
+                if result.home_club_id == gs.user_club_id:
+                    home_tactics.starting_xi = list(active_user_xi[0])
+                    outcome.home_starting_xi = list(active_user_xi[0])
+                else:
+                    away_tactics.starting_xi = list(active_user_xi[0])
+                    outcome.away_starting_xi = list(active_user_xi[0])
+
+                future_sim = match_engine.simulate_match(
+                    home_club,
+                    away_club,
+                    home_squad,
+                    away_squad,
+                    home_tactics,
+                    away_tactics,
+                    match_date=result.date,
+                )
+
+                # Preserve events up to now (including this substitution), then replace the tail.
+                past_events = [ev for ev in result.events if ev.minute <= current_min]
+                future_events = [
+                    ev for ev in future_sim.events
+                    if ev.minute > current_min and ev.event_type not in {
+                        MatchEventType.KICKOFF,
+                        MatchEventType.HALF_TIME,
+                    }
+                ]
+                result.events = sorted(past_events + future_events, key=lambda ev: (ev.minute, ev.event_type.value))
+
+                # Rebuild minute index used by the live ticker.
+                events_by_minute.clear()
+                for ev in result.events:
+                    events_by_minute.setdefault(ev.minute, []).append(ev)
+
+                # Use resimulated outputs so persisted result reflects updated match state.
+                result.home_goals = future_sim.home_goals
+                result.away_goals = future_sim.away_goals
+                result.home_stats = future_sim.home_stats
+                result.away_stats = future_sim.away_stats
+                result.player_ratings = future_sim.player_ratings
 
         # Add substitution event to the event feed
         event_list.controls.append(ft.Container(

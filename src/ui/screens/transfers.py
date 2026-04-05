@@ -356,7 +356,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     # ── Negotiations tab ───────────────────────────────────────────────
     from src.core.transfers import (
         get_user_negotiations, submit_counter_response,
-        submit_wage_offer, cancel_negotiation,
+        submit_wage_offer, cancel_negotiation, negotiation_pacing_hint,
     )
 
     negotiations_content = ft.Column(spacing=4, visible=False)
@@ -377,7 +377,12 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                     bgcolor=ft.Colors.BLUE_700, padding=ft.padding.symmetric(horizontal=6, vertical=2),
                     border_radius=4,
                 )
-                action_btn = ft.Text("Response tomorrow", size=10, color=ft.Colors.GREY_500, italic=True)
+                action_btn = ft.Text(
+                    negotiation_pacing_hint(neg, gs.current_date),
+                    size=10,
+                    color=ft.Colors.GREY_500,
+                    italic=True,
+                )
             elif neg.status == "countered":
                 badge = ft.Container(
                     content=ft.Text("↩️ Countered", size=9, color=ft.Colors.WHITE),
@@ -444,6 +449,8 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                         ft.Text(offer_text, size=11, color=ft.Colors.AMBER_300),
                         ft.Text(f"Attempt {neg.attempt}/{neg.max_attempts} | {phase_text} phase",
                                  size=10, color=ft.Colors.GREY_500),
+                        ft.Text(negotiation_pacing_hint(neg, gs.current_date),
+                                size=10, color=ft.Colors.GREY_500),
                         ft.Row(spacing=8, controls=[
                             action_btn,
                             ft.TextButton("✖ Withdraw", on_click=make_cancel(),

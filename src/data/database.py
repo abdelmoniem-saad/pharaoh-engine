@@ -62,6 +62,39 @@ def init_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA_SQL)
     conn.commit()
     _migrate_schema(conn)
+    _repair_schema_drift(conn)
+
+
+def _repair_schema_drift(conn: sqlite3.Connection) -> None:
+    """Backfill critical columns by inspecting actual tables, not only schema_version."""
+
+    def _has_column(table: str, column: str) -> bool:
+        rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+        for row in rows:
+            try:
+                name = row["name"]
+            except (TypeError, KeyError, IndexError):
+                name = row[1] if len(row) > 1 else ""
+            if name == column:
+                return True
+        return False
+
+    repairs = [
+        ("fixtures", "submitted_starting_xi_json", "TEXT NOT NULL DEFAULT '[]'"),
+        ("fixtures", "submitted_bench_json", "TEXT NOT NULL DEFAULT '[]'"),
+    ]
+
+    for table, column, ddl in repairs:
+        if _has_column(table, column):
+            continue
+        try:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
+        except sqlite3.OperationalError as e:
+            # Safe to ignore if another migration/repair already added it.
+            if "duplicate column name" not in str(e).lower():
+                raise
+
+    conn.commit()
 
 
 # ── Schema Definition ────────────────────────────────────────────────────────
@@ -201,7 +234,9 @@ CREATE TABLE IF NOT EXISTS fixtures (
     competition TEXT NOT NULL DEFAULT 'Egyptian Premier League',
     player_ratings_json TEXT NOT NULL DEFAULT '{}',
     extra_time INTEGER NOT NULL DEFAULT 0,
-    penalties_json TEXT NOT NULL DEFAULT ''
+    penalties_json TEXT NOT NULL DEFAULT '',
+    submitted_starting_xi_json TEXT NOT NULL DEFAULT '[]',
+    submitted_bench_json TEXT NOT NULL DEFAULT '[]'
 );
 
 CREATE TABLE IF NOT EXISTS standings (
@@ -593,7 +628,7 @@ _MIGRATIONS = [
     (8, [
         # RELAX FOREIGN KEY CONSTRAINTS on fixtures to allow virtual Cup clubs (negative IDs)
         "CREATE TABLE fixtures_new (id INTEGER PRIMARY KEY AUTOINCREMENT, matchday INTEGER NOT NULL, home_club_id INTEGER NOT NULL, away_club_id INTEGER NOT NULL, home_club_name TEXT NOT NULL DEFAULT '', away_club_name TEXT NOT NULL DEFAULT '', home_club_name_ar TEXT NOT NULL DEFAULT '', away_club_name_ar TEXT NOT NULL DEFAULT '', match_date TEXT, played INTEGER NOT NULL DEFAULT 0, home_goals INTEGER DEFAULT NULL, away_goals INTEGER DEFAULT NULL, events_json TEXT NOT NULL DEFAULT '[]', home_stats_json TEXT NOT NULL DEFAULT '{}', away_stats_json TEXT NOT NULL DEFAULT '{}', competition TEXT NOT NULL DEFAULT 'Egyptian Premier League', player_ratings_json TEXT NOT NULL DEFAULT '{}', extra_time INTEGER NOT NULL DEFAULT 0, penalties_json TEXT NOT NULL DEFAULT '')",
-        "INSERT INTO fixtures_new SELECT * FROM fixtures",
+        "INSERT INTO fixtures_new (id, matchday, home_club_id, away_club_id, home_club_name, away_club_name, home_club_name_ar, away_club_name_ar, match_date, played, home_goals, away_goals, events_json, home_stats_json, away_stats_json, competition, player_ratings_json, extra_time, penalties_json) SELECT id, matchday, home_club_id, away_club_id, home_club_name, away_club_name, home_club_name_ar, away_club_name_ar, match_date, played, home_goals, away_goals, events_json, home_stats_json, away_stats_json, competition, player_ratings_json, extra_time, penalties_json FROM fixtures",
         "DROP TABLE fixtures",
         "ALTER TABLE fixtures_new RENAME TO fixtures",
         "CREATE INDEX IF NOT EXISTS idx_fixtures_matchday ON fixtures(matchday)",
@@ -601,6 +636,15 @@ _MIGRATIONS = [
     ]),
     (9, [
         "ALTER TABLE game_settings ADD COLUMN sound_enabled INTEGER NOT NULL DEFAULT 1",
+    ]),
+    (10, [
+        "ALTER TABLE fixtures ADD COLUMN submitted_starting_xi_json TEXT NOT NULL DEFAULT '[]'",
+        "ALTER TABLE fixtures ADD COLUMN submitted_bench_json TEXT NOT NULL DEFAULT '[]'",
+    ]),
+    (11, [
+        # Repair migration for saves where schema_version advanced but columns are missing.
+        "ALTER TABLE fixtures ADD COLUMN submitted_starting_xi_json TEXT NOT NULL DEFAULT '[]'",
+        "ALTER TABLE fixtures ADD COLUMN submitted_bench_json TEXT NOT NULL DEFAULT '[]'",
     ]),
 ]
 

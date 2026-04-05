@@ -6,6 +6,8 @@ Generates detailed match reports, varied headlines, and random mid-season events
 from __future__ import annotations
 
 from src.data.models import MatchResult, InboxMessage
+from src.core.board import ObjectiveProgressSnapshot
+from src.utils.config import expectation_display
 from src.utils.config import MatchEventType
 from src.utils import rng
 from datetime import date
@@ -372,4 +374,59 @@ def generate_league_roundup(matchday: int, results: list,
         body="\n".join(lines),
         category="media",
     )
+
+
+def create_weekly_board_brief_message(
+    club_name: str,
+    board_confidence: int,
+    confidence_level: str,
+    season_expectation: str,
+    position: int,
+    total_teams: int,
+    progress: list[ObjectiveProgressSnapshot],
+    current_date: date,
+) -> InboxMessage:
+    """Create a weekly board brief message that shows objective momentum."""
+    badge_by_status = {
+        "achieved": "✅",
+        "on_track": "🟢",
+        "at_risk": "🟠",
+        "off_track": "🔴",
+    }
+    status_counts = {"achieved": 0, "on_track": 0, "at_risk": 0, "off_track": 0}
+
+    lines = [
+        f"Weekly board review for {club_name}",
+        f"League position: {position}/{total_teams}",
+        f"Expectation: {expectation_display(season_expectation)}",
+        f"Confidence: {board_confidence}/100 ({confidence_level})",
+        "",
+        "Objective Track:",
+    ]
+
+    if not progress:
+        lines.append("- No active board objectives recorded.")
+    else:
+        for item in progress:
+            badge = badge_by_status.get(item.status, "•")
+            if item.status in status_counts:
+                status_counts[item.status] += 1
+            lines.append(f"{badge} {item.description}")
+            lines.append(f"   {item.detail}")
+
+    summary = (
+        f"{status_counts['achieved']} achieved, "
+        f"{status_counts['on_track']} on track, "
+        f"{status_counts['at_risk']} at risk, "
+        f"{status_counts['off_track']} off track"
+    )
+    lines.extend(["", f"Board Summary: {summary}"])
+
+    return InboxMessage(
+        date=current_date,
+        subject="🏛️ Weekly Board Brief",
+        body="\n".join(lines),
+        category="board",
+    )
+
 
