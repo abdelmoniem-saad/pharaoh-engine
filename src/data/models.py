@@ -4,20 +4,29 @@ Pydantic data models for all core game entities.
 These models serve as the single source of truth for data structures
 throughout the simulation engine, database layer, and UI.
 """
-from typing import Optional
 
 import datetime as _dt
-from pydantic import BaseModel, Field
-from src.utils.config import (
-    Position, Foot, Mentality, MatchEventType, CompetitionType,
-    ATTR_MIN, ATTR_MAX, ABILITY_MIN, ABILITY_MAX,
-)
 
+from pydantic import BaseModel, Field
+
+from src.utils.config import (
+    ABILITY_MAX,
+    ABILITY_MIN,
+    ATTR_MAX,
+    ATTR_MIN,
+    CompetitionType,
+    Foot,
+    MatchEventType,
+    Mentality,
+    Position,
+)
 
 # ── Player Models ────────────────────────────────────────────────────────────
 
+
 class PlayerAttributes(BaseModel):
     """Player skill attributes (1-20 scale)."""
+
     # Technical
     finishing: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
     passing: int = Field(default=10, ge=ATTR_MIN, le=ATTR_MAX)
@@ -56,14 +65,16 @@ class PlayerAttributes(BaseModel):
 
 class PlayerContract(BaseModel):
     """Player contract details."""
-    wage_weekly: int = 0          # EGP per week
-    contract_expiry: Optional[_dt.date] = None
-    release_clause: Optional[int] = None
+
+    wage_weekly: int = 0  # EGP per week
+    contract_expiry: _dt.date | None = None
+    release_clause: int | None = None
     signing_bonus: int = 0
 
 
 class PlayerSeasonStats(BaseModel):
     """Per-season statistics for a player."""
+
     appearances: int = 0
     goals: int = 0
     assists: int = 0
@@ -77,6 +88,7 @@ class PlayerSeasonStats(BaseModel):
 
 class Player(BaseModel):
     """Complete player model."""
+
     id: int = 0
     name: str
     name_ar: str = ""
@@ -94,36 +106,40 @@ class Player(BaseModel):
     contract: PlayerContract = Field(default_factory=PlayerContract)
     season_stats: PlayerSeasonStats = Field(default_factory=PlayerSeasonStats)
 
-    morale: int = Field(default=50, ge=0, le=100)       # 0=terrible, 100=ecstatic
-    fitness: int = Field(default=100, ge=0, le=100)      # 0=injured, 100=peak
-    form: float = Field(default=7.0, ge=0.0, le=10.0)   # rolling match rating average
+    morale: int = Field(default=50, ge=0, le=100)  # 0=terrible, 100=ecstatic
+    fitness: int = Field(default=100, ge=0, le=100)  # 0=injured, 100=peak
+    form: float = Field(default=7.0, ge=0.0, le=10.0)  # rolling match rating average
 
-    club_id: Optional[int] = None
+    club_id: int | None = None
     is_captain: bool = False
-    shirt_number: Optional[int] = None
+    shirt_number: int | None = None
     transfer_listed: bool = False
 
     # Injury & suspension
     injury_days_remaining: int = 0
-    injury_type: str = ""              # e.g., "Hamstring", "Ankle", "Knee"
-    suspension_matches: int = 0        # matches left on ban
+    injury_type: str = ""  # e.g., "Hamstring", "Ankle", "Knee"
+    suspension_matches: int = 0  # matches left on ban
 
     # Training
-    training_focus: str = ""           # e.g., "Shooting", "Defending", "Physical", "Playmaking"
+    training_focus: str = ""  # e.g., "Shooting", "Defending", "Physical", "Playmaking"
 
     # Morale tracking
-    matches_benched_streak: int = 0    # consecutive matches benched (not in XI)
+    matches_benched_streak: int = 0  # consecutive matches benched (not in XI)
 
 
 # ── Club Models ──────────────────────────────────────────────────────────────
 
+
 class ClubFinances(BaseModel):
     """Club financial state."""
-    balance: int = 0                   # Current cash (EGP)
-    transfer_budget: int = 0           # Available for transfers
-    wage_budget_weekly: int = 0        # Max weekly wage spend
-    wage_bill_weekly: int = 0          # Current weekly wage bill
-    matchday_income: int = 0           # Revenue per home match
+
+    balance: int = 0  # Current cash (EGP)
+    transfer_budget: int = 0  # Available for transfers
+    wage_budget_weekly: int = 0  # Max weekly wage spend
+    wage_bill_weekly: int = 0  # Current weekly wage bill
+    matchday_income: int = 0  # Revenue per home match (calculated in core/finance.py)
+    ticket_price: int = 150  # Average ticket price (EGP)
+    season_tickets: int = 0  # Number of season ticket holders
     sponsorship_income_yearly: int = 0
     tv_revenue_yearly: int = 0
     prize_money: int = 0
@@ -131,14 +147,16 @@ class ClubFinances(BaseModel):
 
 class BoardObjective(BaseModel):
     """A board-set objective for the season."""
+
     description: str
-    target: str                        # e.g., "finish_top_4", "win_cup"
-    priority: str = "medium"           # low, medium, high, critical
+    target: str  # e.g., "finish_top_4", "win_cup"
+    priority: str = "medium"  # low, medium, high, critical
     achieved: bool = False
 
 
 class Club(BaseModel):
     """Complete club model."""
+
     id: int = 0
     name: str
     short_name: str
@@ -151,6 +169,7 @@ class Club(BaseModel):
     stadium_name_ar: str = ""
     facilities_level: int = Field(default=5, ge=1, le=10)
     youth_rating: int = Field(default=5, ge=1, le=10)
+    academy_tier: int = Field(default=4, ge=1, le=4)  # 1=Top, 4=Basic
     stadium_name: str = ""
     stadium_capacity: int = 10000
 
@@ -174,31 +193,38 @@ class Club(BaseModel):
     is_user_controlled: bool = False
 
     # Season expectation — set per-club at season start based on reputation
-    season_expectation: str = "mid_table"   # win_league, top_4, top_half, mid_table, avoid_relegation
+    season_expectation: str = (
+        "mid_table"  # win_league, top_4, top_half, mid_table, avoid_relegation
+    )
 
     # Youth tracking
-    youth_promoted_count: int = 0    # number of U21 players with ≥5 appearances this season
+    youth_promoted_count: int = (
+        0  # number of U21 players with ≥5 appearances this season
+    )
 
 
 # ── Match Models ─────────────────────────────────────────────────────────────
 
+
 class MatchEvent(BaseModel):
     """A single event during a match."""
+
     minute: int
     event_type: MatchEventType
-    player_id: Optional[int] = None
+    player_id: int | None = None
     player_name: str = ""
     player_name_ar: str = ""
-    second_player_id: Optional[int] = None   # e.g., assist provider
+    second_player_id: int | None = None  # e.g., assist provider
     second_player_name: str = ""
     second_player_name_ar: str = ""
-    club_id: Optional[int] = None
+    club_id: int | None = None
     description: str = ""
     description_ar: str = ""
 
 
 class MatchStats(BaseModel):
     """Aggregate match statistics for one team."""
+
     possession: float = 50.0
     shots: int = 0
     shots_on_target: int = 0
@@ -213,6 +239,7 @@ class MatchStats(BaseModel):
 
 class MatchResult(BaseModel):
     """Complete result of a simulated match."""
+
     match_id: int = 0
     home_club_id: int
     away_club_id: int
@@ -225,10 +252,12 @@ class MatchResult(BaseModel):
     events: list[MatchEvent] = Field(default_factory=list)
     home_stats: MatchStats = Field(default_factory=MatchStats)
     away_stats: MatchStats = Field(default_factory=MatchStats)
-    player_ratings: dict[int, float] = Field(default_factory=dict)   # player_id → 1-10 rating
+    player_ratings: dict[int, float] = Field(
+        default_factory=dict
+    )  # player_id → 1-10 rating
     competition: str = ""
     matchday: int = 0
-    date: Optional[_dt.date] = None
+    date: _dt.date | None = None
 
     @property
     def score_display(self) -> str:
@@ -237,8 +266,10 @@ class MatchResult(BaseModel):
 
 # ── League Models ────────────────────────────────────────────────────────────
 
+
 class LeagueStanding(BaseModel):
     """A single row in the league table."""
+
     club_id: int
     club_name: str
     club_name_ar: str = ""
@@ -260,6 +291,7 @@ class LeagueStanding(BaseModel):
 
 class Fixture(BaseModel):
     """A scheduled match."""
+
     fixture_id: int = 0
     matchday: int
     home_club_id: int
@@ -268,9 +300,9 @@ class Fixture(BaseModel):
     away_club_name: str = ""
     home_club_name_ar: str = ""
     away_club_name_ar: str = ""
-    date: Optional[_dt.date] = None
+    date: _dt.date | None = None
     played: bool = False
-    result: Optional[MatchResult] = None
+    result: MatchResult | None = None
     competition: str = "Egyptian Premier League"
     submitted_starting_xi: list[int] = Field(default_factory=list)
     submitted_bench: list[int] = Field(default_factory=list)
@@ -278,7 +310,8 @@ class Fixture(BaseModel):
 
 class LeagueSeason(BaseModel):
     """Complete state of a league season."""
-    season_year: int           # e.g., 2025 for 2025/26 season
+
+    season_year: int  # e.g., 2025 for 2025/26 season
     competition_name: str = "Egyptian Premier League"
     competition_type: CompetitionType = CompetitionType.LEAGUE
     standings: list[LeagueStanding] = Field(default_factory=list)
@@ -289,8 +322,10 @@ class LeagueSeason(BaseModel):
 
 # ── Tactics Models ───────────────────────────────────────────────────────────
 
+
 class TacticalPreset(BaseModel):
     """A named tactical preset for casual players."""
+
     name: str
     formation: str
     mentality: Mentality
@@ -303,20 +338,23 @@ class TacticalPreset(BaseModel):
 
 class TeamTactics(BaseModel):
     """Active tactics for a match."""
+
     formation: str = "4-2-3-1"
     mentality: Mentality = Mentality.BALANCED
     pressing_intensity: int = Field(default=5, ge=1, le=10)
     tempo: int = Field(default=5, ge=1, le=10)
     width: int = Field(default=5, ge=1, le=10)
     defensive_line: int = Field(default=5, ge=1, le=10)
-    starting_xi: list[int] = Field(default_factory=list)   # player IDs
-    bench: list[int] = Field(default_factory=list)          # player IDs
+    starting_xi: list[int] = Field(default_factory=list)  # player IDs
+    bench: list[int] = Field(default_factory=list)  # player IDs
 
 
 # ── Game State ───────────────────────────────────────────────────────────────
 
+
 class GameState(BaseModel):
     """Top-level game state model."""
+
     save_name: str = ""
     season_year: int = 2025
     current_date: _dt.date = Field(default_factory=lambda: _dt.date(2025, 8, 15))
@@ -330,40 +368,44 @@ class GameState(BaseModel):
 
 # ── Inbox / Messages ────────────────────────────────────────────────────────
 
+
 class InboxMessage(BaseModel):
     """An in-game message for the user."""
+
     id: int = 0
     date: _dt.date
     subject: str
     body: str
-    category: str = "general"     # general, match, transfer, board, media
+    category: str = "general"  # general, match, transfer, board, media
     is_read: bool = False
 
 
 class MatchdayOutcome(BaseModel):
     """Result of simulating a full matchday (user match + all others)."""
+
     fixture_id: int = 0
     user_result: MatchResult
     other_results: list[MatchResult] = Field(default_factory=list)
     matchday: int = 0
-    position_before: int = 0    # league position before this matchday
-    position_after: int = 0     # league position after this matchday
-    attendance: int = 0         # match attendance
+    position_before: int = 0  # league position before this matchday
+    position_after: int = 0  # league position after this matchday
+    attendance: int = 0  # match attendance
     newly_unlocked: list[str] = Field(default_factory=list)  # achievement keys
     home_starting_xi: list[int] = Field(default_factory=list)
     away_starting_xi: list[int] = Field(default_factory=list)
 
 
-
 # ── Historical Stats Archive ────────────────────────────────────────────────
+
 
 class SeasonHistory(BaseModel):
     """Record of a completed season."""
+
     id: int = 0
     season_year: int
-    champion_club_id: Optional[int] = None
+    champion_club_id: int | None = None
     champion_club_name: str = ""
-    user_club_id: Optional[int] = None
+    user_club_id: int | None = None
     user_position: int = 0
     total_goals: int = 0
     total_matches: int = 0
@@ -382,12 +424,13 @@ class SeasonHistory(BaseModel):
 
 class PlayerSeasonArchive(BaseModel):
     """Archived player stats for a single completed season."""
+
     id: int = 0
     season_year: int
     player_id: int
     player_name: str = ""
     player_name_ar: str = ""
-    club_id: Optional[int] = None
+    club_id: int | None = None
     club_name: str = ""
     club_name_ar: str = ""
     position: str = ""
@@ -405,6 +448,7 @@ class PlayerSeasonArchive(BaseModel):
 
 class ClubSeasonArchive(BaseModel):
     """Archived club standings for a single completed season."""
+
     id: int = 0
     season_year: int
     club_id: int
