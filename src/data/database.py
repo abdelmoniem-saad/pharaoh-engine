@@ -152,6 +152,9 @@ CREATE TABLE IF NOT EXISTS clubs (
     tv_revenue_yearly INTEGER NOT NULL DEFAULT 0,
     board_confidence INTEGER NOT NULL DEFAULT 60,
     fan_happiness INTEGER NOT NULL DEFAULT 50,
+    ultras_trust INTEGER NOT NULL DEFAULT 50,
+    choreo_momentum INTEGER NOT NULL DEFAULT 0,
+    protest_risk INTEGER NOT NULL DEFAULT 0,
     formation TEXT NOT NULL DEFAULT '4-2-3-1',
     mentality INTEGER NOT NULL DEFAULT 4,
     pressing_intensity INTEGER NOT NULL DEFAULT 5,
@@ -663,5 +666,12 @@ _MIGRATIONS = [
         "ALTER TABLE fixtures ADD COLUMN submitted_starting_xi_json TEXT NOT NULL DEFAULT '[]'",
         "ALTER TABLE fixtures ADD COLUMN submitted_bench_json TEXT NOT NULL DEFAULT '[]'",
     ]),
+    (12, [
+        "ALTER TABLE clubs ADD COLUMN ultras_trust INTEGER NOT NULL DEFAULT 50",
+        "ALTER TABLE clubs ADD COLUMN choreo_momentum INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE clubs ADD COLUMN protest_risk INTEGER NOT NULL DEFAULT 0",
+    ]),
+    (13, [
+        "ALTER TABLE clubs ADD COLUMN promises_json TEXT NOT NULL DEFAULT '[]'",
+    ]),
 ]
-

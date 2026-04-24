@@ -441,6 +441,17 @@ def simulate_user_match(conn: sqlite3.Connection,
     # Update board confidence
     update_confidence_after_match(user_club, result_type)
 
+    # Evaluate manager promises
+    from src.core.board import update_promises_after_match
+    promise_msgs = update_promises_after_match(user_club, result_type, fixture.matchday)
+    for msg in promise_msgs:
+        queries.insert_message(conn, InboxMessage(
+            date=game_state.current_date,
+            subject="📋 Promise Update",
+            body=msg,
+            category="board"
+        ))
+
     # Update fan happiness (with derby amplification)
     opponent_id = away_club.id if user_is_home else home_club.id
     update_fan_happiness(user_club, result_type,
@@ -668,6 +679,17 @@ def finalize_user_matchday(conn: sqlite3.Connection,
         result_type = "draw"
 
     update_confidence_after_match(user_club, result_type)
+
+    from src.core.board import update_promises_after_match
+    promise_msgs = update_promises_after_match(user_club, result_type, fixture.matchday)
+    for msg in promise_msgs:
+        queries.insert_message(conn, InboxMessage(
+            date=game_state.current_date,
+            subject="📋 Promise Update",
+            body=msg,
+            category="board"
+        ))
+
     opponent_id = away_club.id if user_is_home else home_club.id
     update_fan_happiness(user_club, result_type,
                          opponent_club_id=opponent_id, conn=conn)
@@ -1021,6 +1043,7 @@ def _weekly_board_brief(conn: sqlite3.Connection,
         total_teams=total_teams,
         progress=objective_progress,
         current_date=game_state.current_date,
+        active_promises=[p for p in user_club.promises if p.status == "active"],
     )
     queries.insert_message(conn, brief)
     messages.append(

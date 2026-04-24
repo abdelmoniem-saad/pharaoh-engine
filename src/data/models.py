@@ -154,6 +154,17 @@ class BoardObjective(BaseModel):
     achieved: bool = False
 
 
+class ManagerPromise(BaseModel):
+    """A promise made by the manager to the board or media."""
+
+    description: str
+    target_type: str  # e.g., "win_next", "unbeaten_run", "youth_minutes"
+    target_value: int = 1
+    deadline_matchday: int
+    progress: int = 0
+    status: str = "active"  # active, fulfilled, failed
+
+
 class Club(BaseModel):
     """Complete club model."""
 
@@ -178,8 +189,13 @@ class Club(BaseModel):
 
     finances: ClubFinances = Field(default_factory=ClubFinances)
     board_objectives: list[BoardObjective] = Field(default_factory=list)
+    promises: list[ManagerPromise] = Field(default_factory=list)
     board_confidence: int = Field(default=60, ge=0, le=100)
     fan_happiness: int = Field(default=50, ge=0, le=100)
+
+    ultras_trust: int = Field(default=50, ge=0, le=100)
+    choreo_momentum: int = Field(default=0, ge=0, le=100)
+    protest_risk: int = Field(default=0, ge=0, le=100)
 
     formation: str = "4-2-3-1"
     mentality: Mentality = Mentality.BALANCED

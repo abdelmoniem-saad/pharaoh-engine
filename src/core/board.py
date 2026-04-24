@@ -130,18 +130,57 @@ def get_confidence_level(confidence: int) -> BoardConfidence:
 
 def update_confidence_after_match(club: Club, result_type: str) -> None:
     """
-    Update board confidence after a match result.
+    Adjust board confidence post-match.
     result_type: 'win', 'draw', 'loss'
+
+    The change is scaled by the club's expectation. A title contender
+    losing hurts more than a relegation-threatened team losing.
     """
-    change = {"win": 2, "draw": 0, "loss": -3}.get(result_type, 0)
+    exp = club.season_expectation
 
-    # Higher-expectation clubs have less patience with losses
-    if club.season_expectation in ("win_league", "title_challenge") and result_type == "loss":
-        change -= 2
-    elif club.season_expectation == "avoid_relegation" and result_type == "win":
-        change += 1   # extra boost for underdogs winning
+    changes = {
+        "win": {"win_league": 1, "top_4": 2, "mid_table": 2, "avoid_relegation": 3},
+        "draw": {"win_league": -2, "top_4": -1, "mid_table": 0, "avoid_relegation": 1},
+        "loss": {"win_league": -4, "top_4": -3, "mid_table": -2, "avoid_relegation": -1},
+    }
 
-    club.board_confidence = int(clamp(club.board_confidence + change, 0, 100))
+    base = changes[result_type].get(exp, 0)
+    club.board_confidence = int(clamp(club.board_confidence + base, 0, 100))
+
+
+def update_promises_after_match(club: Club, result_type: str, current_matchday: int) -> list[str]:
+    """
+    Update progress on active promises after a match and evaluate them.
+    Returns a list of inbox message bodies for completed/failed promises.
+    """
+    messages = []
+    for promise in club.promises:
+        if promise.status != "active":
+            continue
+
+        # Update progress based on target type
+        if promise.target_type == "win_next" and result_type == "win":
+            promise.progress += 1
+        elif promise.target_type == "unbeaten_run":
+            if result_type in ("win", "draw"):
+                promise.progress += 1
+            else:
+                # Lost the unbeaten run
+                promise.progress = -1
+
+        # Evaluate status
+        if promise.progress >= promise.target_value:
+            promise.status = "fulfilled"
+            club.board_confidence = min(100, club.board_confidence + 5)
+            club.fan_happiness = min(100, club.fan_happiness + 5)
+            messages.append(f"✅ Promise Fulfilled: {promise.description}")
+        elif promise.progress == -1 or current_matchday >= promise.deadline_matchday:
+            promise.status = "failed"
+            club.board_confidence = max(0, club.board_confidence - 10)
+            club.fan_happiness = max(0, club.fan_happiness - 10)
+            messages.append(f"❌ Promise Failed: {promise.description}")
+
+    return messages
 
 
 def generate_season_objectives(club: Club) -> list[BoardObjective]:

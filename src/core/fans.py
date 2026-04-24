@@ -18,7 +18,7 @@ def calculate_attendance(club: Club, is_home: bool,
     Calculate expected match attendance.
 
     Factors: stadium capacity, fan happiness, opponent reputation (big games draw more),
-    derby status, recent form, weather (not yet implemented).
+    derby status, recent form, weather (not yet implemented), and Ultras influence.
     """
     if not is_home:
         return 0  # Away attendance handled separately
@@ -31,7 +31,15 @@ def calculate_attendance(club: Club, is_home: bool,
     # Big game modifier (top clubs attract more fans)
     opponent_draw = min(1.5, opponent_reputation / 150.0)
 
-    attendance = base * happiness_mod * opponent_draw
+    # Ultras influence on attendance
+    ultras_mod = 1.0
+    if club.choreo_momentum > 50:
+        ultras_mod += (club.choreo_momentum - 50) / 200.0
+    if club.protest_risk > 70:
+        ultras_mod -= (club.protest_risk - 70) / 100.0
+    ultras_mod = max(0.5, min(1.5, ultras_mod))
+
+    attendance = base * happiness_mod * opponent_draw * ultras_mod
 
     # ── Derby attendance boost ───────────────────────────────────────
     if conn and opponent_club_id:

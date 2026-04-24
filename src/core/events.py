@@ -21,6 +21,9 @@ class EventChoice:
     text: str
     board_delta: int = 0
     fan_delta: int = 0
+    ultras_trust_delta: int = 0
+    choreo_momentum_delta: int = 0
+    protest_risk_delta: int = 0
     finance_delta: int = 0
     morale_delta: int = 0
     response: str = ""
@@ -255,6 +258,12 @@ def apply_event_choice(conn: sqlite3.Connection, gs: GameState,
         club.board_confidence = max(0, min(100, club.board_confidence + choice.board_delta))
     if choice.fan_delta != 0:
         club.fan_happiness = max(0, min(100, club.fan_happiness + choice.fan_delta))
+    if choice.ultras_trust_delta != 0:
+        club.ultras_trust = max(0, min(100, club.ultras_trust + choice.ultras_trust_delta))
+    if choice.choreo_momentum_delta != 0:
+        club.choreo_momentum = max(0, min(100, club.choreo_momentum + choice.choreo_momentum_delta))
+    if choice.protest_risk_delta != 0:
+        club.protest_risk = max(0, min(100, club.protest_risk + choice.protest_risk_delta))
     if choice.finance_delta != 0:
         # Check the club can actually afford expenses
         if choice.finance_delta < 0 and club.finances.balance + choice.finance_delta < -500_000:
@@ -295,5 +304,4 @@ def apply_event_choice(conn: sqlite3.Connection, gs: GameState,
     ))
 
     return choice.response
-
 

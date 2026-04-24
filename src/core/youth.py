@@ -172,3 +172,71 @@ def generate_youth_player(club: Club) -> Player:
     player.current_ability = min(player.current_ability, player.potential_ability - 10)
 
     return player
+
+
+def scout_street_tournament(club: Club, governorate: str) -> list[Player]:
+    """
+    Scout a local street tournament (Dawry Madares/Ramadan tournament) for raw, hidden talent.
+    Returns a list of generated free-agent youth players.
+    """
+    from src.core.regional import get_profile, apply_regional_bonuses
+    from src.data.seed import _generate_player
+    from src.utils.config import Position
+
+    profile = get_profile(governorate)
+    # 0 to 3 players based on region's player volume
+    num_players = rng.randint(0, max(1, int(3 * profile.player_volume)))
+
+    discovered = []
+    positions = [
+        Position.GK,
+        Position.CB,
+        Position.CM,
+        Position.ST,
+        Position.LW,
+        Position.RW,
+        Position.LB,
+        Position.RB,
+    ]
+
+    for _ in range(num_players):
+        pos = rng.choice(positions)
+
+        # Street players are very raw. Use lower base reputation for generation.
+        base_rep = max(10, club.reputation - 40)
+
+        player = _generate_player(
+            position=pos,
+            club_rep=base_rep,
+            governorate=governorate,
+            shirt_number=rng.randint(30, 99),
+        )
+
+        # Force youth age
+        player.age = rng.randint(15, 18)
+
+        # Apply regional attribute bonuses to reflect local street playstyle
+        attr_dict = player.attributes.model_dump()
+        attr_dict = apply_regional_bonuses(attr_dict, governorate)
+        for k, v in attr_dict.items():
+            setattr(player.attributes, k, v)
+
+        # Street modifier: extremely raw (low CA), but unpredictable PA
+        player.current_ability = max(10, player.current_ability - rng.randint(10, 30))
+
+        # 15% chance for a "street phenomenon" with massive potential ceiling
+        if rng.chance(0.15):
+            player.potential_ability = min(
+                200, player.potential_ability + rng.randint(20, 50)
+            )
+            # Also boost dribbling/flair (vision) as street skills
+            player.attributes.dribbling = min(20, player.attributes.dribbling + 3)
+            player.attributes.vision = min(20, player.attributes.vision + 2)
+
+        player.club_id = None  # Free agent until signed
+        player.contract.wage_weekly = 500  # Very cheap
+
+        discovered.append(player)
+
+    return discovered
+

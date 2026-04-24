@@ -385,8 +385,9 @@ def create_weekly_board_brief_message(
     total_teams: int,
     progress: list[ObjectiveProgressSnapshot],
     current_date: date,
+    active_promises: list = None,
 ) -> InboxMessage:
-    """Create a weekly board brief message that shows objective momentum."""
+    """Create a weekly board brief message that shows objective momentum and active promises."""
     badge_by_status = {
         "achieved": "✅",
         "on_track": "🟢",
@@ -414,13 +415,20 @@ def create_weekly_board_brief_message(
             lines.append(f"{badge} {item.description}")
             lines.append(f"   {item.detail}")
 
-    summary = (
-        f"{status_counts['achieved']} achieved, "
-        f"{status_counts['on_track']} on track, "
-        f"{status_counts['at_risk']} at risk, "
-        f"{status_counts['off_track']} off track"
-    )
-    lines.extend(["", f"Board Summary: {summary}"])
+        summary = (
+            f"Board Summary: "
+            f'{status_counts["achieved"]} Achieved, '
+            f'{status_counts["on_track"]} On Track, '
+            f'{status_counts["at_risk"]} At Risk, '
+            f'{status_counts["off_track"]} Off Track'
+        )
+        lines.append(summary)
+
+    if active_promises:
+        lines.append("")
+        lines.append("Active Promises:")
+        for p in active_promises:
+            lines.append(f"• {p.description} (Progress: {p.progress}/{p.target_value}, Deadline Matchday: {p.deadline_matchday})")
 
     return InboxMessage(
         date=current_date,
@@ -430,3 +438,6 @@ def create_weekly_board_brief_message(
     )
 
 
+def _format_result_body(result: MatchResult) -> str:
+    """Format the result section of a match report."""
+    return f"{result.home_club_name} {result.home_goals}-{result.away_goals} {result.away_club_name}"

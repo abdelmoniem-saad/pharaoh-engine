@@ -69,11 +69,14 @@ def insert_club(conn: sqlite3.Connection, club: Club) -> int:
             primary_color, secondary_color, balance, transfer_budget,
             wage_budget_weekly, wage_bill_weekly, matchday_income,
             sponsorship_income_yearly, tv_revenue_yearly,
-            board_confidence, fan_happiness, formation, mentality,
+            board_confidence, fan_happiness, 
+            ultras_trust, choreo_momentum, protest_risk,
+            promises_json,
+            formation, mentality,
             pressing_intensity, tempo, width, defensive_line,
             is_user_controlled, season_expectation,
             name_ar, short_name_ar, city_ar, stadium_name_ar)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (club.name, club.short_name, club.city, club.governorate, club.reputation,
           club.facilities_level, club.youth_rating, club.stadium_name, club.stadium_capacity,
           club.primary_color, club.secondary_color,
@@ -81,7 +84,10 @@ def insert_club(conn: sqlite3.Connection, club: Club) -> int:
           club.finances.wage_budget_weekly, club.finances.wage_bill_weekly,
           club.finances.matchday_income, club.finances.sponsorship_income_yearly,
           club.finances.tv_revenue_yearly,
-          club.board_confidence, club.fan_happiness, club.formation,
+          club.board_confidence, club.fan_happiness, 
+          club.ultras_trust, club.choreo_momentum, club.protest_risk,
+          json.dumps([p.model_dump() for p in club.promises]),
+          club.formation,
           int(club.mentality),
           club.pressing_intensity, club.tempo, club.width, club.defensive_line,
           int(club.is_user_controlled),
@@ -110,14 +116,20 @@ def update_club(conn: sqlite3.Connection, club: Club) -> None:
     conn.execute("""
         UPDATE clubs SET name=?, short_name=?, formation=?, mentality=?,
             pressing_intensity=?, tempo=?, width=?, defensive_line=?,
-            board_confidence=?, fan_happiness=?, is_user_controlled=?,
+            board_confidence=?, fan_happiness=?, 
+            ultras_trust=?, choreo_momentum=?, protest_risk=?,
+            promises_json=?,
+            is_user_controlled=?,
             balance=?, transfer_budget=?, wage_budget_weekly=?, wage_bill_weekly=?,
             season_expectation=?, matchday_income=?,
             name_ar=?, short_name_ar=?, city_ar=?, stadium_name_ar=?
         WHERE id=?
     """, (club.name, club.short_name, club.formation, int(club.mentality),
           club.pressing_intensity, club.tempo, club.width, club.defensive_line,
-          club.board_confidence, club.fan_happiness, int(club.is_user_controlled),
+          club.board_confidence, club.fan_happiness,
+          club.ultras_trust, club.choreo_momentum, club.protest_risk,
+          json.dumps([p.model_dump() for p in club.promises]),
+          int(club.is_user_controlled),
           club.finances.balance, club.finances.transfer_budget,
           club.finances.wage_budget_weekly, club.finances.wage_bill_weekly,
           club.season_expectation, club.finances.matchday_income,
@@ -147,6 +159,15 @@ def _row_to_club(row: sqlite3.Row) -> Club:
         except (IndexError, KeyError):
             return default
 
+    from src.data.models import ManagerPromise
+    promises = []
+    try:
+        raw_promises = row["promises_json"]
+        if raw_promises:
+            promises = [ManagerPromise(**p) for p in json.loads(raw_promises)]
+    except (IndexError, KeyError, TypeError, ValueError, json.JSONDecodeError):
+        pass
+
     return Club(
         id=row["id"],
         name=row["name"],
@@ -175,6 +196,10 @@ def _row_to_club(row: sqlite3.Row) -> Club:
         ),
         board_confidence=row["board_confidence"],
         fan_happiness=row["fan_happiness"],
+        ultras_trust=_safe_int("ultras_trust", 50),
+        choreo_momentum=_safe_int("choreo_momentum", 0),
+        protest_risk=_safe_int("protest_risk", 0),
+        promises=promises,
         formation=row["formation"],
         mentality=Mentality(row["mentality"]),
         pressing_intensity=_safe_int("pressing_intensity", 5),
