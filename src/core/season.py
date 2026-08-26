@@ -9,6 +9,7 @@ from datetime import date
 from src.data.models import GameState, InboxMessage
 from src.data import queries
 from src.core.league import create_league_season, get_current_standings
+from src.utils import rng
 from src.core.board import generate_season_objectives, evaluate_objectives
 from src.utils.config import derive_season_expectation, expectation_display
 
@@ -89,8 +90,54 @@ def get_season_awards(conn: sqlite3.Connection,
     }
 
 
+def _league_managerial_changes(conn: sqlite3.Connection,
+                               game_state: GameState) -> list[str]:
+    """
+    Off-season managerial carousel: AI clubs whose board confidence collapsed
+    part ways with their manager. A fresh bench lifts squad morale, and the
+    media covers every appointment.
+    """
+    out: list[str] = []
+    first_names = ["Hossam", "Tarek", "Mido", "Sherif", "Kareem", "Amr",
+                   "Hazem", "Wael"]
+    last_names = ["Hassan", "Fahmy", "Selim", "Abdel-Latif", "Nabil",
+                  "Zaki", "Farouk"]
+
+    clubs = queries.get_all_clubs(conn)
+    candidates = [c for c in clubs
+                  if c.id != game_state.user_club_id
+                  and getattr(c, "board_confidence", 50) < 40][:3]
+
+    for club in candidates:
+        if not rng.chance(0.6):
+            continue
+
+        new_mgr = (f"{first_names[rng.randint(0, len(first_names) - 1)]} "
+                   f"{last_names[rng.randint(0, len(last_names) - 1)]}")
+
+        # A new manager's arrival lifts morale league-wide news-wise
+        for p in queries.get_players_by_club(conn, club.id):
+            p.morale = min(100, p.morale + 3)
+            queries.update_player_stats(conn, p)
+
+        club.board_confidence = min(60, club.board_confidence + 15)
+        queries.update_club(conn, club)
+
+        queries.insert_message(conn, InboxMessage(
+            date=game_state.current_date,
+            subject=f"👔 {club.name} Appoint {new_mgr}",
+            body=(f"After a disappointing campaign, {club.name} have parted "
+                  f"ways with their manager. {new_mgr} takes charge with a "
+                  f"mandate to revive the squad."),
+            category="media",
+        ))
+        out.append(f"{club.name} appointed {new_mgr} as manager.")
+
+    return out
+
+
 def start_new_season(conn: sqlite3.Connection,
-                      game_state: GameState) -> list[str]:
+                     game_state: GameState) -> list[str]:
     """
     Process everything needed to start a new season:
     - Age all players
@@ -143,6 +190,54 @@ def start_new_season(conn: sqlite3.Connection,
                 category="board",
             ))
             messages.extend(eval_msgs)
+
+        # ── Board consequences: budget, confidence, fan fallout ──────────
+        met = sum(1 for m in eval_msgs if m.startswith("✅"))
+        total = max(1, len(eval_msgs))
+        if met == total:
+            verdict = "exceeded"
+            budget_pct = +25
+            user_club.board_confidence = min(100, user_club.board_confidence + 8)
+            user_club.fan_happiness = min(100, user_club.fan_happiness + 10)
+            if hasattr(user_club, "ultras_trust"):
+                user_club.ultras_trust = min(100, getattr(user_club, "ultras_trust", 50) + 8)
+        elif met * 2 >= total:
+            verdict = "met"
+            budget_pct = 0
+        else:
+            verdict = "missed"
+            budget_pct = -20
+            user_club.board_confidence = max(0, user_club.board_confidence - 12)
+            user_club.fan_happiness = max(0, user_club.fan_happiness - 12)
+            if hasattr(user_club, "ultras_trust"):
+                user_club.ultras_trust = max(0, getattr(user_club, "ultras_trust", 50) - 10)
+
+        old_budget = int(getattr(user_club.finances, "transfer_budget", 0))
+        if budget_pct:
+            user_club.finances.transfer_budget = max(
+                0, int(old_budget * (100 + budget_pct) / 100))
+
+        queries.update_club(conn, user_club)
+
+        verdict_line = {
+            "exceeded": "The board is delighted — you exceeded every expectation.",
+            "met": "The board deems the season acceptable.",
+            "missed": "The board is deeply disappointed with this campaign.",
+        }[verdict]
+        budget_line = (
+            f"Transfer budget adjusted by {budget_pct:+d}% "
+            f"(now {int(user_club.finances.transfer_budget):,} EGP)."
+        ) if budget_pct else "Transfer budget unchanged."
+        queries.insert_message(conn, InboxMessage(
+            date=game_state.current_date,
+            subject="🤝 Board Review Meeting",
+            body=(f"{verdict_line}\n\n"
+                  f"Objectives met: {met}/{total}\n{budget_line}\n\n"
+                  "Expectations for the coming campaign will arrive shortly."),
+            category="board",
+        ))
+        messages.append(f"Board review: {verdict} ({met}/{total} objectives).")
+
         queries.update_club(conn, user_club)
 
     # Handle expired contracts — ALL clubs, not just user's
@@ -183,6 +278,10 @@ def start_new_season(conn: sqlite3.Connection,
     # AI inter-club transfers (simulate offseason activity)
     ai_msgs = _simulate_ai_transfers(conn, game_state)
     messages.extend(ai_msgs)
+
+    # ── Managerial carousel: underperformers change managers ─────────
+    mgr_msgs = _league_managerial_changes(conn, game_state)
+    messages.extend(mgr_msgs)
 
     # Youth academy intake — generate a youth player for each club
     youth_msgs = _annual_youth_intake(conn, game_state)

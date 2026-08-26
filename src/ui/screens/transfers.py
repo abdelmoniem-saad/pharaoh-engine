@@ -55,8 +55,22 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
 
     def _player_row(p, value, club_name, is_shortlisted=False, show_star=True):
         """Build a compact player row for search results."""
+        from src.data import queries as _q
         ovr = calculate_overall_rating(p)
-        ovr_color = ft.Colors.GREEN_300 if ovr >= 70 else ft.Colors.WHITE
+        scouted = _q.is_player_scouted(conn, p.id)
+
+        # Unscouted targets are only known by rough scouting range — the
+        # number you see could be off by up to 5 in either direction.
+        if scouted:
+            ovr_display = str(ovr)
+            ovr_color = ft.Colors.GREEN_300 if ovr >= 70 else ft.Colors.WHITE
+        else:
+            _jit = ((p.id * 37) % 7) - 3          # deterministic -3..+3 lean
+            lo = max(40, ovr - 5 + min(0, _jit))
+            hi = min(95, ovr + 5 + max(0, _jit))
+            ovr_display = f"🔍 {lo}–{hi}"
+            ovr_color = ft.Colors.GREY_300
+
         age_color = ft.Colors.GREEN_400 if p.age <= 23 else ft.Colors.GREY_400
 
         badges = []
@@ -72,6 +86,20 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
             return handler
 
         star_icon = ft.Icons.STAR if is_shortlisted else ft.Icons.STAR_BORDER
+
+        SCOUT_FEE = 25_000
+
+        def send_scout(e, pid=p.id):
+            buyer = queries.get_club(conn, gs.user_club_id)
+            if not buyer or buyer.finances.balance < SCOUT_FEE:
+                show_snackbar(page, "❌ Not enough balance to send a scout.",
+                              bgcolor=ft.Colors.RED_800)
+                return
+            buyer.finances.balance -= SCOUT_FEE
+            queries.update_club(conn, buyer)
+            queries.mark_player_scouted(conn, pid, gs.current_date)
+            show_snackbar(page, f"🔍 Scout report filed on {p.name} (-{SCOUT_FEE:,} EGP)")
+            navigate(page, "/transfers")
 
         def toggle_shortlist(e, pid=p.id):
             if pid in shortlist:
@@ -94,7 +122,8 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                             ft.Row(spacing=8, tight=True, controls=[
                                 ft.Text(p.position.value, size=10, color=ft.Colors.AMBER_300),
                                 ft.Text(f"Age {p.age}", size=10, color=age_color),
-                                ft.Text(str(ovr), size=10, weight=ft.FontWeight.BOLD, color=ovr_color),
+                                ft.Text(ovr_display, size=10,
+                                        weight=ft.FontWeight.BOLD, color=ovr_color),
                                 ft.Text(club_name, size=10, color=ft.Colors.GREY_500),
                             ]),
                         ],
@@ -109,6 +138,12 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                             icon_color=ft.Colors.AMBER_400 if is_shortlisted else ft.Colors.GREY_600,
                             on_click=toggle_shortlist, tooltip="Shortlist",
                         ) if show_star else ft.Container(),
+                        ft.IconButton(
+                            icon=ft.Icons.TRAVEL_EXPLORE, icon_size=16,
+                            icon_color=ft.Colors.BLUE_300,
+                            tooltip=f"Send scout ({25_000:,} EGP)",
+                            on_click=send_scout,
+                        ) if not scouted else ft.Container(),
                     ]),
                 ],
             ),

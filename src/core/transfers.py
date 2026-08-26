@@ -155,7 +155,13 @@ def create_loan_deal(conn: sqlite3.Connection, gs: GameState,
 
 
 def process_loan_returns(conn: sqlite3.Connection, gs: GameState) -> list[str]:
-    """Process any loan deals that have expired. Called daily from advance_day."""
+    """
+    Process any loan deals that have expired. Called daily from advance_day.
+
+    Loans carrying a buy option/obligation (buy_option > 0) end with the
+    borrowing club purchasing the player for that fee — provided they can
+    afford it; otherwise the player returns and the miss becomes news.
+    """
     messages: list[str] = []
     today = gs.current_date.isoformat()
 
@@ -168,8 +174,67 @@ def process_loan_returns(conn: sqlite3.Connection, gs: GameState) -> list[str]:
         from_club_id = row["from_club_id"]
         player_name = row["player_name"]
         from_club_name = row["from_club_name"]
+        borrower_id = row["to_club_id"]
+        borrower_name = row["to_club_name"]
+        buy_fee = int(row["buy_option"] or 0)
 
-        # Return player to parent club
+        # ── Obligatory purchase ───────────────────────────────────────
+        if buy_fee > 0:
+            buyer = queries.get_club(conn, borrower_id)
+            seller = queries.get_club(conn, from_club_id)
+            affordable = bool(buyer and buyer.finances.balance >= buy_fee)
+
+            if affordable:
+                conn.execute("UPDATE players SET club_id = ? WHERE id = ?",
+                             (borrower_id, player_id))
+                conn.execute(
+                    "UPDATE loan_deals SET status = 'completed_buy' WHERE id = ?",
+                    (row["id"],))
+                conn.execute("""
+                    INSERT INTO transfer_history (player_id, player_name,
+                        from_club_id, from_club_name, to_club_id, to_club_name,
+                        fee, wage, transfer_date, transfer_type)
+                    VALUES (?,?,?,?,?,?,?,?,?, 'loan_obligation')
+                """, (player_id, player_name, from_club_id, from_club_name,
+                      borrower_id, borrower_name, buy_fee, 0, today))
+
+                if buyer:
+                    buyer.finances.balance -= buy_fee
+                    buyer.finances.transfer_budget = max(
+                        0, int(getattr(buyer.finances, "transfer_budget", 0)) - buy_fee)
+                    queries.update_club(conn, buyer)
+                if seller:
+                    seller.finances.balance += buy_fee
+                    queries.update_club(conn, seller)
+
+                messages.append(
+                    f"Obligation triggered: {player_name} joins {borrower_name} "
+                    f"for {buy_fee:,} EGP")
+                if gs.user_club_id in (from_club_id, borrower_id):
+                    queries.insert_message(conn, InboxMessage(
+                        date=gs.current_date,
+                        subject=f"🤝 Loan Obligation: {player_name} signs permanently",
+                        body=(f"{player_name}'s loan carried an obligation to buy. "
+                              f"{borrower_name} pay {buy_fee:,} EGP to "
+                              f"{from_club_name} and the deal is now permanent."),
+                        category="transfer",
+                    ))
+                continue
+
+            messages.append(
+                f"{player_name}: {borrower_name} could not afford the "
+                f"obligatory {buy_fee:,} EGP fee — player returns")
+            if gs.user_club_id in (from_club_id, borrower_id):
+                queries.insert_message(conn, InboxMessage(
+                    date=gs.current_date,
+                    subject=f"⚠️ Buy Obligation Missed: {player_name}",
+                    body=(f"{borrower_name} failed the financial terms of the "
+                          f"obligation ({buy_fee:,} EGP). {player_name} returns "
+                          f"to {from_club_name}."),
+                    category="transfer",
+                ))
+
+        # ── Plain return ──────────────────────────────────────────────
         conn.execute("UPDATE players SET club_id = ? WHERE id = ?",
                      (from_club_id, player_id))
         conn.execute("UPDATE loan_deals SET status = 'completed' WHERE id = ?",
@@ -641,16 +706,16 @@ def _process_wage_response(conn: sqlite3.Connection, gs: GameState,
 
 def generate_ai_bids(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
     """
-    AI clubs make bids on transfer-listed user players.
-    Called from advance_day. ~10% chance per listed player per day.
+    AI clubs make bids on transfer-listed user players, and also proactively
+    scout and bid on other AI players to strengthen their weak positions.
+    Called from advance_day.
     """
     messages: list[str] = []
+
+    # AI bids on user's listed players (~10% chance)
     listed = queries.search_players(conn, exclude_club_id=0, limit=100)
     user_listed = [p for p in listed
                    if p.club_id == game_state.user_club_id and p.transfer_listed]
-
-    if not user_listed:
-        return messages
 
     all_clubs = queries.get_all_clubs(conn)
     ai_clubs = [c for c in all_clubs if c.id != game_state.user_club_id]
@@ -682,6 +747,47 @@ def generate_ai_bids(conn: sqlite3.Connection, game_state: GameState) -> list[st
             body=body, category="transfer",
         ))
         messages.append(f"{bidder.name} bid {bid_amount:,} EGP for {player.name}")
+
+    # AI vs AI Squad Building (Proactive scouting)
+    # Give a few AI clubs a chance to bolster their squads each day
+    from src.core.finance import can_afford_transfer, can_afford_wage
+    for ai_club in ai_clubs:
+        if not rng.chance(0.05):  # 5% chance per AI club per day in window
+            continue
+
+        if ai_club.finances.transfer_budget < 500000:
+            continue
+
+        # Target a random position to strengthen
+        from src.utils.config import Position
+        target_pos = rng.choice(list(Position))
+
+        # Find potential targets
+        candidates = [p for p in listed if p.position == target_pos
+                      and p.club_id != ai_club.id
+                      and p.club_id != game_state.user_club_id
+                      and p.transfer_listed]
+
+        if candidates:
+            # Pick the best we can afford
+            candidates.sort(key=lambda p: p.current_ability, reverse=True)
+            for target in candidates:
+                val = estimate_player_value(target, current_date=game_state.current_date)
+                bid_amount = int(val * 0.9)
+                if can_afford_transfer(ai_club, bid_amount):
+                    # AI-to-AI instant transfer simulation (simplified)
+                    seller = next((c for c in all_clubs if c.id == target.club_id), None)
+                    target.club_id = ai_club.id
+                    target.transfer_listed = False
+                    ai_club.finances.transfer_budget -= bid_amount
+                    if seller:
+                        seller.finances.balance += bid_amount
+                    queries.update_player(conn, target)
+                    queries.update_club(conn, ai_club)
+                    if seller:
+                        queries.update_club(conn, seller)
+                    messages.append(f"[AI-Transfer] {ai_club.short_name} signed {target.name} for {bid_amount:,} EGP")
+                    break
 
     return messages
 

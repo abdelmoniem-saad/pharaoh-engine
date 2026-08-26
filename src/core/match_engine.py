@@ -196,6 +196,72 @@ def simulate_match(
             condition[_pid] = max(20.0, min(100.0, _cond))
             cond_factor[_pid] = _f
 
+    # ── AI substitution state ─────────────────────────────────────────
+    # Bench coaches watch condition and react late in games: the most
+    # drained outfielder makes way for the freshest bench option when his
+    # condition drops past a threshold (lower one if chasing).
+    home_subs_state = [0]
+    away_subs_state = [0]
+    home_used_ids: set[int] = set()
+    away_used_ids: set[int] = set()
+    home_bench_pool = [pid for pid in getattr(home_tactics, "bench", [])
+                       if pid in home_players]
+    away_bench_pool = [pid for pid in getattr(away_tactics, "bench", [])
+                       if pid in away_players]
+
+    def _ai_consider_sub(player_map, xi, bench_pool, used_ids, subs_state,
+                         club, trailing: bool, minute_now: int):
+        if subs_state[0] >= 3 or not bench_pool:
+            return None
+        outfield = [pid for pid in xi
+                    if pid in player_map
+                    and player_map[pid].position != Position.GK]
+        if len(outfield) < 7:          # never gut a depleted team
+            return None
+        off_pid = min(outfield, key=lambda pid: condition.get(pid, 100.0))
+        off_cond = condition.get(off_pid, 100.0)
+
+        candidates = [
+            (bid, player_map[bid]) for bid in bench_pool
+            if bid not in used_ids and bid not in xi
+            and player_map[bid].position != Position.GK
+        ]
+        if not candidates:
+            return None
+        on_bid, on_p = max(candidates,
+                           key=lambda t: float(getattr(t[1], "fitness", 70)))
+
+        trigger = 66 if trailing else 58   # chasing managers act sooner
+        if off_cond > trigger:
+            return None
+        if float(getattr(on_p, "fitness", 70)) < off_cond + 6:
+            return None                    # no freshness gain — save the sub
+
+        xi[xi.index(off_pid)] = on_bid
+        used_ids.update((off_pid, on_bid))
+        bench_pool.remove(on_bid)
+        subs_state[0] += 1
+        condition[on_bid] = max(30.0, min(100.0,
+                                          float(getattr(on_p, "fitness", 80))))
+        cond_factor[on_bid] = cond_factor.get(off_pid, 1.0)
+
+        off_p = player_map.get(off_pid)
+        return MatchEvent(
+            minute=min(minute_now, MATCH_DURATION_MINUTES),
+            event_type=MatchEventType.SUBSTITUTION,
+            player_id=off_pid,
+            player_name=getattr(off_p, "name", ""),
+            player_name_ar=getattr(off_p, "name_ar", ""),
+            second_player_id=on_bid,
+            second_player_name=getattr(on_p, "name", ""),
+            second_player_name_ar=getattr(on_p, "name_ar", ""),
+            club_id=club.id,
+            description=(f"Substitution ({club.short_name}): "
+                         f"{getattr(off_p, 'name', '')} off, {on_p.name} on"),
+            description_ar=(f"تبديل ({club.short_name}): خروج "
+                            f"{getattr(off_p, 'name_ar', '')} ودخول {on_p.name_ar}"),
+        )
+
     # Simulate minute by minute
     for minute in range(1, MATCH_DURATION_MINUTES + second_half_added + 1):
         if minute == 46:
@@ -238,6 +304,21 @@ def simulate_match(
         eff_away_defense = away_defense * fatigue_mult_away * away_manpower
         eff_home_gk = home_gk * fatigue_mult_home
         eff_away_gk = away_gk * fatigue_mult_away
+
+        # ── AI benches: react to tired legs ──────────────────────────
+        if minute in (60, 68, 76, 84):
+            ev = _ai_consider_sub(
+                home_players, home_active_xi, home_bench_pool,
+                home_used_ids, home_subs_state, home_club,
+                trailing=(home_goals < away_goals), minute_now=minute)
+            if ev:
+                events.append(ev)
+            ev = _ai_consider_sub(
+                away_players, away_active_xi, away_bench_pool,
+                away_used_ids, away_subs_state, away_club,
+                trailing=(away_goals < home_goals), minute_now=minute)
+            if ev:
+                events.append(ev)
 
         # ── Chance creation ──────────────────────────────────────────
         home_tempo = getattr(home_tactics, "tempo", 5)

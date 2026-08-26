@@ -825,4 +825,8 @@ _MIGRATIONS = [
         "ALTER TABLE players ADD COLUMN dev_plan TEXT NOT NULL DEFAULT ''",
         "ALTER TABLE players ADD COLUMN dev_progress INTEGER NOT NULL DEFAULT 0",
     ]),
+    (15, [
+        # Scouting knowledge: a player here has had his true ability revealed
+        "CREATE TABLE IF NOT EXISTS scouting_reports (player_id INTEGER PRIMARY KEY, scouted_on TEXT NOT NULL DEFAULT '')",
+    ]),
 ]

@@ -663,6 +663,26 @@ def _update_standing(conn: sqlite3.Connection, club_id: int,
 
 # ── Inbox ────────────────────────────────────────────────────────────────────
 
+def is_player_scouted(conn: sqlite3.Connection, player_id: int) -> bool:
+    """True when the player's true ability has been revealed by a scout."""
+    try:
+        row = conn.execute(
+            "SELECT 1 FROM scouting_reports WHERE player_id = ?",
+            (player_id,)).fetchone()
+        return bool(row)
+    except Exception:
+        return False  # table may not exist in very old saves pre-migration
+
+
+def mark_player_scouted(conn: sqlite3.Connection, player_id: int, on_date) -> None:
+    """Record that a scout has fully reported on *player_id*."""
+    iso = getattr(on_date, "isoformat", lambda: str(on_date))()
+    conn.execute(
+        "INSERT OR REPLACE INTO scouting_reports (player_id, scouted_on) VALUES (?, ?)",
+        (player_id, iso))
+    conn.commit()
+
+
 def insert_message(conn: sqlite3.Connection, msg: InboxMessage) -> int:
     """Insert an inbox message."""
     cursor = conn.execute("""
