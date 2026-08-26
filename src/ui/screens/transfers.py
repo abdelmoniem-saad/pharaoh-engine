@@ -65,9 +65,16 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
             ovr_display = str(ovr)
             ovr_color = ft.Colors.GREEN_300 if ovr >= 70 else ft.Colors.WHITE
         else:
-            _jit = ((p.id * 37) % 7) - 3          # deterministic -3..+3 lean
-            lo = max(40, ovr - 5 + min(0, _jit))
-            hi = min(95, ovr + 5 + max(0, _jit))
+            # Unscouted reports give a rough BAND, deliberately off-centre:
+            # averaging the two numbers must NOT reveal the true ability.
+            _lean = (((p.id * 73) % 8) + 1) * (1 if p.id % 2 else -1)  # ±1..4
+            _half = 5 + ((p.id >> 3) % 3)      # band width 10–14, varies too
+            lo = max(35, ovr - _half + _lean)
+            hi = min(99, ovr + _half + _lean)
+            if ovr < lo:                       # clamps must never hide truth
+                lo = ovr
+            elif ovr > hi:
+                hi = ovr
             ovr_display = f"🔍 {lo}–{hi}"
             ovr_color = ft.Colors.GREY_300
 

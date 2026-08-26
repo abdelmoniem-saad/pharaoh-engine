@@ -153,9 +153,9 @@ def build_main_menu(page: ft.Page) -> ft.Column:
 def _slot_badge(i: int) -> ft.Container:
     """Small golden circular badge showing the slot number."""
     return ft.Container(
-        content=ft.Text(str(i), size=14, weight=ft.FontWeight.BOLD,
+        content=ft.Text(str(i), size=11, weight=ft.FontWeight.BOLD,
                         color="#0a0e1a", text_align=ft.TextAlign.CENTER),
-        width=32, height=32, border_radius=16, bgcolor="#FFD54F",
+        width=24, height=24, border_radius=12, bgcolor="#FFD54F",
         alignment=ft.Alignment(0, 0),
     )
 
@@ -196,12 +196,10 @@ def _show_new_game_slot_dialog(page: ft.Page):
                 _show_manager_name_dialog(page, s)
         else:
             year = int(info.get("season_year") or 2025)
-            subtitle = t_format(
-                "slot_summary",
-                manager=info.get("manager_name") or "Manager",
-                club=info.get("user_club_name") or "?",
-                y1=year, y2=year + 1,
-            )
+            club_nm = info.get("user_club_name") or "?"
+            mgr = info.get("manager_name") or "Manager"
+            subtitle = (f"{club_nm} · {t('season_short')} "
+                        f"{year}/{year + 1} · {mgr}")
 
             def on_pick(e, s=slot, inf=info):
                 page.pop_dialog()
@@ -210,10 +208,13 @@ def _show_new_game_slot_dialog(page: ft.Page):
                     lambda s=s: _show_manager_name_dialog(page, s))
 
         tiles.append(ft.ListTile(
+            dense=True,
             leading=_slot_badge(i),
             title=ft.Text(t_format("slot_label", n=i),
                           weight=ft.FontWeight.W_600, color=GOLD),
-            subtitle=ft.Text(subtitle, size=12, color=TEXT_SECONDARY),
+            subtitle=ft.Text(subtitle, size=11, color=TEXT_SECONDARY,
+                             max_lines=1,
+                             overflow=ft.TextOverflow.ELLIPSIS),
             on_click=on_pick,
         ))
 
@@ -242,6 +243,8 @@ def _show_load_game_dialog(page: ft.Page):
         if info:
             any_save = True
             year = int(info.get("season_year") or 2025)
+            club_nm = info.get("user_club_name") \
+                or info.get("manager_name") or t("load")
 
             def _load(e, s=slot):
                 page.pop_dialog()
@@ -252,26 +255,23 @@ def _show_load_game_dialog(page: ft.Page):
                 _confirm_delete_slot(page, s)
 
             tiles.append(ft.ListTile(
+                dense=True,
                 leading=_slot_badge(i),
-                title=ft.Text(
-                    info.get("user_club_name")
-                    or info.get("manager_name") or t("load"),
-                    weight=ft.FontWeight.W_600,
-                ),
+                title=ft.Text(club_nm, weight=ft.FontWeight.W_600,
+                              max_lines=1,
+                              overflow=ft.TextOverflow.ELLIPSIS),
                 subtitle=ft.Text(
-                    t_format("slot_summary",
-                             manager=info.get("manager_name") or "Manager",
-                             club=info.get("user_club_name") or "?",
-                             y1=year, y2=year + 1),
-                    size=12, color=TEXT_MUTED,
+                    f"{t('season_short')} {year}/{year+1} · "
+                    f"{t('manager_label')}: "
+                    f"{info.get('manager_name') or 'Manager'}",
+                    size=11, color=TEXT_MUTED, max_lines=1,
+                    overflow=ft.TextOverflow.ELLIPSIS,
                 ),
-                trailing=ft.Row(spacing=4, tight=True, controls=[
-                    ft.TextButton("📂 " + t("load"), on_click=_load),
-                    ft.IconButton(ft.Icons.DELETE_OUTLINE,
-                                  icon_color="#EF5350",
-                                  tooltip=t("delete_save"),
-                                  on_click=_ask_delete),
-                ]),
+                trailing=ft.IconButton(ft.Icons.DELETE_OUTLINE,
+                                       icon_size=18,
+                                       icon_color="#EF5350",
+                                       tooltip=t("delete_save"),
+                                       on_click=_ask_delete),
                 on_click=_load,
             ))
         else:
