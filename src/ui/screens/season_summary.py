@@ -117,10 +117,39 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
             ])
         )
 
+    def _begin_next_season():
+        from src.ui.app import run_busy_task
+
+        def done(error):
+            if error is not None:
+                show_snackbar(page,
+                              f"⚠️ Could not start the new season: {error}",
+                              bgcolor=ft.Colors.RED_800)
+                return
+            show_snackbar(page, f"🏟️ Season {gs.season_year}/{gs.season_year+1} started!")
+            navigate(page, "/match_day")
+
+        run_busy_task(page, "🏟️ Preparing new season…", lambda: start_new_season(conn, gs),
+                      on_done=done)
+
     def start_next(e):
-        msgs = start_new_season(conn, gs)
-        show_snackbar(page, f"🏟️ Season {gs.season_year}/{gs.season_year+1} started!")
-        navigate(page, "/match_day")
+        # Irreversible progression — always confirm before rolling over.
+        def _confirm(e2):
+            page.pop_dialog()
+            _begin_next_season()
+
+        page.show_dialog(ft.AlertDialog(
+            title=ft.Text("🔄 Start Next Season?"),
+            content=ft.Text(
+                "This closes the current campaign for good: players age, "
+                "retirements are processed, youth prospects join and next "
+                "season's fixtures are drawn.\n\nReady when you are, Boss."
+            ),
+            actions=[
+                ft.TextButton(t("cancel"), on_click=lambda e2: page.pop_dialog()),
+                ft.ElevatedButton("🔄 Let's Go", on_click=_confirm),
+            ],
+        ))
 
     return ft.Column(
         expand=True,

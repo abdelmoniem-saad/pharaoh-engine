@@ -162,8 +162,9 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
         results_list.controls.clear()
 
         if not players:
+            from src.ui.widgets.cards import empty_state
             results_list.controls.append(
-                ft.Text(t("no_players_found"), size=13, color=ft.Colors.GREY_500))
+                empty_state(ft.Icons.SEARCH_OFF, t("no_players_found")))
         else:
             results_list.controls.append(
                 ft.Text(f"{len(players)} {t('available')}", size=11, color=ft.Colors.GREY_500))
@@ -179,8 +180,9 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     def _build_shortlist_content():
         items = []
         if not shortlist:
-            items.append(ft.Text(t("no_players_shortlisted"),
-                                  size=13, color=ft.Colors.GREY_500, text_align=ft.TextAlign.CENTER))
+            from src.ui.widgets.cards import empty_state
+            items.append(empty_state(ft.Icons.PLAYLIST_ADD,
+                                     t("no_players_shortlisted")))
         else:
             for pid in list(shortlist):
                 # Look up player from DB

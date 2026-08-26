@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 import sqlite3
 import threading
 
@@ -15,6 +16,9 @@ import flet as ft
 
 from src.data.models import GameState
 from src.utils.config import APP_NAME, APP_VERSION
+from src.utils.logging_util import get_logger
+
+log = get_logger("ui")
 
 
 class AppState:
@@ -23,6 +27,8 @@ class AppState:
     def __init__(self):
         self.db_conn: sqlite3.Connection | None = None
         self.game_state: GameState | None = None
+        self.current_save_name: str = "slot1"  # Active slot (multi-save support)
+        self._busy: bool = False  # Guards against overlapping heavy operations
         self.pending_event = None  # Interactive random event awaiting player choice
         self._page_ref: ft.Page | None = None
         self._transition_container: ft.Container | None = None
@@ -99,6 +105,9 @@ def show_notification(page: ft.Page, message: str,
         offset=ft.Offset(0.05, 0),
         animate_offset=ft.Animation(250, ft.AnimationCurve.EASE_OUT),
     )
+    # Expiry stamp used by purge_expired_notifications() — guarantees the
+    # toast disappears on the event thread even if its timer update was dropped.
+    card.data = {"expire_at": time.time() + duration}
 
     col = app_state._notification_column
     col.controls.append(card)
@@ -171,6 +180,7 @@ def show_breaking_news(page: ft.Page, headline: str,
     col = app_state._notification_column
     if not col:
         return
+    banner.data = {"expire_at": time.time() + 5.5}
     col.controls.insert(0, banner)
     page.update()
 
@@ -213,12 +223,269 @@ def show_snackbar(page: ft.Page, message: str,
     page.update()
 
 
+def purge_expired_notifications(page: ft.Page) -> None:
+    """
+    Remove toast cards whose auto-dismiss window has passed.
+
+    Called from event-thread entry points (navigate, snackbars) because UI
+    updates issued by background timers are unreliable in some Flet runtimes.
+    This guarantees toasts eventually vanish even when their timer's own
+    page.update() was silently dropped.
+    """
+    col = app_state._notification_column
+    if not col or not col.controls:
+        return
+    now = time.time()
+    expired = [c for c in col.controls
+               if isinstance(getattr(c, "data", None), dict)
+               and c.data.get("expire_at") is not None
+               and c.data["expire_at"] <= now]
+    if not expired:
+        return
+    removed = False
+    for c in expired:
+        if c in col.controls:
+            col.controls.remove(c)
+            removed = True
+    if removed:
+        try:
+            page.update()
+        except Exception as ex:
+            log.warning("Notification purge update failed: %s", ex)
+
+
+# ── Tutorial Overlay ────────────────────────────────────────────────────────
+
+def show_tutorial_overlay(page: ft.Page) -> None:
+    """Displays a first-time manager tutorial overlay in the UI hub."""
+    from src.utils.prefs import get_pref
+
+    # NOTE: previously used page.client_storage which does not exist in every
+    # Flet runtime and crashed right after choosing a new club.
+    if get_pref("tutorial_seen"):
+        return
+
+    steps = [
+        {
+            "icon": ft.Icons.WELCOME_HEADER,
+            "title": "Welcome to Pharaoh Engine! ⚽",
+            "desc": "You are now in charge. Your decisions on and off the pitch will shape the future of your club."
+        },
+        {
+            "icon": ft.Icons.SPORTS_SOCCER,
+            "title": "Match Day & Inbox",
+            "desc": "The main hub! Read board emails, answer transfer bids, and press Advance Date to progress to match day."
+        },
+        {
+            "icon": ft.Icons.PEOPLE_ALT,
+            "title": "Squad & Tactics",
+            "desc": "Evaluate player attributes, choose the best formation, and select your starting XI before every game."
+        },
+        {
+            "icon": ft.Icons.ACCOUNT_BALANCE,
+            "title": "Club & Finances",
+            "desc": "Keep the fans happy, the board confident, and manage the wage bill to dominate the Egyptian Premier League."
+        }
+    ]
+
+    current_step = [0]
+
+    title_text = ft.Text(steps[0]["title"], size=22, weight=ft.FontWeight.BOLD, color="#FFD54F", text_align=ft.TextAlign.CENTER)
+    desc_text = ft.Text(steps[0]["desc"], size=16, color="#EAEAEA", text_align=ft.TextAlign.CENTER)
+    icon_ctrl = ft.Icon(steps[0]["icon"], size=64, color="#FFD54F")
+    step_indicator = ft.Text(f"Step 1 of {len(steps)}", size=12, color="#9E9E9E")
+
+    def _next_step(e):
+        current_step[0] += 1
+        if current_step[0] >= len(steps):
+            _close_tutorial(e)
+        else:
+            step = steps[current_step[0]]
+            title_text.value = step["title"]
+            desc_text.value = step["desc"]
+            icon_ctrl.name = step["icon"]
+            step_indicator.value = f"Step {current_step[0] + 1} of {len(steps)}"
+            btn.text = "Finish" if current_step[0] == len(steps) - 1 else "Next"
+            page.update()
+
+    def _close_tutorial(e):
+        from src.utils.prefs import set_pref
+        set_pref("tutorial_seen", True)
+        if overlay_container in page.overlay:
+            page.overlay.remove(overlay_container)
+            page.update()
+
+    btn = ft.ElevatedButton("Next", on_click=_next_step, style=ft.ButtonStyle(
+        bgcolor={"": "#FFD54F"}, color={"": "#0a0e1a"}, padding=16
+    ), width=200)
+
+    card = ft.Container(
+        content=ft.Column(
+            [icon_ctrl, title_text, desc_text, ft.Container(height=10), btn, step_indicator],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=15,
+        ),
+        bgcolor="#141e33",
+        padding=30,
+        border_radius=16,
+        width=320,
+        height=380,
+        border=ft.border.all(2, "#FFD54F"),
+        shadow=ft.BoxShadow(spread_radius=5, blur_radius=25, color=ft.colors.with_opacity(0.5, "#000000")),
+    )
+
+    overlay_container = ft.Container(
+        content=card,
+        expand=True,
+        bgcolor=ft.colors.with_opacity(0.8, "#000000"),
+        alignment=ft.alignment.center,
+        on_click=lambda e: None,  # Consume clicks to prevent interacting with background
+    )
+
+    page.overlay.append(overlay_container)
+    page.update()
+
+
+# ── Crash-safe Error Screen ──────────────────────────────────────────────────
+
+def build_error_screen(page: ft.Page, route: str = "?") -> ft.Column:
+    """Themed fallback screen shown whenever a view fails to build.
+
+    Guarantees the player always sees something usable and their save stays
+    intact, instead of a blank screen or a dead app.
+    """
+    from src.ui.theme import PRIMARY_BTN_STYLE
+
+    def retry(e):
+        navigate(page, route)
+
+    def go_home(e):
+        navigate(page, "/" if app_state.game_state is None else "/match_day")
+
+    return ft.Column(
+        expand=True,
+        alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        controls=[
+            ft.Icon(ft.Icons.ERROR_OUTLINE, size=64, color="#EF5350"),
+            ft.Container(height=12),
+            ft.Text("Something went wrong", size=20,
+                    weight=ft.FontWeight.BOLD, color="#EAEAEA"),
+            ft.Container(height=6),
+            ft.Text(
+                "This section hit an unexpected error.\n"
+                "Your save is safe — you can retry or continue playing.",
+                size=13, color="#9E9E9E", text_align=ft.TextAlign.CENTER,
+            ),
+            ft.Container(height=18),
+            ft.ElevatedButton("🔄 Try Again", width=220, height=44,
+                              style=PRIMARY_BTN_STYLE, on_click=retry),
+            ft.Container(height=8),
+            ft.OutlinedButton("🏠 Back", width=220, height=40, on_click=go_home),
+        ],
+    )
+
+
+# ── Busy Overlay & Heavy Task Runner ────────────────────────────────────────
+
+def show_busy_overlay(page: ft.Page, text: str = "Simulating…"):
+    """
+    Show a full-screen modal 'working' overlay that blocks interaction.
+
+    Returns a zero-arg *hide()* function that removes the overlay.
+    """
+    overlay = ft.Container(
+        content=ft.Column(
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            alignment=ft.MainAxisAlignment.CENTER,
+            controls=[
+                ft.ProgressRing(width=46, height=46, color="#FFD54F"),
+                ft.Container(height=14),
+                ft.Text(text, size=14, color="#EAEAEA",
+                        text_align=ft.TextAlign.CENTER),
+            ],
+        ),
+        bgcolor=ft.Colors.with_opacity(0.72, "#050810"),
+        expand=True,
+        alignment=ft.Alignment(0, 0),
+        on_click=lambda e: None,  # swallow clicks while working
+    )
+    page.overlay.append(overlay)
+    try:
+        page.update()
+    except Exception as ex:
+        log.warning("Busy overlay initial update failed: %s", ex)
+
+    def hide():
+        try:
+            if overlay in page.overlay:
+                page.overlay.remove(overlay)
+                page.update()
+        except Exception as ex:
+            log.warning("Failed to hide busy overlay: %s", ex)
+
+    return hide
+
+
+def run_busy_task(page: ft.Page, text: str, fn, on_done=None) -> None:
+    """
+    Run a potentially slow function behind a modal busy overlay.
+
+    IMPORTANT: this deliberately runs *synchronously* on the calling thread
+    after flushing the overlay to the screen. The progress ring keeps
+    spinning client-side (Flutter renders animations locally), so users get
+    instant feedback, and doing all control mutations on one thread
+    guarantees every update is actually delivered.
+
+    Rationale: UI updates from background threads proved unreliable in some
+    Flet runtimes — the overlay lingered on screen until the next user
+    interaction flushed pending diffs — so worker threads are intentionally
+    avoided for UI-affecting work here.
+
+    *on_done(error)* is invoked exactly once afterwards (error is None on
+    success) and may safely navigate or update the UI. Re-entrant calls are
+    ignored while a task is running, preventing double-click double-sims.
+    """
+    if getattr(app_state, "_busy", False):
+        return
+    app_state._busy = True
+
+    try:
+        hide = show_busy_overlay(page, text)
+    except Exception:
+        log.exception("Failed to show busy overlay")
+        hide = lambda: None  # noqa: E731 — degrade to overlay-less execution
+
+    error = None
+    try:
+        fn()
+    except Exception as ex:
+        log.exception("Busy task failed")
+        error = ex
+
+    try:
+        hide()
+    except Exception:
+        log.exception("Failed to hide busy overlay")
+
+    app_state._busy = False
+
+    if callable(on_done):
+        try:
+            on_done(error)
+        except Exception:
+            log.exception("on_done callback failed")
+
+
 # ── Navigation ──────────────────────────────────────────────────────────────
 
 def navigate(page: ft.Page, route: str):
     """
     Navigate to a screen with a smooth fade transition.
     """
+    purge_expired_notifications(page)
+
     from src.ui.screens.main_menu import build_main_menu
     from src.ui.screens.squad import build_squad_screen
     from src.ui.screens.tactics import build_tactics_screen
@@ -233,6 +500,7 @@ def navigate(page: ft.Page, route: str):
     from src.ui.screens.settings import build_settings_screen
     from src.ui.screens.post_match import build_post_match_screen
     from src.ui.screens.history import build_history_screen
+    from src.ui.screens.live_match import build_live_match_screen
 
     builders = {
         "/": build_main_menu,
@@ -250,16 +518,23 @@ def navigate(page: ft.Page, route: str):
         "/settings": build_settings_screen,
         "/post_match": build_post_match_screen,
         "/history": build_history_screen,
+        "/live_match": build_live_match_screen,
     }
 
     builder = builders.get(route, build_main_menu)
-    new_content = builder(page)
-
     try:
-        from src.utils.audio import play_click
-        play_click()
+        new_content = builder(page)
     except Exception:
-        pass
+        # Error boundary: a broken screen must never take the whole app down.
+        log.exception("Failed to build screen '%s'", route)
+        new_content = build_error_screen(page, route)
+
+    # [SOUND DISABLED] Navigation click sound commented out.
+    # try:
+    #     from src.utils.audio import play_click
+    #     play_click()
+    # except Exception:
+    #     pass
 
     tc = app_state._transition_container
     if tc is not None:
@@ -277,8 +552,28 @@ def navigate(page: ft.Page, route: str):
         page.update()
 
 
+def _install_global_error_hooks() -> None:
+    """Log uncaught exceptions (main thread & worker threads) before exiting."""
+
+    def _hook(exc_type, exc, tb):
+        log.critical("Uncaught exception", exc_info=(exc_type, exc, tb))
+        try:
+            sys.__excepthook__(exc_type, exc, tb)
+        except Exception:
+            pass
+
+    sys.excepthook = _hook
+    if hasattr(threading, "excepthook"):
+        def _thread_hook(args):
+            log.critical("Uncaught thread exception",
+                         exc_info=(args.exc_type, args.exc_value,
+                                   args.exc_traceback))
+        threading.excepthook = _thread_hook
+
+
 def main(page: ft.Page):
     """Flet app entry point — configures the page and sets up routing."""
+    _install_global_error_hooks()
     page.title = APP_NAME
     page.window.width = 390
     page.window.height = 844
@@ -293,11 +588,12 @@ def main(page: ft.Page):
     page.padding = 0
     page.spacing = 0
 
-    try:
-        from src.utils.audio import init_audio
-        init_audio(page)
-    except Exception:
-        pass
+    # [SOUND DISABLED] Audio/haptics initialization commented out.
+    # try:
+    #     from src.utils.audio import init_audio
+    #     init_audio(page)
+    # except Exception:
+    #     pass
 
     app_state._page_ref = page
 
@@ -348,7 +644,7 @@ def main(page: ft.Page):
     # ── Load language preference (once, at startup) ────────────────────
     try:
         from src.utils.localization import set_language, get_language, is_rtl
-        from src.utils.audio import set_audio_enabled
+        # from src.utils.audio import set_audio_enabled  # [SOUND DISABLED]
         _lang_conn = app_state.db_conn
         if _lang_conn is None:
             try:
@@ -364,16 +660,16 @@ def main(page: ft.Page):
                 )
                 _lang_conn.commit()
                 row = _lang_conn.execute(
-                    "SELECT language, sound_enabled FROM game_settings WHERE id=1"
+                    "SELECT language FROM game_settings WHERE id=1"
                 ).fetchone()
                 if row and row["language"] and row["language"] != "en":
                     set_language(row["language"])
                     page.rtl = is_rtl()
                     page.update()
-                    print(f"DEBUG: Startup language loaded from DB: '{row['language']}'")
-                set_audio_enabled(bool(row["sound_enabled"])) if row and "sound_enabled" in row.keys() else set_audio_enabled(True)
+                    log.debug("Startup language loaded from DB: '%s'", row["language"])
+                # [SOUND DISABLED] set_audio_enabled(bool(row["sound_enabled"])) if row and "sound_enabled" in row.keys() else set_audio_enabled(True)
             except Exception as ex:
-                print(f"DEBUG: Startup language load skipped: {ex}")
+                log.warning("Startup language load skipped: %s", ex)
     except Exception:
         pass
 

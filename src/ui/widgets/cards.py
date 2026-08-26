@@ -20,6 +20,30 @@ from src.ui.theme import (
 )
 
 
+# ── Empty State ─────────────────────────────────────────────────────────────
+
+def empty_state(icon, title: str, subtitle: str = "") -> ft.Container:
+    """Friendly centered placeholder for empty lists and screens."""
+    controls = [
+        ft.Icon(icon, size=52, color=TEXT_MUTED),
+        ft.Container(height=10),
+        ft.Text(title, size=BODY_SIZE, weight=ft.FontWeight.W_600,
+                color=TEXT_SECONDARY, text_align=ft.TextAlign.CENTER),
+    ]
+    if subtitle:
+        controls.append(ft.Container(height=4))
+        controls.append(ft.Text(subtitle, size=CAPTION_SIZE,
+                                color=TEXT_MUTED, text_align=ft.TextAlign.CENTER))
+    return ft.Container(
+        content=ft.Column(
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            controls=controls,
+        ),
+        padding=40,
+        alignment=ft.Alignment(0, 0),
+    )
+
+
 # ── Section Card ────────────────────────────────────────────────────────────
 
 def section_card(

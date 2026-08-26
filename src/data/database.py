@@ -8,13 +8,22 @@ from __future__ import annotations
 
 import sqlite3
 import os
+from datetime import datetime
 from pathlib import Path
+
+from src.utils.logging_util import get_logger
+
+log = get_logger("db")
 
 
 # Default DB path — will be set to app storage dir on mobile
 _DEFAULT_DB_DIR = Path(__file__).parent.parent.parent / "saves"
 _db_connection: sqlite3.Connection | None = None
 _active_save_name: str | None = None
+_startup_backup_done: set[str] = set()
+
+# Named career slots for the multi-slot save system ("default" is legacy).
+SAVE_SLOTS: tuple[str, ...] = ("slot1", "slot2", "slot3")
 
 
 def get_db_path(save_name: str = "default") -> Path:
@@ -35,10 +44,23 @@ def connect(save_name: str = "default") -> sqlite3.Connection:
         close()
 
     db_path = get_db_path(save_name)
-    _db_connection = sqlite3.connect(str(db_path))
+    is_existing_save = db_path.exists() and db_path.stat().st_size > 0
+    # check_same_thread=False lets heavy simulations run on a worker thread
+    # while the UI thread owns this connection object (cross-thread access is
+    # serialized by the busy-overlay guard in src/ui/app.py).
+    _db_connection = sqlite3.connect(str(db_path), check_same_thread=False)
     _db_connection.row_factory = sqlite3.Row
     _db_connection.execute("PRAGMA journal_mode=WAL")
     _db_connection.execute("PRAGMA foreign_keys=ON")
+    _db_connection.execute("PRAGMA busy_timeout=5000")
+    _db_connection.execute("PRAGMA synchronous=NORMAL")
+
+    # Safety net: snapshot the save once per session BEFORE migrations touch it,
+    # so a failed migration can never permanently destroy a career.
+    if is_existing_save and save_name not in _startup_backup_done:
+        _startup_backup_done.add(save_name)
+        if backup_save(save_name, label="startup"):
+            log.info("Startup backup created for save '%s'", save_name)
 
     # Always run migrations so existing saves get new tables/columns
     init_schema(_db_connection)
@@ -62,11 +84,134 @@ def get_active_save_name() -> str | None:
 
 
 def delete_save(save_name: str) -> None:
-    """Delete a save game database file."""
+    """Delete a save game database file (keeping a last-chance backup first)."""
     db_path = get_db_path(save_name)
     close()
     if db_path.exists():
+        try:
+            backup_save(save_name, label="pre-delete")
+        except Exception:
+            pass
         os.remove(db_path)
+        # Remove stale WAL/SHM sidecars so they can't corrupt a future DB file
+        for suffix in ("-wal", "-shm"):
+            sidecar = Path(str(db_path) + suffix)
+            try:
+                if sidecar.exists():
+                    sidecar.unlink()
+            except OSError:
+                pass
+
+
+def backups_dir(save_name: str = "default") -> Path:
+    """Directory holding automatic backups for a save slot."""
+    return get_db_path(save_name).parent / "backups"
+
+
+def backup_save(save_name: str = "default", label: str = "auto") -> Path | None:
+    """
+    Create a consistent backup of a save using SQLite's online backup API.
+
+    Safe to call mid-session (WAL-aware). Returns the backup path,
+    or None when there is nothing to back up or the backup failed.
+    """
+    src_path = get_db_path(save_name)
+    if not src_path.exists():
+        return None
+    try:
+        bdir = backups_dir(save_name)
+        bdir.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        dest_path = bdir / f"{save_name}_{label}_{ts}.db"
+        src = sqlite3.connect(str(src_path))
+        try:
+            dest = sqlite3.connect(str(dest_path))
+            try:
+                src.backup(dest)
+            finally:
+                dest.close()
+        finally:
+            src.close()
+        rotate_backups(save_name)
+        return dest_path
+    except Exception as ex:
+        log.warning("Backup failed for save '%s': %s", save_name, ex)
+        return None
+
+
+def rotate_backups(save_name: str = "default", keep: int = 5) -> None:
+    """Keep only the newest *keep* backups for a save slot."""
+    try:
+        bdir = backups_dir(save_name)
+        if not bdir.exists():
+            return
+        files = sorted(bdir.glob(f"{save_name}_*.db"),
+                       key=lambda p: p.stat().st_mtime, reverse=True)
+        for old in files[keep:]:
+            try:
+                old.unlink()
+            except OSError:
+                pass
+    except Exception as ex:
+        log.warning("Backup rotation failed for '%s': %s", save_name, ex)
+
+
+def migrate_legacy_default_slot() -> None:
+    """
+    One-time upgrade: rename a legacy 'default.db' save to 'slot1.db' so the
+    multi-slot menu shows the player's existing career as Slot 1.
+    """
+    try:
+        close()
+        legacy = get_db_path("default")
+        target = get_db_path("slot1")
+        if not legacy.exists() or target.exists():
+            return
+        os.replace(legacy, target)
+        for suffix in ("-wal", "-shm"):
+            src_sidecar = Path(str(legacy) + suffix)
+            if src_sidecar.exists():
+                os.replace(src_sidecar, Path(str(target) + suffix))
+        log.info("Migrated legacy save 'default' -> 'slot1'")
+    except OSError as ex:
+        log.warning("Legacy save migration failed: %s", ex)
+
+
+def peek_save_info(save_name: str) -> dict | None:
+    """
+    Lightweight metadata about a save slot WITHOUT touching the active
+    connection (opens its own short-lived connection).
+
+    Returns a dict with manager_name / user_club_name / season_year /
+    current_date / day_count / modified, or None when there is no save file.
+    """
+    path = get_db_path(save_name)
+    if not path.exists():
+        return None
+    info: dict = {
+        "save_name": save_name,
+        "manager_name": "",
+        "user_club_name": "",
+        "season_year": 2025,
+        "current_date": "",
+        "day_count": 0,
+        "modified": path.stat().st_mtime,
+    }
+    try:
+        c = sqlite3.connect(str(path))
+        c.row_factory = sqlite3.Row
+        try:
+            row = c.execute(
+                "SELECT manager_name, user_club_name, season_year, current_date, day_count "
+                "FROM game_state WHERE id = 1"
+            ).fetchone()
+            if row:
+                info.update({k: row[k] for k in row.keys()})
+        finally:
+            c.close()
+    except Exception as ex:
+        log.debug("peek_save_info('%s') partial read: %s", save_name, ex)
+    return info
 
 
 def init_schema(conn: sqlite3.Connection) -> None:

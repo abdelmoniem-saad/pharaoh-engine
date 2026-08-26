@@ -16,7 +16,7 @@ from src.ui.theme import (
 def build_settings_screen(page: ft.Page) -> ft.Column:
     from src.ui.app import app_state, navigate, show_snackbar
     from src.utils.localization import get_language, set_language, is_rtl, t
-    from src.utils.audio import set_audio_enabled
+    # from src.utils.audio import set_audio_enabled  # [SOUND DISABLED]
 
     page.navigation_bar = None
 
@@ -34,7 +34,7 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
     auto_save = settings.get("auto_save", 1)
     auto_save_interval = settings.get("auto_save_interval", 7)
     difficulty = settings.get("difficulty", "normal")
-    sound_enabled = settings.get("sound_enabled", 1)
+    # sound_enabled = settings.get("sound_enabled", 1)  # [SOUND DISABLED]
 
     speed_dd = ft.Dropdown(
         label="Match Speed", value=str(match_speed), expand=True,
@@ -46,7 +46,7 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
         options=[ft.dropdown.Option(k, text=k.title()) for k in ("easy", "normal", "hard")],
     )
     auto_save_switch = ft.Switch(label="Auto-Save", value=bool(auto_save))
-    sound_switch = ft.Switch(label="Sound Effects", value=bool(sound_enabled))
+    # sound_switch = ft.Switch(label="Sound Effects", value=bool(sound_enabled))  # [SOUND DISABLED]
     interval_dd = ft.Dropdown(
         label="Auto-Save Interval", value=str(auto_save_interval), expand=True,
         options=[ft.dropdown.Option(str(d), text=f"Every {d} days") for d in (3, 7, 14, 30)],
@@ -58,11 +58,11 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
             "auto_save": 1 if auto_save_switch.value else 0,
             "auto_save_interval": int(interval_dd.value or 7),
             "difficulty": diff_dd.value or "normal",
-            "sound_enabled": 1 if sound_switch.value else 0,
+            # "sound_enabled": 1 if sound_switch.value else 0,  # [SOUND DISABLED]
         }
         if conn:
             _save_settings(conn, s)
-        set_audio_enabled(bool(sound_switch.value))
+        # set_audio_enabled(bool(sound_switch.value))  # [SOUND DISABLED]
         show_snackbar(page, "✅ Settings saved!")
 
     def go_back(e):
@@ -71,10 +71,11 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
     def delete_save_click(e):
         def confirm_delete(e2):
             from src.data.database import delete_save
+            active_slot = app_state.current_save_name or "slot1"
             page.pop_dialog()
             app_state.db_conn = None
             app_state.game_state = None
-            delete_save("default")
+            delete_save(active_slot)
             navigate(page, "/")
             show_snackbar(page, f"🗑️ {t('save_deleted')}")
 
@@ -111,7 +112,7 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
                 ft.Text("💾 " + t("save"), size=16, weight=ft.FontWeight.W_600, color=GOLD),
                 auto_save_switch,
                 interval_dd,
-                sound_switch,
+                # sound_switch,  # [SOUND DISABLED]
             ]),
         ),
     ]
@@ -208,7 +209,7 @@ def _load_settings(conn) -> dict:
                 auto_save=row["auto_save"],
                 auto_save_interval=row["auto_save_interval"],
                 difficulty=row["difficulty"],
-                sound_enabled=row["sound_enabled"] if "sound_enabled" in row.keys() else 1,
+                # sound_enabled=row["sound_enabled"] if "sound_enabled" in row.keys() else 1,  # [SOUND DISABLED]
             )
             return d
     except Exception as ex:
@@ -222,9 +223,9 @@ def _save_settings(conn, s: dict) -> None:
         lang = get_language()
         conn.execute("INSERT OR IGNORE INTO game_settings (id) VALUES (1)")
         conn.execute("""UPDATE game_settings SET
-            match_speed=?, auto_save=?, auto_save_interval=?, difficulty=?, language=?, sound_enabled=?
+            match_speed=?, auto_save=?, auto_save_interval=?, difficulty=?, language=?
             WHERE id=1
-        """, (s["match_speed"], s["auto_save"], s["auto_save_interval"], s["difficulty"], lang, s.get("sound_enabled", 1)))
+        """, (s["match_speed"], s["auto_save"], s["auto_save_interval"], s["difficulty"], lang))
         conn.commit()
     except Exception as ex:
         print(f"DEBUG: _save_settings error: {ex}")

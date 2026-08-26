@@ -26,6 +26,94 @@ from src.ui.theme import (
 )
 from src.utils.config import MatchEventType, expectation_display
 from src.utils.localization import t, t_format, display_name, display_home_name, display_away_name
+from src.utils.logging_util import get_logger
+
+
+def _safe_advance(page, fn) -> None:
+    """
+    Run a calendar-advancing operation behind a blocking progress overlay on a
+    worker thread, keeping the UI responsive.
+
+    A failed simulation must never kill the app or leave a silent dead click;
+    errors are logged and surfaced via snackbar instead.
+    """
+    from src.ui.app import navigate, show_snackbar, run_busy_task
+
+    def done(error):
+        if error is not None:
+            show_snackbar(page, f"⚠️ Simulation interrupted: {error}",
+                          bgcolor=ft.Colors.RED_800)
+            return
+        try:
+            navigate(page, "/match_day")
+        except Exception:
+            get_logger("ui").exception("Navigation after calendar advance failed")
+
+    run_busy_task(page, "⏳ Simulating…", fn, on_done=done)
+
+
+def _tips_block(page, gs) -> list:
+    """
+    Dismissible quick-tips card shown during the first week of a new career.
+    Returns [card, spacer] or [] — dismissal persists via app prefs so it
+    never nags again. Part of the onboarding flow.
+    """
+    try:
+        if gs.day_count > 5:
+            return []
+        from src.utils.prefs import get_pref
+        if get_pref("tips_dismissed"):
+            return []
+    except Exception:
+        return []
+
+    tip_rows = [
+        ("📋", "Pick your Starting XI in Squad before every kickoff."),
+        ("✉️", "Check Inbox daily — board mail and transfer bids arrive there."),
+        ("📅", "Use Advance Date / Skip to Next Match to reach match day."),
+    ]
+
+    def _dismiss(e):
+        try:
+            from src.utils.prefs import set_pref
+            set_pref("tips_dismissed", True)
+        except Exception:
+            pass
+        from src.ui.app import navigate
+        navigate(page, "/match_day")
+
+    card = ft.Container(
+        width=330,
+        content=ft.Column(
+            tight=True,
+            spacing=6,
+            controls=[
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    controls=[
+                        ft.Text("💡 Manager Tips", size=14,
+                                weight=ft.FontWeight.BOLD, color=GOLD),
+                        ft.IconButton(ft.Icons.CLOSE, icon_size=16,
+                                      icon_color="#9E9E9E",
+                                      tooltip="Dismiss",
+                                      on_click=_dismiss),
+                    ],
+                ),
+                *[
+                    ft.Row(spacing=8, controls=[
+                        ft.Text(icon, size=15),
+                        ft.Text(txt, size=12, color="#BDBDBD", expand=True),
+                    ])
+                    for icon, txt in tip_rows
+                ],
+            ],
+        ),
+        bgcolor="#141e33",
+        border_radius=12,
+        padding=ft.padding.symmetric(horizontal=12, vertical=8),
+        border=ft.border.all(1, GOLD_BORDER),
+    )
+    return [card, ft.Container(height=6)]
 
 
 def build_match_day_screen(page: ft.Page) -> ft.Column:
@@ -137,12 +225,10 @@ def _build_match_preview(page, conn, gs, fixture):
         navigate(page, "/pre_match")
 
     def advance_to_match_click(e):
-        advance_to_next_match(conn, gs)
-        navigate(page, "/match_day")
+        _safe_advance(page, lambda: advance_to_next_match(conn, gs))
 
     def advance_one_day(e):
-        advance_day(conn, gs)
-        navigate(page, "/match_day")
+        _safe_advance(page, lambda: advance_day(conn, gs))
 
     # ── Match card (always visible — the main focus) ─────────────────
     match_card = match_score_card(
@@ -307,7 +393,7 @@ def _build_match_preview(page, conn, gs, fixture):
                         match_card,
                         ft.Container(height=4),
                         *action_controls,
-                        ft.Container(height=6),
+                        *_tips_block(page, gs),
                         intel_section,
                         fixtures_section,
                         ft.Container(height=10),
@@ -323,12 +409,10 @@ def _build_no_match_view(page, conn, gs):
     from src.ui.app import navigate
 
     def advance_one(e):
-        advance_day(conn, gs)
-        navigate(page, "/match_day")
+        _safe_advance(page, lambda: advance_day(conn, gs))
 
     def advance_to_match(e):
-        advance_to_next_match(conn, gs)
-        navigate(page, "/match_day")
+        _safe_advance(page, lambda: advance_to_next_match(conn, gs))
 
     return ft.Column(
         expand=True,
@@ -352,6 +436,7 @@ def _build_no_match_view(page, conn, gs):
             ft.Container(height=8),
             ft.OutlinedButton(f"📅 {t('advance_1_day')}", width=260, height=42,
                                on_click=advance_one),
+            *_tips_block(page, gs),
         ],
     )
 

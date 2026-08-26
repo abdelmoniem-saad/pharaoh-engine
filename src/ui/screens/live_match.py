@@ -19,7 +19,7 @@ from src.data import queries
 from src.core import club as club_module, match_engine
 from src.core.calendar import finalize_user_matchday
 from src.utils.localization import t, display_name, display_home_name, display_away_name, is_rtl
-from src.utils.audio import play_goal, play_full_time
+# from src.utils.audio import play_goal, play_full_time  # [SOUND DISABLED]
 from src.utils import rng
 
 
@@ -92,6 +92,11 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         squad = queries.get_players_by_club(conn, gs.user_club_id)
         if club and squad:
             active_user_xi[0] = list(club_module.prepare_team_for_match(club, squad).starting_xi)
+
+    # Snapshot of who actually kicked off (the user's submitted XI). The sub
+    # dialog uses this to tell players subbed OFF/ON during the match apart
+    # from the real current pitch state.
+    original_user_xi = list(active_user_xi[0])
 
     # ── Pre-index events by minute ───────────────────────────────────
     events_by_minute: dict[int, list] = {}
@@ -223,6 +228,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
             sub_pending,
             subs_btn,
             minute_text,
+            original_user_xi=original_user_xi,
         )
 
     skip_btn.on_click = on_skip
@@ -335,7 +341,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                     else:
                         away_goals[0] += 1
                     score_text.value = f"{home_goals[0]} - {away_goals[0]}"
-                    play_goal()
+                    # play_goal()  # [SOUND DISABLED]
 
                 if ev.event_type == MatchEventType.HALF_TIME:
                     status_text.value = "⏸️ Half Time"
@@ -365,7 +371,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                 elif ev.event_type == MatchEventType.FULL_TIME:
                     status_text.value = "🏁 Full Time"
                     status_text.color = ft.Colors.AMBER_300
-                    play_full_time()
+                    # play_full_time()  # [SOUND DISABLED]
 
                 event_list.controls.append(_make_event_row(ev))
                 page.update()
@@ -540,7 +546,7 @@ def _show_halftime_talk(page: ft.Page, event_list, halftime_choice):
 
 
 def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi, subs_remaining, subs_made,
-                      sub_pending, subs_btn, minute_text):
+                      sub_pending, subs_btn, minute_text, original_user_xi=None):
     """Show a substitution selection dialog — pick a starter to take OFF, then a bench player ON."""
     from src.ui.app import app_state
     from src.core.player import calculate_overall_rating
@@ -556,22 +562,31 @@ def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi
     squad = queries.get_players_by_club(conn, user_club_id)
     player_map = {p.id: p for p in squad}
 
-    # Get current starting XI and bench from the user's club
-    from src.core import club as club_module
-    club = queries.get_club(conn, user_club_id)
-    if not club:
-        sub_pending[0] = False
-        return
+    # ── Roster derivation ────────────────────────────────────────────────────
+    # The OFF list must mirror who is ACTUALLY on the pitch right now: the
+    # user's submitted XI plus any in-match substitutions so far. Previously
+    # this rebuilt tactics from scratch (auto_select_xi), which resurrected
+    # pre-match-subbed-out players and hid subbed-on ones.
+    active_ids = list(dict.fromkeys(active_user_xi[0]))
+    starters = [player_map[pid] for pid in active_ids if pid in player_map]
 
-    tactics = club_module.prepare_team_for_match(club, squad)
-    starters = [player_map[pid] for pid in tactics.starting_xi if pid in player_map]
-    bench = [player_map[pid] for pid in tactics.bench if pid in player_map]
+    # Players who already featured in a substitution can neither come off
+    # again nor return to the pitch. IDs are tracked (names are not unique).
+    original_ids = set(original_user_xi or [])
+    # Tuple layout: (off_name, on_name, minute_str, off_id, on_id)
+    off_history = {s[3] for s in subs_made if len(s) > 3}   # sent to the bench
+    on_history = {s[4] for s in subs_made if len(s) > 3}    # came onto the pitch
+    used_ids = (set(active_ids) | on_history | off_history | original_ids)
 
-    # Remove already-subbed players
-    already_off = {s[0] for s in subs_made}  # names of players subbed off
-    already_on = {s[1] for s in subs_made}   # names of players subbed on
-    starters = [p for p in starters if p.name not in already_on and p.name not in already_off]
-    bench = [p for p in bench if p.name not in already_on and p.name not in already_off]
+    available_squad = [
+        p for p in squad
+        if p.injury_days_remaining <= 0 and p.suspension_matches <= 0
+    ]
+    bench = sorted(
+        (p for p in available_squad if p.id not in used_ids),
+        key=lambda p: calculate_overall_rating(p),
+        reverse=True,
+    )
 
     if not bench:
         sub_pending[0] = False
@@ -648,7 +663,7 @@ def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi
         except (ValueError, AttributeError):
             current_min = 60
 
-        subs_made.append((off_p.name, on_p.name, str(current_min)))
+        subs_made.append((off_p.name, on_p.name, str(current_min), off_p.id, on_p.id))
 
         # Update active XI immediately so further substitutions and resim use current state.
         if off_p.id in active_user_xi[0]:
@@ -914,4 +929,3 @@ def _contains(parent, target) -> bool:
         if _contains(child, target):
             return True
     return False
-

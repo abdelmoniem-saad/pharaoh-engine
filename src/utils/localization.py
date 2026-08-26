@@ -37,6 +37,17 @@ _strings: dict[str, dict[str, str]] = {
         "delete_save": "Delete Save Game",
         "language_changed": "Language changed!",
 
+        # Save slots (multi-slot careers)
+        "save_slots": "Save Slots",
+        "slot_label": "Slot {n}",
+        "empty_slot": "Empty — start a new career here",
+        "slot_summary": "{club} — Season {y1}/{y2}\nManager: {manager}",
+        "manager_label": "Manager",
+        "season_short": "Season",
+        "overwrite_confirm_title": "Overwrite this save?",
+        "overwrite_confirm_msg": "A new career here will replace {manager} ({club}).\nAn automatic backup of the old one is kept.",
+        "no_saves_yet": "No saved careers yet.\nStart a New Game to begin!",
+
         # Navigation
         "squad": "Squad",
         "tactics": "Tactics",
@@ -691,6 +702,17 @@ _strings: dict[str, dict[str, str]] = {
         "gameplay": "طريقة اللعب",
         "danger_zone": "منطقة الخطر",
         "delete_save": "حذف اللعبة المحفوظة",
+
+        # Save slots (multi-slot careers)
+        "save_slots": "ملفات الحفظ",
+        "slot_label": "ملف {n}",
+        "empty_slot": "فارغ — ابدأ مسيرة جديدة هنا",
+        "slot_summary": "{club} — موسم {y1}/{y2}\nالمدير: {manager}",
+        "manager_label": "المدير",
+        "season_short": "موسم",
+        "overwrite_confirm_title": "استبدال هذا الحفظ؟",
+        "overwrite_confirm_msg": "المسيرة الجديدة هنا ستستبدل {manager} ({club}).\nسيتم الاحتفاظ بنسخة احتياطية تلقائية من القديمة.",
+        "no_saves_yet": "لا توجد مسيرات محفوظة بعد.\nابدأ لعبة جديدة للبدء!",
         "language_changed": "تم تغيير اللغة!",
 
         # Navigation

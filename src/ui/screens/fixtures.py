@@ -256,5 +256,6 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
             )
 
     if not results and not unplayed:
-        column.controls.append(
-            ft.Text(t("no_fixtures_matchday"), size=13, color=ft.Colors.GREY_500))
+        from src.ui.widgets.cards import empty_state
+        column.controls.append(empty_state(
+            ft.Icons.EVENT_NOTE, t("no_fixtures_matchday")))
