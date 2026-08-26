@@ -244,6 +244,8 @@ def _repair_schema_drift(conn: sqlite3.Connection) -> None:
     repairs = [
         ("fixtures", "submitted_starting_xi_json", "TEXT NOT NULL DEFAULT '[]'"),
         ("fixtures", "submitted_bench_json", "TEXT NOT NULL DEFAULT '[]'"),
+        ("players", "dev_plan", "TEXT NOT NULL DEFAULT ''"),
+        ("players", "dev_progress", "INTEGER NOT NULL DEFAULT 0"),
     ]
 
     for table, column, ddl in repairs:
@@ -818,5 +820,9 @@ _MIGRATIONS = [
     ]),
     (13, [
         "ALTER TABLE clubs ADD COLUMN promises_json TEXT NOT NULL DEFAULT '[]'",
+    ]),
+    (14, [
+        "ALTER TABLE players ADD COLUMN dev_plan TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE players ADD COLUMN dev_progress INTEGER NOT NULL DEFAULT 0",
     ]),
 ]

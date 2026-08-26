@@ -19,6 +19,21 @@ from src.core.player import get_match_readiness
 from src.core import commentary
 
 
+def _per_minute_drain(p: Player) -> float:
+    """
+    Condition points lost per minute by *p*.
+
+    Low stamina tires far faster; goalkeepers track at half rate.
+    Outfield reference (before tempo/pressing/Ramadan multipliers):
+    stamina 18 → ~0.148/min (~13 pts over a match), stamina 13 →
+    ~0.208/min (~19 pts), stamina 8 → ~0.268/min (~24 pts).
+    """
+    base = 0.10 + max(0.0, (22 - p.attributes.stamina) * 0.012)
+    if p.position == Position.GK:
+        base *= 0.5
+    return base
+
+
 def simulate_match(
     home_club: Club,
     away_club: Club,
@@ -28,6 +43,7 @@ def simulate_match(
     away_tactics: TeamTactics,
     match_date=None,
     is_derby: bool = False,
+    minutes_played_offset: dict[int, int] | None = None,
 ) -> MatchResult:
     """
     Simulate a full match between two teams.
@@ -38,11 +54,17 @@ def simulate_match(
     - Pressing increases fouls but boosts midfield
     - High tempo = more chances but more turnovers
     - Fan happiness scales home advantage
-    - Stamina → fatigue penalty in 2nd half
+    - Per-player stamina: each player's condition drains minute by minute
+      (stamina attribute, fitness, tempo, pressing, Ramadan) and feeds back
+      into effective team strength — subs bring genuinely fresh legs
     - Red cards remove players from the XI
     - Training focus gives small match bonuses
-    - Ramadan → reduced stamina effectiveness
     - Derby → amplified morale effects
+
+    ``minutes_played_offset`` optionally maps player_id → minutes already on
+    the pitch (used by the live-match re-simulation after a substitution, so
+    the rest of the match starts from the real fatigue state while the new
+    arrival begins fresh).
     """
     # Build player lookup maps
     home_players = {p.id: p for p in home_squad}
@@ -141,21 +163,38 @@ def simulate_match(
     first_half_added = rng.randint(1, 4)
     second_half_added = rng.randint(1, 7)
 
-    # ── Pre-compute average stamina for fatigue calculation ──────────
-    def _avg_stamina(player_map, xi):
-        vals = [player_map[pid].attributes.stamina for pid in xi if pid in player_map]
-        return sum(vals) / max(len(vals), 1) if vals else 10.0
+    # ── Per-player live condition model ────────────────────────────────
+    # Every player starts at his real fitness and drains each minute based
+    # on his own stamina, his team's tempo & pressing, and Ramadan fasting.
+    # Team effectiveness follows the average condition of whoever is on the
+    # pitch right now — which is exactly why substitutions matter.
+    def _tempo_press_factor(tactics) -> float:
+        tempo = getattr(tactics, "tempo", 5)
+        press = getattr(tactics, "pressing_intensity", 5)
+        return (0.90 + tempo * 0.02) * (0.95 + press * 0.01)
 
-    home_avg_stamina = _avg_stamina(home_players, home_active_xi)
-    away_avg_stamina = _avg_stamina(away_players, away_active_xi)
-
-    # ── Ramadan stamina penalty ──────────────────────────────────────
-    # During Ramadan, players tire ~10% faster due to fasting
+    ramadan_drain_mult = 1.0
     if match_date:
         from src.utils.config import is_ramadan as _is_ramadan
         if _is_ramadan(match_date):
-            home_avg_stamina *= 0.90
-            away_avg_stamina *= 0.90
+            ramadan_drain_mult = 1.10  # fasting players tire ~10% faster
+
+    offsets = minutes_played_offset or {}
+    condition: dict[int, float] = {}
+    cond_factor: dict[int, float] = {}
+    for _pmap, _xi, _f in (
+        (home_players, home_tactics.starting_xi, _tempo_press_factor(home_tactics)),
+        (away_players, away_tactics.starting_xi, _tempo_press_factor(away_tactics)),
+    ):
+        for _pid in _xi:
+            _p = _pmap.get(_pid)
+            if not _p:
+                continue
+            _pre = offsets.get(_pid, 0)
+            _cond = float(getattr(_p, "fitness", 85) or 85)
+            _cond -= _pre * _per_minute_drain(_p) * _f * ramadan_drain_mult
+            condition[_pid] = max(20.0, min(100.0, _cond))
+            cond_factor[_pid] = _f
 
     # Simulate minute by minute
     for minute in range(1, MATCH_DURATION_MINUTES + second_half_added + 1):
@@ -167,15 +206,27 @@ def simulate_match(
 
         is_second_half = minute > 45
 
-        # ── Fatigue: 2nd-half penalty based on average stamina ───────
-        # Low stamina teams tire more; starts at minute 60+
-        fatigue_mult_home = 1.0
-        fatigue_mult_away = 1.0
-        if minute > 60:
-            mins_tired = minute - 60
-            # stamina 20 → up to 15% penalty by 90'; stamina 10 → up to 25%
-            fatigue_mult_home = max(0.75, 1.0 - (mins_tired / 30.0) * (1.0 - home_avg_stamina / 25.0) * 0.15)
-            fatigue_mult_away = max(0.75, 1.0 - (mins_tired / 30.0) * (1.0 - away_avg_stamina / 25.0) * 0.15)
+        # ── Fatigue: drain every player, then read team condition ─────
+        for pid in condition:
+            p = home_players.get(pid) or away_players.get(pid)
+            if not p:
+                continue
+            condition[pid] = max(
+                20.0,
+                condition[pid] - _per_minute_drain(p) * cond_factor[pid] * ramadan_drain_mult,
+            )
+
+        def _team_condition_pct(player_map, xi) -> float:
+            vals = [condition[pid] for pid in xi if pid in condition]
+            if not vals:
+                return 100.0
+            return sum(vals) / len(vals)
+
+        # Effectiveness from team condition: linear, clamped.
+        # Condition 100 → ×1.00, 87 (typical fresh side) → ×0.98, 50 → ×0.74.
+        # A substitute arriving at full condition lifts the average at once.
+        fatigue_mult_home = max(0.70, min(1.03, 0.74 + 0.26 * (_team_condition_pct(home_players, home_active_xi) - 50.0) / 50.0))
+        fatigue_mult_away = max(0.70, min(1.03, 0.74 + 0.26 * (_team_condition_pct(away_players, away_active_xi) - 50.0) / 50.0))
 
         # ── Red card penalty: fewer players = weaker ─────────────────
         home_manpower = len(home_active_xi) / 11.0  # 1.0 at full, 0.91 with 10 men

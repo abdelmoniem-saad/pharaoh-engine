@@ -123,6 +123,10 @@ class Player(BaseModel):
     # Training
     training_focus: str = ""  # e.g., "Shooting", "Defending", "Physical", "Playmaking"
 
+    # Long-term development plan (key into core/development.py catalog) + 0-100
+    dev_plan: str = ""
+    dev_progress: int = Field(default=0, ge=0, le=100)
+
     # Morale tracking
     matches_benched_streak: int = 0  # consecutive matches benched (not in XI)
 

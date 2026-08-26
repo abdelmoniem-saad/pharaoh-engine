@@ -704,6 +704,14 @@ def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi
                     away_tactics.starting_xi = list(active_user_xi[0])
                     outcome.away_starting_xi = list(active_user_xi[0])
 
+                # Fatigue carry-over: everyone except the incoming sub has
+                # been on the pitch for `current_min` minutes, so the tail
+                # simulation starts from real tiredness — fresh legs bite.
+                minutes_offset: dict[int, int] = {}
+                for pid in set(home_tactics.starting_xi) | set(away_tactics.starting_xi):
+                    if pid != on_p.id:
+                        minutes_offset[pid] = current_min
+
                 future_sim = match_engine.simulate_match(
                     home_club,
                     away_club,
@@ -712,6 +720,7 @@ def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi
                     home_tactics,
                     away_tactics,
                     match_date=result.date,
+                    minutes_played_offset=minutes_offset,
                 )
 
                 # Preserve events up to now (including this substitution), then replace the tail.

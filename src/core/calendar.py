@@ -33,13 +33,20 @@ from src.core.finance import process_monthly_finances
 from src.core.transfers import generate_ai_bids, check_expiring_contracts, process_pending_negotiations, process_loan_returns
 from src.utils.config import MatchEventType, INJURY_TYPES
 from src.utils import rng
+from src.utils.logging_util import get_logger
+
+log = get_logger("calendar")
 
 
-def advance_day(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
+def advance_day(conn: sqlite3.Connection, game_state: GameState,
+                generate_report: bool = True) -> list[str]:
     """
     Advance the game by one day.
 
     Returns a list of summary messages about what happened.
+    When *generate_report* is true (single-day steps), a Daily Report inbox
+    message is produced afterwards — the manager's morning briefing.
+    Multi-day fast-forwards suppress per-day reports and emit one final one.
     """
     messages: list[str] = []
     game_state.current_date += timedelta(days=1)
@@ -161,6 +168,16 @@ def advance_day(conn: sqlite3.Connection, game_state: GameState) -> list[str]:
     except Exception:
         pass
 
+    # ── Daily club report (the manager's morning briefing) ─────────────
+    if generate_report:
+        try:
+            report = _build_daily_report_message(conn, game_state)
+            if report is not None:
+                queries.insert_message(conn, report)
+                messages.append("📋 Daily report delivered to your inbox")
+        except Exception as ex:
+            log.warning("Daily report generation failed: %s", ex)
+
     return messages
 
 
@@ -179,13 +196,113 @@ def advance_to_next_match(conn: sqlite3.Connection,
         if user_fixture and user_fixture.date == game_state.current_date:
             break
 
-        day_messages = advance_day(conn, game_state)
+        day_messages = advance_day(conn, game_state, generate_report=False)
         all_messages.extend(day_messages)
 
         if league.is_season_complete(conn):
             break
 
+    # One consolidated morning briefing after a multi-day skip
+    try:
+        report = _build_daily_report_message(conn, game_state)
+        if report is not None:
+            queries.insert_message(conn, report)
+            all_messages.append("📋 Daily report delivered to your inbox")
+    except Exception as ex:
+        log.warning("Daily report generation failed: %s", ex)
+
     return all_messages
+
+
+def _build_daily_report_message(conn: sqlite3.Connection,
+                                game_state: GameState) -> InboxMessage | None:
+    """
+    The manager's morning briefing — real information worth opening the game
+    for: medical room, fitness watch, suspensions, upcoming fixtures,
+    contract situations and development progress. No login rewards; just
+    the state of your squad every single morning.
+    """
+    squad = queries.get_players_by_club(conn, game_state.user_club_id)
+    today = game_state.current_date
+    lines: list[str] = []
+
+    # ── Medical room ──────────────────────────────────────────────────
+    injured = sorted((p for p in squad if p.injury_days_remaining > 0),
+                     key=lambda p: p.injury_days_remaining)
+    lines.append("🏥 MEDICAL ROOM")
+    if injured:
+        for p in injured[:4]:
+            lines.append(f"• {p.name} — out ~{p.injury_days_remaining}d")
+        if len(injured) > 4:
+            lines.append(f"• …plus {len(injured) - 4} more in treatment")
+    else:
+        lines.append("• Clean bill of health — everyone trained this morning.")
+    lines.append("")
+
+    # ── Fitness watch ─────────────────────────────────────────────────
+    fit_pool = [p for p in squad if p.injury_days_remaining <= 0]
+    tired = sorted(fit_pool, key=lambda p: p.fitness)[:3]
+    tired = [p for p in tired if p.fitness < 75]
+    if tired:
+        lines.append("💪 FITNESS WATCH")
+        for p in tired:
+            flag = "🔴" if p.fitness < 50 else "🟡"
+            lines.append(f"• {flag} {p.name} — {p.fitness}% condition")
+        lines.append("")
+
+    # ── Suspensions ───────────────────────────────────────────────────
+    suspended = [p for p in squad if p.suspension_matches > 0]
+    if suspended:
+        lines.append("🚫 SUSPENDED")
+        for p in suspended[:4]:
+            lines.append(f"• {p.name} — {p.suspension_matches} match(es)")
+        lines.append("")
+
+    # ── Looking ahead ─────────────────────────────────────────────────
+    fixture = queries.get_user_next_fixture(conn, game_state.user_club_id)
+    has_ahead = False
+    if fixture and fixture.date:
+        days_to = (fixture.date - today).days
+        when = "TODAY" if days_to <= 0 else f"in {days_to} day(s)"
+        lines.append("📅 LOOKING AHEAD")
+        lines.append(
+            f"• Next: {fixture.home_club_name} v {fixture.away_club_name} "
+            f"({fixture.competition}) — {when}"
+        )
+        has_ahead = True
+
+    contracts = []
+    for p in squad:
+        expiry = getattr(getattr(p, "contract", None), "contract_expiry", None)
+        if expiry:
+            d = (expiry - today).days
+            if 0 <= d <= 45:
+                contracts.append((d, p.name))
+    if contracts:
+        contracts.sort()
+        names = ", ".join(n for _, n in contracts[:3])
+        lines.append(f"• Contract talks due: {names}")
+        has_ahead = True
+    if has_ahead:
+        lines.append("")
+
+    # ── Development plans (visible once plans are assigned) ───────────
+    devs = [p for p in squad if getattr(p, "dev_plan", "")]
+    if devs:
+        lines.append("🎯 DEVELOPMENT PLANS")
+        for p in devs[:3]:
+            prog = min(100, int(getattr(p, "dev_progress", 0)))
+            lines.append(f"• {p.name} — {p.dev_plan}: {prog}%")
+        lines.append("")
+
+    body = "\n".join(lines).rstrip()
+
+    return InboxMessage(
+        date=today,
+        subject=f"📋 Daily Report — {today.strftime('%d %b')}",
+        body=body,
+        category="general",
+    )
 
 
 def _simulate_matchday(conn: sqlite3.Connection, game_state: GameState,
@@ -961,7 +1078,21 @@ def _weekly_development(conn: sqlite3.Connection,
                 player.training_focus = get_recommended_focus(player)
 
             dev_msgs = process_weekly_training(player, club, TrainingIntensity.NORMAL)
-            if dev_msgs:
+
+            # ── Long-term development plan tick ────────────────────────
+            pre_progress = getattr(player, "dev_progress", 0)
+            plan_note = None
+            try:
+                from src.core.development import apply_weekly_development
+                plan_note = apply_weekly_development(player)
+            except Exception as ex:
+                log.warning("Development tick failed for %s: %s",
+                            getattr(player, "name", "?"), ex)
+            plan_changed = getattr(player, "dev_progress", 0) != pre_progress or plan_note
+            if plan_note and is_user:
+                dev_msgs = list(dev_msgs) + [plan_note]
+
+            if dev_msgs or plan_changed:
                 if is_user:
                     user_dev_lines.extend(dev_msgs)
                     messages.extend(dev_msgs)

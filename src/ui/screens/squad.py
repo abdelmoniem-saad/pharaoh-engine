@@ -449,6 +449,41 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
         width=200, text_size=12,
     )
 
+    # Development plan dropdown (long-term arcs / position retraining)
+    from src.core.development import PLANS
+
+    def on_dev_change(e):
+        from src.ui.app import app_state, show_snackbar
+        v = e.control.value or "none"
+        player.dev_plan = "" if v == "none" else v
+        if not player.dev_plan:
+            player.dev_progress = 0
+        _pct = min(100, int(getattr(player, "dev_progress", 0)))
+        dev_progress_bar.value = _pct / 100.0
+        dev_progress_text.value = (
+            f"{_pct}% complete" if player.dev_plan else "No active plan."
+        )
+        queries.update_player_stats(app_state.db_conn, player)
+        label = PLANS.get(v, {}).get("label", "No plan")
+        show_snackbar(page, f"{player.name}: {label}")
+
+    dev_dd = ft.Dropdown(
+        label="Development Plan",
+        value=getattr(player, "dev_plan", "") or "none",
+        options=[ft.dropdown.Option("none", text="None")] + [
+            ft.dropdown.Option(k, text=v["label"]) for k, v in PLANS.items()
+        ],
+        on_select=on_dev_change,
+        width=200, text_size=12,
+    )
+
+    _dp = min(100, int(getattr(player, "dev_progress", 0)))
+    dev_progress_bar = ft.ProgressBar(value=_dp / 100.0, width=200)
+    dev_progress_text = ft.Text(
+        f"{_dp}% complete" if getattr(player, "dev_plan", "") else "No active plan.",
+        size=10, color=ft.Colors.GREY_500,
+    )
+
     dlg = ft.AlertDialog(
         title=ft.Row(
             controls=[
@@ -561,6 +596,16 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
                     ft.Text("🏋️ Training", size=13, weight=ft.FontWeight.W_500,
                              color=ft.Colors.AMBER_300),
                     training_dd,
+                    ft.Text("🎯 Development Plan", size=13, weight=ft.FontWeight.W_500,
+                             color=ft.Colors.AMBER_300),
+                    ft.Text(
+                        "Season-long arc: weekly attribute growth toward a target "
+                        "role. Retrain plans can change a player's position.",
+                        size=10, color=ft.Colors.GREY_500,
+                    ),
+                    dev_dd,
+                    dev_progress_bar,
+                    dev_progress_text,
                 ],
             ),
             width=290,
