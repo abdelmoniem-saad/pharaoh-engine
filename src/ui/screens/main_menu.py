@@ -189,7 +189,9 @@ def _show_new_game_slot_dialog(page: ft.Page):
         info = peek_save_info(slot)
 
         if info is None:
-            subtitle = t("empty_slot")
+            title_line = t_format("slot_label", n=i)
+            sub_rows = [ft.Text(t("empty_slot"), size=11,
+                                color=TEXT_SECONDARY)]
 
             def on_pick(e, s=slot):
                 page.pop_dialog()
@@ -198,8 +200,21 @@ def _show_new_game_slot_dialog(page: ft.Page):
             year = int(info.get("season_year") or 2025)
             club_nm = info.get("user_club_name") or "?"
             mgr = info.get("manager_name") or "Manager"
-            subtitle = (f"{club_nm} · {t('season_short')} "
-                        f"{year}/{year + 1} · {mgr}")
+            title_line = club_nm
+            sub_rows = [
+                ft.Row(spacing=4, tight=True, controls=[
+                    ft.Text("👤", size=10),
+                    ft.Text(f"{t('manager_label')}: {mgr}",
+                            size=11, color=TEXT_SECONDARY, expand=True,
+                            max_lines=1,
+                            overflow=ft.TextOverflow.ELLIPSIS),
+                ]),
+                ft.Row(spacing=4, tight=True, controls=[
+                    ft.Text("📅", size=10),
+                    ft.Text(f"{t('season_short')} {year}/{year + 1}",
+                            size=11, color=TEXT_SECONDARY),
+                ]),
+            ]
 
             def on_pick(e, s=slot, inf=info):
                 page.pop_dialog()
@@ -208,22 +223,22 @@ def _show_new_game_slot_dialog(page: ft.Page):
                     lambda s=s: _show_manager_name_dialog(page, s))
 
         tiles.append(ft.ListTile(
-            dense=True,
             leading=_slot_badge(i),
-            title=ft.Text(t_format("slot_label", n=i),
-                          weight=ft.FontWeight.W_600, color=GOLD),
-            subtitle=ft.Text(subtitle, size=11, color=TEXT_SECONDARY,
-                             max_lines=1,
-                             overflow=ft.TextOverflow.ELLIPSIS),
+            title=ft.Text(title_line,
+                          weight=ft.FontWeight.W_600, color=GOLD,
+                          max_lines=1,
+                          overflow=ft.TextOverflow.ELLIPSIS),
+            subtitle=ft.Column(spacing=1, controls=sub_rows),
             on_click=on_pick,
         ))
 
     page.show_dialog(ft.AlertDialog(
+        bgcolor="#0f1729",
         title=ft.Text("🆕 " + t("save_slots"), color=GOLD,
                       weight=ft.FontWeight.BOLD),
         content=ft.Container(
-            content=ft.Column(controls=tiles, spacing=2, tight=True),
-            width=320,
+            content=ft.Column(controls=tiles, spacing=4, tight=True),
+            width=340,
         ),
         actions=[ft.TextButton(t("cancel"),
                                on_click=lambda e: page.pop_dialog())],
@@ -245,6 +260,7 @@ def _show_load_game_dialog(page: ft.Page):
             year = int(info.get("season_year") or 2025)
             club_nm = info.get("user_club_name") \
                 or info.get("manager_name") or t("load")
+            mgr = info.get("manager_name") or "Manager"
 
             def _load(e, s=slot):
                 page.pop_dialog()
@@ -255,20 +271,30 @@ def _show_load_game_dialog(page: ft.Page):
                 _confirm_delete_slot(page, s)
 
             tiles.append(ft.ListTile(
-                dense=True,
                 leading=_slot_badge(i),
-                title=ft.Text(club_nm, weight=ft.FontWeight.W_600,
+                title=ft.Text(club_nm, size=14,
+                              weight=ft.FontWeight.W_600,
                               max_lines=1,
                               overflow=ft.TextOverflow.ELLIPSIS),
-                subtitle=ft.Text(
-                    f"{t('season_short')} {year}/{year+1} · "
-                    f"{t('manager_label')}: "
-                    f"{info.get('manager_name') or 'Manager'}",
-                    size=11, color=TEXT_MUTED, max_lines=1,
-                    overflow=ft.TextOverflow.ELLIPSIS,
+                subtitle=ft.Column(
+                    spacing=1,
+                    controls=[
+                        ft.Row(spacing=4, tight=True, controls=[
+                            ft.Text("👤", size=10),
+                            ft.Text(f"{t('manager_label')}: {mgr}",
+                                    size=11, color=TEXT_MUTED, expand=True,
+                                    max_lines=1,
+                                    overflow=ft.TextOverflow.ELLIPSIS),
+                        ]),
+                        ft.Row(spacing=4, tight=True, controls=[
+                            ft.Text("📅", size=10),
+                            ft.Text(f"{t('season_short')} {year}/{year + 1}",
+                                    size=11, color=TEXT_MUTED),
+                        ]),
+                    ],
                 ),
                 trailing=ft.IconButton(ft.Icons.DELETE_OUTLINE,
-                                       icon_size=18,
+                                       icon_size=16,
                                        icon_color="#EF5350",
                                        tooltip=t("delete_save"),
                                        on_click=_ask_delete),
@@ -290,12 +316,13 @@ def _show_load_game_dialog(page: ft.Page):
         ))
 
     page.show_dialog(ft.AlertDialog(
+        bgcolor="#0f1729",
         title=ft.Text("📂 " + t("load_game"), color=GOLD,
                       weight=ft.FontWeight.BOLD),
         content=ft.Container(
-            content=ft.Column(controls=tiles, spacing=2,
+            content=ft.Column(controls=tiles, spacing=4,
                               scroll=ft.ScrollMode.AUTO),
-            width=330, height=400,
+            width=350,
         ),
         actions=[ft.TextButton(t("cancel"),
                                on_click=lambda e: page.pop_dialog())],
