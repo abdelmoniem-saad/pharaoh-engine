@@ -1,8 +1,7 @@
 """
 UI Theme constants — centralized colors, spacing, and styling for mobile-first design.
 
-Premium Egyptian pharaoh-themed visual language: rich dark gradients,
-golden amber accents, frosted glass cards with glow borders.
+Restrained club-management workspace with opaque surfaces and clear hierarchy.
 Portrait-mode optimized for 360px–430px phone widths.
 """
 from __future__ import annotations
@@ -11,35 +10,35 @@ import flet as ft
 
 # ── Brand Palette ───────────────────────────────────────────────────────────
 # Deep navy → teal gradient background inspired by Egyptian night sky
-BG_DARK = "#0a0e1a"        # deepest background
-BG_MID = "#0f1729"          # mid-tone panels
-BG_SURFACE = "#141e33"      # card surfaces
-BG_TEAL = "#0d2137"         # teal accent tone
+BG_DARK = "#10141B"        # deepest background
+BG_MID = "#171D26"          # mid-tone panels
+BG_SURFACE = "#202833"      # card surfaces
+BG_TEAL = "#202833"         # teal accent tone
 
 # Golden / Amber — the pharaoh accent
-GOLD = "#FFD54F"
-GOLD_DARK = "#F9A825"
+GOLD = "#DDC08A"
+GOLD_DARK = "#9C7741"
 GOLD_GLOW = ft.Colors.with_opacity(0.25, "#FFD54F")
-GOLD_BORDER = ft.Colors.with_opacity(0.18, "#FFD54F")
-GOLD_BORDER_STRONG = ft.Colors.with_opacity(0.35, "#FFD54F")
+GOLD_BORDER = "#2C3642"
+GOLD_BORDER_STRONG = "#596674"
 
-ACCENT = ft.Colors.AMBER_400
-ACCENT_DARK = ft.Colors.AMBER_700
+ACCENT = "#DDC08A"
+ACCENT_DARK = "#795B2F"
 ACCENT_BG = ft.Colors.with_opacity(0.10, ft.Colors.AMBER)
 
 # ── Card / Glass surfaces ──────────────────────────────────────────────────
-CARD_BG = ft.Colors.with_opacity(0.10, ft.Colors.WHITE)
-CARD_GLASS = ft.Colors.with_opacity(0.08, ft.Colors.WHITE)       # frosted glass
-CARD_GLASS_STRONG = ft.Colors.with_opacity(0.14, ft.Colors.WHITE) # elevated glass
-CARD_BG_HOVER = ft.Colors.with_opacity(0.16, ft.Colors.WHITE)
+CARD_BG = "#1B222C"
+CARD_GLASS = "#171D26"
+CARD_GLASS_STRONG = "#1B222C"
+CARD_BG_HOVER = "#25303D"
 CARD_BG_HIGHLIGHT = ft.Colors.with_opacity(0.12, ft.Colors.GREEN)
 CARD_BG_DANGER = ft.Colors.with_opacity(0.12, ft.Colors.RED)
 
-SECTION_BG = ft.Colors.with_opacity(0.05, ft.Colors.WHITE)
+SECTION_BG = "#171D26"
 
 # ── Text ────────────────────────────────────────────────────────────────────
-TEXT_PRIMARY = "#EAEAEA"
-TEXT_SECONDARY = "#9E9E9E"
+TEXT_PRIMARY = "#F1F3F5"
+TEXT_SECONDARY = "#B3BDC8"
 TEXT_MUTED = "#91A0B3"
 TEXT_SUCCESS = "#66BB6A"
 TEXT_WARNING = "#FFCA28"
@@ -58,13 +57,13 @@ PITCH_LIGHT = "#2E7D32"
 PITCH_LINE = ft.Colors.with_opacity(0.35, ft.Colors.WHITE)
 
 # ── Spacing ─────────────────────────────────────────────────────────────────
-CARD_RADIUS = 14
+CARD_RADIUS = 16
 CARD_RADIUS_SM = 10
-CARD_PADDING = 14
+CARD_PADDING = 20
 CARD_PADDING_SM = 10
-PAGE_PADDING = 14
-SECTION_SPACING = 12
-ITEM_SPACING = 6
+PAGE_PADDING = 20
+SECTION_SPACING = 24
+ITEM_SPACING = 12
 
 # ── Touch targets ───────────────────────────────────────────────────────
 MIN_TOUCH_TARGET = 44
@@ -72,9 +71,9 @@ TOUCH_ROW_PADDING_V = 10
 NAV_BAR_HEIGHT = 60
 
 # ── Typography ──────────────────────────────────────────────────────────────
-TITLE_SIZE = 22
+TITLE_SIZE = 28
 SUBTITLE_SIZE = 15
-BODY_SIZE = 14
+BODY_SIZE = 15
 CAPTION_SIZE = 12
 TINY_SIZE = 11
 
@@ -158,7 +157,7 @@ def gradient_bg(
 ) -> ft.LinearGradient:
     """Dark-to-teal vertical gradient for screen backgrounds."""
     return ft.LinearGradient(
-        colors=colors or [BG_DARK, BG_MID, BG_TEAL],
+        colors=colors or [BG_DARK, BG_DARK],
         begin=begin,
         end=end,
     )
@@ -186,11 +185,6 @@ def glass_card(
     border_color = GOLD_BORDER if border_color is None else border_color
     border_radius = CARD_RADIUS if border_radius is None else border_radius
     shadow = None
-    if glow:
-        shadow = ft.BoxShadow(
-            spread_radius=0, blur_radius=8,
-            color=GOLD_GLOW, offset=ft.Offset(0, 0),
-        )
     return ft.Container(
         content=content,
         padding=padding,
@@ -218,10 +212,9 @@ def header_bar(
     Includes a notification bell with unread count badge.
     """
     left = []
-    if icon:
-        left.append(ft.Icon(icon, size=22, color=GOLD))
+    # Screen title provides hierarchy; icons are reserved for actions.
     left.append(
-        ft.Column(spacing=0, expand=True, controls=[
+        ft.Column(spacing=6, expand=True, controls=[
             ft.Text(title, size=TITLE_SIZE, weight=ft.FontWeight.BOLD,
                     color=TEXT_PRIMARY),
             *([ ft.Text(subtitle, size=CAPTION_SIZE, color=TEXT_SECONDARY) ]
@@ -286,13 +279,8 @@ def header_bar(
                 ft.Row(spacing=0, controls=right) if right else ft.Container(),
             ],
         ),
-        padding=ft.padding.only(left=PAGE_PADDING, right=8, top=12, bottom=10),
-        gradient=ft.LinearGradient(
-            colors=[BG_SURFACE, ft.Colors.with_opacity(0, BG_SURFACE)],
-            begin=ft.Alignment(0, -1), end=ft.Alignment(0, 1),
-        ),
-        border=ft.border.only(bottom=ft.BorderSide(3 if current_theme() == "supporter" else 1,
-                                                       SECONDARY_ACCENT if current_theme() == "supporter" else GOLD_BORDER)),
+        padding=ft.padding.only(left=0, right=0, top=12, bottom=16),
+
     )
 
 
@@ -354,17 +342,18 @@ def configure(name: str) -> None:
         globals().update(
             BG_DARK="#11191F", BG_MID="#18252D", BG_SURFACE="#23343E", BG_TEAL="#123B48",
             GOLD="#FFAC7A", GOLD_DARK="#C34A15", ACCENT="#FFAC7A", ACCENT_DARK="#AA3D10",
-            ACCENT_BG="#332D27", GOLD_GLOW="#334F2818", GOLD_BORDER="#38515D",
+            ACCENT_BG="#332D27", GOLD_GLOW="#334F2818", GOLD_BORDER="#2C3C45",
             GOLD_BORDER_STRONG="#69C5DD", CARD_BG="#23343E", CARD_GLASS="#1D2C35",
-            CARD_GLASS_STRONG="#23343E", CARD_BG_HOVER="#304652", SECTION_BG="#18252D",
+            CARD_GLASS_STRONG="#1B2B33", CARD_BG_HOVER="#304652", SECTION_BG="#18252D",
             TEXT_PRIMARY="#F5F3ED", TEXT_SECONDARY="#BDC9CD", TEXT_MUTED="#A4B5BD",
-            CARD_RADIUS=8, CARD_RADIUS_SM=6, TITLE_SIZE=24, BODY_SIZE=14,
-            CAPTION_SIZE=12, TINY_SIZE=11, SECTION_SPACING=14,
+            CARD_RADIUS=16, CARD_RADIUS_SM=10, TITLE_SIZE=28, BODY_SIZE=15,
+            CAPTION_SIZE=12, TINY_SIZE=11, SECTION_SPACING=24,
         )
     PRIMARY_BTN_STYLE = ft.ButtonStyle(
         bgcolor=ACCENT_DARK, color="#FFFFFF",
         text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
         shape=ft.RoundedRectangleBorder(radius=CARD_RADIUS_SM), elevation=0,
+        padding=ft.padding.symmetric(horizontal=24, vertical=14),
     )
     SECONDARY_BTN_STYLE = ft.ButtonStyle(
         bgcolor=CARD_GLASS_STRONG, color=TEXT_PRIMARY,

@@ -34,9 +34,11 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
 
     players = queries.get_players_by_club(conn, club.id)
 
+    # Football order keeps each position group contiguous.
+    position_order = {p: i for i, p in enumerate(("GK", "CB", "LB", "RB", "CDM", "CM", "LM", "RM", "CAM", "LW", "RW", "ST"))}
     # Sorting
     sort_options = {
-        t("position") + ":": lambda p: (p.position.value, -calculate_overall_rating(p)),
+        t("position") + ":": lambda p: (position_order.get(p.position.value, 99), -calculate_overall_rating(p)),
         t("overall") + " ↓": lambda p: -calculate_overall_rating(p),
         t("age"): lambda p: p.age,
         t("fitness"): lambda p: -p.fitness,
@@ -53,7 +55,7 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
     suspended_count = sum(1 for p in players if p.suspension_matches > 0)
 
     # Build player cards
-    def _build_player_list(sorted_players):
+    def _build_player_list(sorted_players, grouped=True):
         """Build a list of player_card_h widgets, grouped by position."""
         cards = []
         from src.utils.config import POSITION_GROUP_MAP, PositionGroup
@@ -68,10 +70,10 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
 
         for player in sorted_players:
             grp = POSITION_GROUP_MAP.get(player.position, PositionGroup.MIDFIELDER)
-            if grp.value != current_group:
+            if grouped and grp.value != current_group:
                 current_group = grp.value
                 group_label = {
-                    "GK": t("GK"), "DEF": t("DEF"), "MID": t("MID"), "ATT": t("FWD"),
+                    "GK": t("goalkeepers"), "DEF": t("defenders"), "MID": t("midfielders"), "ATT": t("forwards"),
                 }.get(current_group, current_group)
                 cards.append(position_group_header(
                     group_label, group_counter.get(current_group, 0)
@@ -104,13 +106,13 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
     player_cards = _build_player_list(players)
 
     # The player list container (will be rebuilt on sort)
-    player_list_col = ft.Column(spacing=4, controls=player_cards)
+    player_list_col = ft.Column(spacing=0, controls=player_cards)
 
     def on_sort_change(e):
         key = e.control.value
-        sort_fn = sort_options.get(key, sort_options["Position"])
+        sort_fn = sort_options.get(key, sort_options[default_sort])
         players.sort(key=sort_fn)
-        player_list_col.controls = _build_player_list(players)
+        player_list_col.controls = _build_player_list(players, grouped=key == default_sort)
         page.update()
 
     # Recent form
@@ -145,8 +147,8 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                     controls=[
                         # ── Header (minimal) ────────────────────────────
                         theme.header_bar(
-                            title=display_name(queries.get_club(conn, gs.user_club_id)),
-                            subtitle=f"👤 {gs.manager_name}  •  📅 {gs.current_date.strftime('%d %b %Y')}",
+                            title=t("squad"),
+                            subtitle=display_name(club) + " · " + gs.current_date.strftime("%d %b %Y"),
                             icon=ft.Icons.SHIELD,
                             page=page,
                             extra_controls=[
@@ -159,14 +161,14 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
 
                         # Quick nav
                         ft.Row(spacing=6, controls=[
-                            ft.OutlinedButton(f"🏟️ {t('my_club')}", height=32,
+                            ft.OutlinedButton(t("my_club"), height=44,
                                               on_click=lambda e: navigate(page, "/club"),
                                               style=ft.ButtonStyle(
                                                   padding=ft.padding.symmetric(horizontal=12),
                                                   shape=ft.RoundedRectangleBorder(radius=10),
                                                   side=ft.BorderSide(1, theme.GOLD_BORDER),
                                               )),
-                            ft.OutlinedButton(f"🔁 {t('transfers')}", height=32,
+                            ft.OutlinedButton(t("transfers"), height=44,
                                               on_click=lambda e: navigate(page, "/transfers"),
                                               style=ft.ButtonStyle(
                                                   padding=ft.padding.symmetric(horizontal=12),
@@ -175,66 +177,30 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                                               )),
                         ]),
 
-                        # ── Squad Summary (collapsed) ──────────────────
-                        collapsible_section(
-                            f"📊 {t('squad_summary')}",
-                            [
-                                ft.Row(
-                                    spacing=6, scroll=ft.ScrollMode.AUTO,
-                                    controls=[
-                                        info_tile(t("pos_label"), f"{user_pos}{'st' if user_pos == 1 else 'nd' if user_pos == 2 else 'rd' if user_pos == 3 else 'th'}",
-                                                  icon=ft.Icons.EMOJI_EVENTS),
-                                        info_tile(t("points_short"), str(user_pts), icon=ft.Icons.STAR),
-                                        info_tile(t("squad_label"), str(len(players)), icon=ft.Icons.PEOPLE),
-                                        info_tile(t("avg_ovr"), f"{avg_ovr:.0f}", icon=ft.Icons.INSIGHTS),
-                                    ],
-                                ),
-                                ft.Container(
-                                    content=ft.Row(
-                                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                                        controls=[
-                                            ft.Row(spacing=6, tight=True, controls=[
-                                                ft.Text(f"{t('form_label')}:", size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED),
-                                                form_chips(form_results),
-                                            ]),
-                                            ft.Row(spacing=4, tight=True, controls=[
-                                                *([ ft.Text(f"🏥 {injured_count}", size=theme.CAPTION_SIZE,
-                                                            color=ft.Colors.RED_400)
-                                                ] if injured_count > 0 else []),
-                                                *([ ft.Text(f"🚫 {suspended_count}", size=theme.CAPTION_SIZE,
-                                                            color=ft.Colors.ORANGE_400)
-                                                ] if suspended_count > 0 else []),
-                                            ]),
-                                        ],
-                                    ),
-                                    padding=ft.padding.symmetric(horizontal=8, vertical=6),
-                                    border_radius=8,
-                                    bgcolor=theme.CARD_GLASS,
-                                    border=ft.border.all(1, theme.GOLD_BORDER),
-                                ),
-                            ],
-                            initially_expanded=False,
-                            subtitle=f"{len(players)} players  •  Avg {avg_ovr:.0f} OVR",
-                        ),
+                        ft.Row(spacing=12, controls=[
+                            _squad_metric(t("squad_label"), str(len(players))),
+                            _squad_metric(t("avg_ovr"), f"{avg_ovr:.0f}"),
+                            _squad_metric(t("position"), str(user_pos)),
+                        ]),
 
                         # ── Sort + Compare + Player List ────────────────
                         ft.Row(
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
-                                ft.Text("Tap a player for details",
-                                        size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED, italic=True),
+                                ft.Text(t("players"),
+                                        size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY, weight=ft.FontWeight.W_600),
                                 ft.Row(spacing=4, tight=True, controls=[
                                     ft.IconButton(
                                         icon=ft.Icons.COMPARE_ARROWS, icon_size=18,
-                                        icon_color=theme.TEXT_SECONDARY, tooltip="Compare Players",
+                                        icon_color=theme.TEXT_SECONDARY, tooltip=t("compare_players"),
                                         on_click=lambda e: _start_compare(page, players),
                                     ),
                                     ft.Dropdown(
-                                        label="Sort",
+                                        label=t("sort_by"),
                                         value=default_sort,
                                         options=[ft.dropdown.Option(k) for k in sort_options],
                                         on_select=on_sort_change,
-                                        width=120, text_size=11,
+                                        width=150, text_size=12,
                                     ),
                                 ]),
                             ],
@@ -247,6 +213,15 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
             ),
         ],
     )
+
+
+def _squad_metric(label, value):
+    return ft.Container(expand=True, padding=16, border_radius=12,
+        bgcolor=theme.CARD_GLASS_STRONG,
+        content=ft.Column(spacing=8, controls=[
+            ft.Text(label, size=11, color=theme.TEXT_MUTED),
+            ft.Text(value, size=26, weight=ft.FontWeight.W_600, color=theme.TEXT_PRIMARY),
+        ]))
 
 
 def _show_player_detail(page: ft.Page, player, ovr: int):

@@ -24,7 +24,9 @@ def build_main_menu(page: ft.Page) -> ft.Column:
 
     # One-time upgrade: surface a legacy default.db career as Slot 1.
     from src.data.database import migrate_legacy_default_slot
-    migrate_legacy_default_slot()
+    from src.ui.app import app_state
+    if app_state.db_conn is None:
+        migrate_legacy_default_slot()
 
     def new_game_click(e):
         _show_new_game_slot_dialog(page)
@@ -39,125 +41,52 @@ def build_main_menu(page: ft.Page) -> ft.Column:
     # No navigation bar on main menu
     page.navigation_bar = None
 
-    # Title block
-    title_block = ft.Column(
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        spacing=4,
-        controls=[
-            ft.Container(
-                content=ft.Icon(ft.Icons.SHIELD, size=56, color=theme.GOLD),
-                width=80, height=80, border_radius=40,
-                bgcolor=ft.Colors.with_opacity(0.10, theme.GOLD),
-                alignment=ft.Alignment(0, 0),
-                shadow=ft.BoxShadow(
-                    spread_radius=2, blur_radius=20,
-                    color=ft.Colors.with_opacity(0.15, theme.GOLD),
-                ),
-            ),
-            ft.Container(height=8),
-            ft.Text(
-                t("app_title").upper(),
-                size=34, weight=ft.FontWeight.BOLD,
-                text_align=ft.TextAlign.CENTER,
-                color=theme.GOLD,
-            ),
-            ft.Container(
-                content=ft.Row(
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    spacing=8,
-                    controls=[
-                        ft.Container(width=30, height=1, bgcolor=theme.GOLD_BORDER_STRONG),
-                        ft.Text("⚽", size=12),
-                        ft.Container(width=30, height=1, bgcolor=theme.GOLD_BORDER_STRONG),
-                    ],
-                ),
-            ),
-            ft.Text(
-                t("egyptian_football_manager"),
-                size=15,
-                color=theme.TEXT_SECONDARY,
-                text_align=ft.TextAlign.CENTER,
-                italic=True,
-            ),
-        ],
-    )
-
-    if theme.current_theme() == "supporter":
-        from src.utils.localization import is_rtl
-        title_block = ft.Container(
-            padding=24, margin=ft.margin.symmetric(horizontal=20),
-            bgcolor=theme.BG_SURFACE, border_radius=theme.CARD_RADIUS,
-            border=ft.border.only(top=ft.BorderSide(4, theme.SECONDARY_ACCENT)),
-            content=ft.Column(spacing=14, horizontal_alignment=ft.CrossAxisAlignment.START, controls=[
-                ft.Text("موسمك. ناديك. حكايتك." if is_rtl() else "YOUR CLUB. YOUR SEASON.",
-                        size=12, weight=ft.FontWeight.BOLD, color=theme.SECONDARY_ACCENT),
-                ft.Text(t("app_title"), size=34, weight=ft.FontWeight.W_900,
-                        color=theme.TEXT_PRIMARY),
-                ft.Text("من المدرج لدكة المدير الفني" if is_rtl() else "From the stands to the touchline.",
-                        size=19, weight=ft.FontWeight.BOLD, color=theme.GOLD),
-                ft.Text(t("egyptian_football_manager"), size=14, color=theme.TEXT_SECONDARY),
-            ]),
-        )
-
-    # Buttons
-    button_block = ft.Column(
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        spacing=10,
-        controls=[
-            ft.ElevatedButton(
-                "⚽  " + t("new_game"),
-                width=280, height=56,
-                style=theme.PRIMARY_BTN_STYLE,
-                on_click=new_game_click,
-            ),
-            ft.ElevatedButton(
-                "📂  " + t("continue_game"),
-                width=280, height=52,
-                style=theme.SECONDARY_BTN_STYLE,
-                on_click=continue_click,
-            ),
-            ft.OutlinedButton(
-                "⚙️  " + t("settings"),
-                width=280, height=48,
-                style=ft.ButtonStyle(
-                    color=theme.TEXT_SECONDARY,
-                    shape=ft.RoundedRectangleBorder(radius=12),
-                    side=ft.BorderSide(1, theme.GOLD_BORDER),
-                ),
-                on_click=settings_click,
-            ),
-        ],
-    )
-
-    return ft.Column(
-        expand=True,
-        controls=[
-            ft.Container(
-                expand=True,
-                gradient=theme.gradient_bg(
-                    colors=[theme.BG_DARK, theme.BG_MID, theme.BG_MID, theme.BG_TEAL],
-                ),
-                padding=0,
-                content=ft.Column(
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    expand=True,
-                    controls=[
-                        ft.Container(expand=2),
-                        title_block,
-                        ft.Container(expand=1),
-                        button_block,
-                        ft.Container(expand=2),
-                        ft.Text(
-                            f"v{APP_VERSION}",
-                            size=11, color=theme.TEXT_MUTED,
-                        ),
-                        ft.Container(height=16),
-                    ],
-                ),
-            ),
-        ],
-    )
+    from src.utils.localization import is_rtl
+    accent = theme.SECONDARY_ACCENT if theme.current_theme() == "supporter" else theme.ACCENT
+    has_career = any(peek_save_info(slot) for slot in SAVE_SLOTS)
+    pitch_inner_width = min(page.width or 390, 400) - 84
+    # Original pitch illustration: no third-party identity assets.
+    pitch = ft.Container(height=158, padding=18, border_radius=16,
+        bgcolor=theme.BG_SURFACE,
+        content=ft.Stack(controls=[
+            ft.Container(left=0, right=0, top=0, bottom=0,
+                         border=ft.border.all(1, theme.GOLD_BORDER_STRONG), border_radius=6),
+            ft.Container(left=0, right=0, top=60, height=1, bgcolor=theme.GOLD_BORDER_STRONG),
+            ft.Container(width=54, height=54, left=(pitch_inner_width - 54) / 2, top=34, border_radius=27,
+                         border=ft.border.all(1, theme.GOLD_BORDER_STRONG)),
+            *[ft.Container(left=pitch_inner_width * x - 5, top=y, width=10, height=10, border_radius=5, bgcolor=accent)
+              for x, y in [(.25, 83), (.5, 100), (.75, 83), (.37, 52), (.63, 52), (.5, 20)]],
+        ]))
+    return ft.Column(expand=True, scroll=ft.ScrollMode.AUTO,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
+            ft.Container(width=min(page.width or 390, 800), alignment=ft.Alignment(0, 0),
+                content=ft.Container(width=400, padding=24, content=ft.Column(spacing=28, controls=[
+                ft.Container(height=28),
+                ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
+                    ft.Text("PHARAOH / FOOTBALL", size=11, weight=ft.FontWeight.W_700,
+                            color=accent),
+                    ft.IconButton(icon=ft.Icons.SETTINGS_OUTLINED, tooltip=t("settings"),
+                                  icon_color=theme.TEXT_SECONDARY, on_click=settings_click),
+                ]),
+                ft.Column(spacing=14, controls=[
+                    ft.Text("كل موسم\nحكاية جديدة." if is_rtl() else "Every season.\nA new story.",
+                            size=42, weight=ft.FontWeight.W_700, color=theme.TEXT_PRIMARY),
+                    ft.Text(t("egyptian_football_manager"), size=15, color=theme.TEXT_SECONDARY),
+                ]),
+                pitch,
+                ft.Column(spacing=12, horizontal_alignment=ft.CrossAxisAlignment.STRETCH, controls=[
+                    ft.ElevatedButton(t("continue_game") if has_career else t("new_game"), height=54,
+                        icon=ft.Icons.PLAY_ARROW_ROUNDED, style=theme.PRIMARY_BTN_STYLE,
+                        on_click=continue_click if has_career else new_game_click),
+                    ft.OutlinedButton(t("new_game"), height=54, visible=has_career,
+                        icon=ft.Icons.ADD, style=theme.SECONDARY_BTN_STYLE, on_click=new_game_click),
+                ]),
+                ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
+                    ft.Text(t("app_title"), size=12, color=theme.TEXT_MUTED),
+                    ft.Text(f"v{APP_VERSION}", size=11, color=theme.TEXT_MUTED),
+                ]),
+            ]))),
+        ])
 
 
 # ── Multi-Slot Save System ──────────────────────────────────────────────────

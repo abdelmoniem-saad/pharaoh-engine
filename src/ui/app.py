@@ -543,7 +543,10 @@ def navigate(page: ft.Page, route: str):
         # The animate_opacity on the container still provides a smooth feel
         # on initial load, but we avoid the "glimpse then disappear" flicker
         # caused by the background-thread timer fighting Flet's animation.
-        tc.content = new_content
+        frame = ft.Container(width=min(page.width or 390, 800), content=new_content)
+        app_state._workspace_frame = frame
+        tc.content = ft.Row(expand=True, alignment=ft.MainAxisAlignment.CENTER,
+                            vertical_alignment=ft.CrossAxisAlignment.STRETCH, controls=[frame])
         tc.opacity = 1
         page.update()
     else:
@@ -603,6 +606,14 @@ def main(page: ft.Page):
         animate_opacity=ft.Animation(200, ft.AnimationCurve.EASE_IN_OUT),
     )
     app_state._transition_container = transition_container
+
+    def resize_workspace(e):
+        frame = getattr(app_state, "_workspace_frame", None)
+        if frame is not None:
+            frame.width = min(page.width or 390, 800)
+            page.update()
+    page.on_resize = resize_workspace
+
 
     # ── Notification overlay — floats above screen content ───────────────
     # IMPORTANT: The overlay must not block pointer events on the content

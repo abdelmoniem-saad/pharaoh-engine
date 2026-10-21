@@ -51,10 +51,29 @@ def test_career_screens_build(palette, language, monkeypatch):
             ('inbox','build_inbox_screen'), ('club_overview','build_club_overview_screen'),
             ('fixtures','build_fixtures_screen'), ('transfers','build_transfers_screen'),
             ('pre_match','build_pre_match_screen'), ('settings','build_settings_screen'),
-            ('history','build_history_screen'),
+            ('history','build_history_screen'), ('main_menu','build_main_menu'),
         ]:
             module = import_module('src.ui.screens.' + screen)
             assert getattr(module, builder)(page) is not None, screen
+        # Sorting used to evaluate a nonexistent fallback key even for valid choices.
+        from dataclasses import fields
+        import flet as ft
+        def walk(control):
+            yield control
+            for field in fields(control):
+                value = getattr(control, field.name)
+                if isinstance(value, ft.Control):
+                    yield from walk(value)
+                elif isinstance(value, list):
+                    for child in value:
+                        if isinstance(child, ft.Control):
+                            yield from walk(child)
+        from src.ui.screens.squad import build_squad_screen
+        squad = build_squad_screen(page)
+        dropdown = next(c for c in walk(squad) if isinstance(c, ft.Dropdown))
+        for option in dropdown.options:
+            dropdown.value = option.key
+            dropdown.on_select(SimpleNamespace(control=dropdown))
         app.show_tutorial_overlay(page)
         assert page.overlay
         from src.ui.screens.main_menu import _show_load_game_dialog

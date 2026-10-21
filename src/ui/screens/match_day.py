@@ -71,38 +71,13 @@ def _tips_block(page, gs) -> list:
         from src.ui.app import navigate
         navigate(page, "/match_day")
 
-    card = ft.Container(
-        width=330,
-        content=ft.Column(
-            tight=True,
-            spacing=6,
-            controls=[
-                ft.Row(
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                    controls=[
-                        ft.Text("💡 Manager Tips", size=14,
-                                weight=ft.FontWeight.BOLD, color=theme.GOLD),
-                        ft.IconButton(ft.Icons.CLOSE, icon_size=16,
-                                      icon_color="#9E9E9E",
-                                      tooltip="Dismiss",
-                                      on_click=_dismiss),
-                    ],
-                ),
-                *[
-                    ft.Row(spacing=8, controls=[
-                        ft.Text(icon, size=15),
-                        ft.Text(txt, size=12, color="#BDBDBD", expand=True),
-                    ])
-                    for icon, txt in tip_rows
-                ],
-            ],
-        ),
-        bgcolor=theme.BG_SURFACE,
-        border_radius=12,
-        padding=ft.padding.symmetric(horizontal=12, vertical=8),
-        border=ft.border.all(1, theme.GOLD_BORDER),
-    )
-    return [card, ft.Container(height=6)]
+    from src.ui.widgets.cards import collapsible_section
+    card = collapsible_section(t("manager_guide"), [
+        ft.Text(t("manager_guide_text"), size=13, color=theme.TEXT_SECONDARY),
+        ft.TextButton(t("dismiss"), on_click=_dismiss),
+    ], icon=ft.Icons.HELP_OUTLINE)
+    return [card]
+
 
 
 def build_match_day_screen(page: ft.Page) -> ft.Column:
@@ -221,8 +196,8 @@ def _build_match_preview(page, conn, gs, fixture):
 
     # ── Match card (always visible — the main focus) ─────────────────
     match_card = match_score_card(
-        home_name=fixture.home_club_name,
-        away_name=fixture.away_club_name,
+        home_name=display_home_name(fixture),
+        away_name=display_away_name(fixture),
         competition=fixture.competition,
         matchday=matchday_str,
         is_home=is_home,
@@ -234,7 +209,7 @@ def _build_match_preview(page, conn, gs, fixture):
     if days_until <= 0:
         action_controls.append(
             ft.ElevatedButton(
-                f"⚽ {t('play_match_btn')}",
+                t("play_match_btn"),
                 width=280, height=56,
                 style=theme.PRIMARY_BTN_STYLE,
                 on_click=simulate_click,
@@ -256,13 +231,13 @@ def _build_match_preview(page, conn, gs, fixture):
         )
         action_controls.append(
             ft.ElevatedButton(
-                f"⏩ {t('skip_to_match_day')}", width=280, height=50,
+                t("skip_to_match_day"), width=280, height=50,
                 style=theme.PRIMARY_BTN_STYLE,
                 on_click=advance_to_match_click,
             )
         )
         action_controls.append(
-            ft.OutlinedButton(f"📅 {t('advance_1_day')}", width=280, height=45,
+            ft.OutlinedButton(t("advance_1_day"), width=280, height=45,
                                style=theme.SECONDARY_BTN_STYLE,
                                on_click=advance_one_day),
         )
@@ -368,23 +343,24 @@ def _build_match_preview(page, conn, gs, fixture):
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
             ft.Container(
-                padding=ft.padding.only(left=12, right=12, top=10, bottom=10),
+                padding=theme.PAGE_PADDING,
+                width=theme.content_width(page) + 2 * theme.PAGE_PADDING,
                 content=ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=12,
+                    spacing=24,
                     controls=[
                         theme.header_bar(
                             title=t("match_day"),
-                            subtitle=f"📅 {gs.current_date.strftime('%d %B %Y')}",
+                            subtitle=gs.current_date.strftime("%d %B %Y"),
                             icon=ft.Icons.SPORTS_SOCCER,
                             page=page,
                         ),
                         match_card,
                         ft.Container(height=4),
                         *action_controls,
-                        *_tips_block(page, gs),
                         intel_section,
                         fixtures_section,
+                        *_tips_block(page, gs),
                         ft.Container(height=10),
                     ],
                 ),
@@ -423,7 +399,7 @@ def _build_no_match_view(page, conn, gs):
                                                      text_style=ft.TextStyle(size=16)),
                                on_click=advance_to_match),
             ft.Container(height=8),
-            ft.OutlinedButton(f"📅 {t('advance_1_day')}", width=260, height=42,
+            ft.OutlinedButton(t("advance_1_day"), width=260, height=42,
                                on_click=advance_one),
             *_tips_block(page, gs),
         ],

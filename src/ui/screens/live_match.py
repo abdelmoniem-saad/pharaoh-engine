@@ -125,11 +125,11 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
 
     # ── UI Controls ──────────────────────────────────────────────────
     score_text = ft.Text(
-        "0 - 0", size=36, weight=ft.FontWeight.BOLD,
-        color=theme.GOLD, text_align=ft.TextAlign.CENTER,
+        "0 - 0", size=44, weight=ft.FontWeight.BOLD,
+        color=theme.TEXT_PRIMARY, text_align=ft.TextAlign.CENTER,
     )
     minute_text = ft.Text(
-        "0'", size=20, color=ft.Colors.GREY_400,
+        "0'", size=16, color=ft.Colors.GREY_400,
         weight=ft.FontWeight.W_500, text_align=ft.TextAlign.CENTER,
     )
     progress_bar = ft.ProgressBar(
@@ -143,7 +143,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
     event_list = ft.ListView(spacing=6, height=max(180, min(340, (page.height or 844) - 400)), auto_scroll=True)
 
     skip_btn = ft.ElevatedButton(
-        ("⏩ تخطي للنهاية" if is_rtl() else "⏩ Skip to End"), width=140, height=42,
+        ("تخطي للنهاية" if is_rtl() else "Skip to End"), width=140, height=42,
         style=ft.ButtonStyle(
             bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
             color=ft.Colors.WHITE,
@@ -153,7 +153,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         ),
     )
     subs_btn = ft.ElevatedButton(
-        f"🔄 {t('substitution')} ({subs_remaining[0]})", width=120, height=42, visible=False,
+        f"{t('substitution')} ({subs_remaining[0]})", width=150, height=46, visible=False,
         style=ft.ButtonStyle(
             bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.BLUE),
             color=ft.Colors.WHITE,
@@ -434,14 +434,15 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
 
     # ── Layout ───────────────────────────────────────────────────────
     content = ft.Column(
-        expand=True,
+        expand=True, scroll=ft.ScrollMode.AUTO,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
             ft.Container(
-                padding=ft.padding.only(left=12, right=12, top=10, bottom=10),
+                padding=theme.PAGE_PADDING,
+                width=min(page.width or 390, 800),
                 content=ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=8,
+                    spacing=20,
                     controls=[
                         # Header
                         ft.Container(
@@ -467,14 +468,14 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                                                 display_home_name(result), size=14,
                                                 weight=ft.FontWeight.BOLD,
                                                 text_align=ft.TextAlign.RIGHT, expand=True,
-                                                max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
+                                                max_lines=2, overflow=ft.TextOverflow.ELLIPSIS,
                                             ),
                                             score_text,
                                             ft.Text(
                                                 display_away_name(result), size=14,
                                                 weight=ft.FontWeight.BOLD,
                                                 text_align=ft.TextAlign.LEFT, expand=True,
-                                                max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
+                                                max_lines=2, overflow=ft.TextOverflow.ELLIPSIS,
                                             ),
                                         ],
                                     ),
@@ -483,10 +484,10 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                                     status_text,
                                 ],
                             ),
-                            padding=ft.padding.symmetric(horizontal=12, vertical=14),
-                            border_radius=14,
-                            bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.WHITE),
-                            border=ft.border.all(1, ft.Colors.with_opacity(0.18, theme.GOLD)),
+                            padding=ft.padding.symmetric(horizontal=16, vertical=24),
+                            border_radius=theme.CARD_RADIUS,
+                            bgcolor=theme.CARD_GLASS_STRONG,
+                            border=ft.border.all(1, theme.GOLD_BORDER),
                             shadow=ft.BoxShadow(
                                 spread_radius=0, blur_radius=8,
                                 color=ft.Colors.with_opacity(0.08, theme.GOLD),
@@ -495,7 +496,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
 
                         # Event feed
                         ft.Container(
-                            content=ft.Text(f"📜 {t('match_commentary')}", size=14,
+                            content=ft.Text(t("match_commentary"), size=14,
                                              weight=ft.FontWeight.W_500, color=ft.Colors.GREY_400),
                             padding=ft.padding.only(top=4),
                         ),
@@ -504,7 +505,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                         # Buttons
                         ft.Row(
                             alignment=ft.MainAxisAlignment.CENTER,
-                            spacing=8,
+                            spacing=8, wrap=True,
                             controls=[subs_btn, skip_btn, continue_btn],
                         ),
                     ],
@@ -710,7 +711,7 @@ def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi
             bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.CYAN),
         ))
 
-        subs_btn.text = f"🔄 {t('substitution')} ({subs_remaining[0]})"
+        subs_btn.text = f"{t('substitution')} ({subs_remaining[0]})"
         if subs_remaining[0] <= 0:
             subs_btn.visible = False
 
@@ -727,7 +728,7 @@ def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi
 
     dlg = ft.AlertDialog(
         on_dismiss=lambda e: sub_pending.__setitem__(0, False),
-        title=ft.Text(f"🔄 {t('substitution')} ({subs_remaining[0]})",
+        title=ft.Text(f"{t('substitution')} ({subs_remaining[0]})",
                        size=15, weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
             content=ft.Column(

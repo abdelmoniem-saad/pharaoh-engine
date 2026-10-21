@@ -11,6 +11,16 @@ _current_language = "en"
 # String tables keyed by language → key → display string
 _strings: dict[str, dict[str, str]] = {
     "en": {
+        "goalkeepers": "Goalkeepers",
+        "defenders": "Defenders",
+        "midfielders": "Midfielders",
+        "forwards": "Forwards",
+        "players": "Players",
+        "compare_players": "Compare players",
+        "manager_guide": "Manager guide",
+        "manager_guide_text": "Select your starting eleven, check your inbox, then prepare for the next fixture.",
+        "dismiss": "Dismiss",
+
         # General
         "app_title": "Pharaoh Engine",
         "new_game": "New Game",
@@ -684,6 +694,16 @@ _strings: dict[str, dict[str, str]] = {
         "match_es": "{n} match(es)",
 },
     "ar": {
+        "goalkeepers": "حراس المرمى",
+        "defenders": "الدفاع",
+        "midfielders": "الوسط",
+        "forwards": "الهجوم",
+        "players": "اللاعبون",
+        "compare_players": "مقارنة اللاعبين",
+        "manager_guide": "دليل المدير الفني",
+        "manager_guide_text": "اختر التشكيلة الأساسية، راجع البريد، ثم استعد للمباراة القادمة.",
+        "dismiss": "إخفاء",
+
         # General
         "app_title": "محرك فرعون",
         "new_game": "لعبة جديدة",

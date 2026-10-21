@@ -109,7 +109,7 @@ def _build_league_view(page: ft.Page, conn, gs) -> ft.Column:
 
     # ── Table Header Row ────────────────────────────────────────────
     header_row = ft.Container(
-        content=ft.Row(
+        content=ft.Row(spacing=4,
             controls=[
                 ft.Text("#", size=theme.TINY_SIZE, color=theme.TEXT_MUTED, width=22,
                         text_align=ft.TextAlign.CENTER),
@@ -168,13 +168,13 @@ def _build_league_view(page: ft.Page, conn, gs) -> ft.Column:
 
         table_rows.append(
             ft.Container(
-                content=ft.Row(
+                content=ft.Row(spacing=4,
                     controls=[
                         ft.Text(str(pos), size=theme.CAPTION_SIZE, width=22,
                                 text_align=ft.TextAlign.CENTER,
                                 weight=ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL,
                                 color=theme.ACCENT if is_user else theme.TEXT_SECONDARY),
-                        ft.Text(club_display[:16], size=12, expand=True,
+                        ft.Text(club_display, size=13, expand=True,
                                 weight=name_weight,
                                 color=theme.TEXT_SUCCESS if is_user else theme.TEXT_PRIMARY,
                                 max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
@@ -193,7 +193,7 @@ def _build_league_view(page: ft.Page, conn, gs) -> ft.Column:
                                 weight=ft.FontWeight.BOLD, color=pts_color),
                     ],
                 ),
-                padding=ft.padding.symmetric(horizontal=10, vertical=6),
+                padding=ft.padding.symmetric(horizontal=10, vertical=12),
                 border_radius=theme.CARD_RADIUS_SM,
                 bgcolor=bg,
                 border=left_border,

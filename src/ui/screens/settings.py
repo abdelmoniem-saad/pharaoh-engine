@@ -68,10 +68,10 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
             app_state.game_state = None
             delete_save(active_slot)
             navigate(page, "/")
-            show_snackbar(page, f"🗑️ {t('save_deleted')}")
+            show_snackbar(page, f"{t('save_deleted')}")
 
         page.show_dialog(ft.AlertDialog(
-            title=ft.Text(f"⚠️ {t('delete_save')}?"),
+            title=ft.Text(f"{t('delete_save')}?"),
             content=ft.Text(t("delete_save_confirm")),
             actions=[
                 ft.TextButton(t("cancel"), on_click=lambda e2: page.pop_dialog()),
@@ -90,8 +90,8 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
 
         # Gameplay section
         theme.glass_card(
-            content=ft.Column(spacing=10, controls=[
-                ft.Text("🎮 " + t("gameplay"), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
+            content=ft.Column(spacing=18, controls=[
+                ft.Text("" + t("gameplay"), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
                 speed_dd,
                 diff_dd,
             ]),
@@ -99,8 +99,8 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
 
         # Save section
         theme.glass_card(
-            content=ft.Column(spacing=10, controls=[
-                ft.Text("💾 " + t("save"), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
+            content=ft.Column(spacing=18, controls=[
+                ft.Text("" + t("save"), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
                 auto_save_switch,
                 interval_dd,
                 # sound_switch,  # [SOUND DISABLED]
@@ -120,11 +120,17 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
     appearance = ft.RadioGroup(
         value=theme.current_theme(), on_change=on_theme_change,
         content=ft.Column(controls=[
-            ft.Radio(value=key, label=names[1 if is_rtl() else 0])
+            ft.Container(padding=12, border_radius=10, bgcolor=theme.BG_DARK,
+                content=ft.Row(controls=[
+                    ft.Radio(value=key, label=names[1 if is_rtl() else 0], expand=True),
+                    *[ft.Container(width=16, height=24, border_radius=4, bgcolor=color)
+                      for color in (("#202833", "#DDC08A") if key == "classic"
+                                    else ("#69C5DD", "#FFAC7A"))],
+                ]))
             for key, names in theme.THEME_NAMES.items()
         ]),
     )
-    controls_list.insert(1, theme.glass_card(ft.Column(spacing=10, controls=[
+    controls_list.insert(1, theme.glass_card(ft.Column(spacing=18, controls=[
         ft.Text("المظهر" if is_rtl() else "Appearance", size=18,
                 weight=ft.FontWeight.BOLD, color=theme.GOLD),
         appearance,
@@ -172,8 +178,8 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
 
     controls_list.append(
         theme.glass_card(
-            content=ft.Column(spacing=10, controls=[
-                ft.Text("🌍 " + t("language"), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
+            content=ft.Column(spacing=18, controls=[
+                ft.Text("" + t("language"), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
                 lang_radio,
                 ft.Text(
                     t("language_help"),
@@ -185,16 +191,16 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
 
     controls_list.extend([
         ft.Container(height=10),
-        ft.ElevatedButton("💾 " + t("save") + " " + t("settings"), width=280, height=48,
+        ft.ElevatedButton("" + t("save") + " " + t("settings"), width=280, height=48,
             style=theme.PRIMARY_BTN_STYLE,
             on_click=save_click),
         ft.Container(height=16),
 
         # Danger zone
         theme.glass_card(
-            content=ft.Column(spacing=10, controls=[
-                ft.Text("⚠️ " + t("danger_zone"), size=16, weight=ft.FontWeight.W_600, color=theme.TEXT_DANGER),
-                ft.OutlinedButton("🗑️ " + t("delete_save"), width=250, height=42,
+            content=ft.Column(spacing=18, controls=[
+                ft.Text("" + t("danger_zone"), size=16, weight=ft.FontWeight.W_600, color=theme.TEXT_DANGER),
+                ft.OutlinedButton("" + t("delete_save"), width=250, height=42,
                     style=theme.DANGER_BTN_STYLE,
                     on_click=delete_save_click),
             ]),
@@ -206,7 +212,7 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
         expand=True, scroll=ft.ScrollMode.AUTO,
         controls=[ft.Container(
             padding=ft.padding.all(theme.PAGE_PADDING),
-            content=ft.Column(spacing=14, controls=controls_list),
+            content=ft.Column(spacing=24, controls=controls_list),
         )],
     )
 

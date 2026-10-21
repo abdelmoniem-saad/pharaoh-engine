@@ -65,10 +65,11 @@ def build_nav_bar(page: ft.Page, selected_index: int = 0) -> ft.NavigationBar:
     return ft.NavigationBar(
         selected_index=selected_index,
         on_change=on_nav,
-        bgcolor=theme.BG_MID,
+        bgcolor=theme.BG_DARK,
+        height=76,
         indicator_color=ft.Colors.with_opacity(0.20, theme.SECONDARY_ACCENT if theme.current_theme() == "supporter" else theme.ACCENT),
         shadow_color=ft.Colors.with_opacity(0.3, ft.Colors.BLACK),
-        elevation=8,
+        elevation=0,
         destinations=[
             ft.NavigationBarDestination(icon=ft.Icons.PEOPLE_OUTLINED,
                                         selected_icon=ft.Icons.PEOPLE,
