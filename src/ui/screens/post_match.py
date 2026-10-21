@@ -4,6 +4,7 @@ Post-Match screen — detailed summary, MOTM, press conference, ratings.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 
 from src.data import queries
 from src.data.models import MatchResult, MatchdayOutcome, InboxMessage
@@ -95,7 +96,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
             ft.Container(
                 content=ft.Row(spacing=6, controls=[
                     ft.Text(f"{g.minute}'", size=12, weight=ft.FontWeight.BOLD,
-                            color=ft.Colors.AMBER_300, width=35),
+                            color=theme.GOLD, width=35),
                     ft.Text("⚽", size=14),
                     ft.Text(f"{g.player_name}{assist_text}", size=12, color=goal_color,
                             expand=True),
@@ -189,7 +190,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                                 content=ft.Text(p.position.value, size=9,
                                                 color=ft.Colors.WHITE),
                                 width=28, height=18, border_radius=4,
-                                bgcolor=ft.Colors.AMBER_700 if is_mine else ft.Colors.GREY_700,
+                                bgcolor=theme.ACCENT_DARK if is_mine else ft.Colors.GREY_700,
                                 alignment=ft.Alignment(0, 0),
                             ),
                             ft.Text(p.name, size=12,
@@ -208,7 +209,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                 bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
                 border=ft.border.only(
                     left=ft.BorderSide(2,
-                        ft.Colors.AMBER_400 if is_mine else ft.Colors.with_opacity(0.1, ft.Colors.WHITE)),
+                        theme.ACCENT if is_mine else ft.Colors.with_opacity(0.1, ft.Colors.WHITE)),
                 ),
             )
         )
@@ -290,7 +291,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
             if ach:
                 show_snackbar(page,
                     f"{ach['icon']} Achievement: {ach['title']}!",
-                    bgcolor=ft.Colors.AMBER_800)
+                    bgcolor=theme.ACCENT_DARK)
 
     sections = [
         # Header — glass card scoreboard
@@ -312,7 +313,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
             padding=ft.padding.only(top=15, bottom=12),
             border_radius=14,
             bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.WHITE),
-            border=ft.border.all(1, ft.Colors.with_opacity(0.18, "#FFD54F")),
+            border=ft.border.all(1, ft.Colors.with_opacity(0.18, theme.GOLD)),
         ),
 
         # MOTM
@@ -325,9 +326,9 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                     alignment=ft.MainAxisAlignment.CENTER,
                     spacing=10,
                     controls=[
-                        ft.Icon(ft.Icons.STAR, size=28, color=ft.Colors.AMBER_400),
+                        ft.Icon(ft.Icons.STAR, size=28, color=theme.ACCENT),
                         ft.Column(spacing=0, controls=[
-                            ft.Text(t("man_of_the_match"), size=10, color=ft.Colors.AMBER_300),
+                            ft.Text(t("man_of_the_match"), size=10, color=theme.GOLD),
                             ft.Text(motm_player.name, size=16, weight=ft.FontWeight.BOLD),
                         ]),
                         ft.Container(
@@ -390,7 +391,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
     if other_widgets:
         sections.extend([
             ft.Text(f"📋 Other Matchday {outcome.matchday} Results", size=15,
-                    weight=ft.FontWeight.W_500, color=ft.Colors.AMBER_300),
+                    weight=ft.FontWeight.W_500, color=theme.GOLD),
             *other_widgets,
             ft.Divider(height=1),
         ])
@@ -409,7 +410,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                             ft.Text(ach["icon"], size=24),
                             ft.Column(spacing=0, expand=True, controls=[
                                 ft.Text(ach["title"], size=13, weight=ft.FontWeight.BOLD,
-                                        color=ft.Colors.AMBER_300),
+                                        color=theme.GOLD),
                                 ft.Text(ach["description"], size=10, color=ft.Colors.GREY_400),
                             ]),
                         ]),
@@ -421,7 +422,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
         if ach_widgets:
             sections.extend([
                 ft.Text(f"🏆 {t('achievements_unlocked')}", size=15, weight=ft.FontWeight.W_500,
-                         color=ft.Colors.AMBER_400),
+                         color=theme.ACCENT),
                 *ach_widgets,
                 ft.Divider(height=1),
             ])
@@ -437,7 +438,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                 color=ft.Colors.WHITE,
                 text_style=ft.TextStyle(size=15),
                 shape=ft.RoundedRectangleBorder(radius=12),
-                side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, "#FFD54F")),
+                side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, theme.GOLD)),
             ),
             on_click=_press_conference,
         ),
@@ -446,11 +447,11 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
             f"➡️ {t('continue_btn')}",
             width=280, height=50,
             style=ft.ButtonStyle(
-                bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
+                bgcolor=theme.ACCENT_DARK, color=ft.Colors.WHITE,
                 text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
                 shape=ft.RoundedRectangleBorder(radius=12),
                 elevation=4,
-                shadow_color=ft.Colors.with_opacity(0.25, "#FFD54F"),
+                shadow_color=ft.Colors.with_opacity(0.25, theme.GOLD),
             ),
             on_click=go_match_day,
         ),
@@ -459,7 +460,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                           on_click=go_table,
                           style=ft.ButtonStyle(
                               shape=ft.RoundedRectangleBorder(radius=12),
-                              side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, "#FFD54F")),
+                              side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, theme.GOLD)),
                               color=ft.Colors.GREY_400,
                           )),
         ft.Container(height=15),
@@ -578,14 +579,14 @@ def _show_press_conference(page, conn, gs, result, is_home):
                 ),
                 bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
                 border_radius=10,
-                border=ft.border.all(1, ft.Colors.with_opacity(0.10, "#FFD54F")),
+                border=ft.border.all(1, ft.Colors.with_opacity(0.10, theme.GOLD)),
             )
         )
 
     dlg = ft.AlertDialog(
         title=ft.Column(spacing=4, controls=[
             ft.Text(f"🎤 {t('press_conference')}", size=16,
-                     weight=ft.FontWeight.BOLD, color="#FFD54F"),
+                     weight=ft.FontWeight.BOLD, color=theme.GOLD),
             ft.Text(t("journalist_asks"), size=11, color=ft.Colors.GREY_400),
         ]),
         content=ft.Container(

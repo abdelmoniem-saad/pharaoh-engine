@@ -4,20 +4,16 @@ Fixtures screen — browse matchday results across the season.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 
 from src.data import queries
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.utils.localization import t, t_format
-from src.ui.theme import (
-    header_bar, GOLD_BORDER, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS_SM,
-    TEXT_SECONDARY, TEXT_MUTED, ACCENT, PAGE_PADDING,
-)
 
 
 def build_fixtures_screen(page: ft.Page) -> ft.Column:
     """Build the fixtures/results browser."""
     from src.ui.app import app_state, navigate
-    from src.ui.theme import ACCENT
 
     page.navigation_bar = build_nav_bar(page, 3)
 
@@ -73,18 +69,18 @@ def build_fixtures_screen(page: ft.Page) -> ft.Column:
                 ft.TextButton(
                     t("league").upper(),
                     style=ft.ButtonStyle(
-                        color=ACCENT if active_comp == "league" else TEXT_SECONDARY,
-                        bgcolor=ft.Colors.with_opacity(0.1, ACCENT) if active_comp == "league" else ft.Colors.TRANSPARENT,
+                        color=theme.ACCENT if active_comp == "league" else theme.TEXT_SECONDARY,
+                        bgcolor=ft.Colors.with_opacity(0.1, theme.ACCENT) if active_comp == "league" else ft.Colors.TRANSPARENT,
                         shape=ft.RoundedRectangleBorder(radius=8),
                     ),
                     on_click=lambda _: switch_comp("league"),
                 ),
-                ft.Icon(ft.Icons.SWAP_HORIZ, size=16, color=TEXT_MUTED),
+                ft.Icon(ft.Icons.SWAP_HORIZ, size=16, color=theme.TEXT_MUTED),
                 ft.TextButton(
                     t("cup").upper(),
                     style=ft.ButtonStyle(
-                        color=ACCENT if active_comp == "cup" else TEXT_SECONDARY,
-                        bgcolor=ft.Colors.with_opacity(0.1, ACCENT) if active_comp == "cup" else ft.Colors.TRANSPARENT,
+                        color=theme.ACCENT if active_comp == "cup" else theme.TEXT_SECONDARY,
+                        bgcolor=ft.Colors.with_opacity(0.1, theme.ACCENT) if active_comp == "cup" else ft.Colors.TRANSPARENT,
                         shape=ft.RoundedRectangleBorder(radius=8),
                     ),
                     on_click=lambda _: switch_comp("cup"),
@@ -126,7 +122,7 @@ def build_fixtures_screen(page: ft.Page) -> ft.Column:
                 content=ft.Column(
                     spacing=8,
                     controls=[
-                        header_bar(
+                        theme.header_bar(
                             title=t("fixture_results"),
                             icon=ft.Icons.CALENDAR_MONTH,
                             page=page,
@@ -142,7 +138,7 @@ def build_fixtures_screen(page: ft.Page) -> ft.Column:
                                     on_click=lambda e: navigate(page, "/table"),
                                     style=ft.ButtonStyle(
                                         shape=ft.RoundedRectangleBorder(radius=10),
-                                        side=ft.BorderSide(1, GOLD_BORDER),
+                                        side=ft.BorderSide(1, theme.GOLD_BORDER),
                                     ),
                                 ),
                             ],
@@ -175,9 +171,9 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
 
             is_user = (fixture.home_club_id == gs.user_club_id or
                        fixture.away_club_id == gs.user_club_id)
-            bg = CARD_GLASS_STRONG if is_user else CARD_GLASS
+            bg = theme.CARD_GLASS_STRONG if is_user else theme.CARD_GLASS
             border = (ft.border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.GREEN))
-                      if is_user else ft.border.all(1, GOLD_BORDER))
+                      if is_user else ft.border.all(1, theme.GOLD_BORDER))
 
             column.controls.append(
                 ft.Container(
@@ -199,7 +195,7 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
                                 bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
                                 padding=ft.padding.symmetric(horizontal=10, vertical=4),
                                 border_radius=6,
-                                border=ft.border.all(1, ft.Colors.with_opacity(0.12, "#FFD54F")),
+                                border=ft.border.all(1, ft.Colors.with_opacity(0.12, theme.GOLD)),
                             ),
                             ft.Text(
                                 fixture.away_club_name, size=12,
@@ -211,7 +207,7 @@ def _populate_results(conn, gs, matchday: int, column: ft.Column):
                     ),
                     bgcolor=bg,
                     border=border,
-                    border_radius=CARD_RADIUS_SM,
+                    border_radius=theme.CARD_RADIUS_SM,
                     padding=ft.padding.symmetric(vertical=6, horizontal=8),
                 )
             )

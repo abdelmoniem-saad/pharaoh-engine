@@ -4,6 +4,7 @@ Transfer Market screen — search, scout, buy, sell, and loan players.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 
 from src.data import queries
 from src.data.models import InboxMessage
@@ -13,11 +14,6 @@ from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.widgets.stat_bar import stat_bar
 from src.utils.config import Position
 from src.utils.localization import t, t_format
-from src.ui.theme import (
-    header_bar, GOLD_BORDER, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS_SM,
-    TEXT_SECONDARY, TEXT_MUTED, ACCENT,
-    PRIMARY_BTN_STYLE, SECONDARY_BTN_STYLE,
-)
 
 
 def build_transfers_screen(page: ft.Page) -> ft.Column:
@@ -127,7 +123,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                                 ft.Text(badge_text, size=10) if badge_text else ft.Container(),
                             ]),
                             ft.Row(spacing=8, tight=True, controls=[
-                                ft.Text(p.position.value, size=10, color=ft.Colors.AMBER_300),
+                                ft.Text(p.position.value, size=10, color=theme.GOLD),
                                 ft.Text(f"Age {p.age}", size=10, color=age_color),
                                 ft.Text(ovr_display, size=10,
                                         weight=ft.FontWeight.BOLD, color=ovr_color),
@@ -137,12 +133,12 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                     ),
                     ft.Row(spacing=4, tight=True, controls=[
                         ft.Column(spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END, controls=[
-                            ft.Text(f"{value:,}", size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.AMBER_300),
+                            ft.Text(f"{value:,}", size=11, weight=ft.FontWeight.BOLD, color=theme.GOLD),
                             ft.Text("EGP", size=9, color=ft.Colors.GREY_600),
                         ]),
                         ft.IconButton(
                             icon=star_icon, icon_size=16,
-                            icon_color=ft.Colors.AMBER_400 if is_shortlisted else ft.Colors.GREY_600,
+                            icon_color=theme.ACCENT if is_shortlisted else ft.Colors.GREY_600,
                             on_click=toggle_shortlist, tooltip="Shortlist",
                         ) if show_star else ft.Container(),
                         ft.IconButton(
@@ -155,9 +151,9 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                 ],
             ),
             padding=ft.padding.symmetric(horizontal=10, vertical=10),
-            border_radius=CARD_RADIUS_SM,
-            bgcolor=CARD_GLASS,
-            border=ft.border.all(1, GOLD_BORDER),
+            border_radius=theme.CARD_RADIUS_SM,
+            bgcolor=theme.CARD_GLASS,
+            border=ft.border.all(1, theme.GOLD_BORDER),
             on_click=make_handler(),
             ink=True,
         )
@@ -285,7 +281,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                                     if badges_parts else ft.Container(),
                                 ]),
                                 ft.Row(spacing=8, tight=True, controls=[
-                                    ft.Text(p.position.value, size=10, color=ft.Colors.AMBER_300),
+                                    ft.Text(p.position.value, size=10, color=theme.GOLD),
                                     ft.Text(f"Age {p.age}", size=10, color=ft.Colors.GREY_400),
                                     ft.Text(f"OVR {ovr}", size=10, weight=ft.FontWeight.BOLD),
                                     ft.Text(f"💰 {p.contract.wage_weekly:,}/wk", size=9,
@@ -293,14 +289,14 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                                 ]),
                             ],
                         ),
-                        ft.Text(f"{value:,} EGP", size=11, color=ft.Colors.AMBER_300),
+                        ft.Text(f"{value:,} EGP", size=11, color=theme.GOLD),
                     ],
                 ),
                 padding=ft.padding.symmetric(horizontal=8, vertical=6),
                 border_radius=6,
                 bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.RED) if listed
-                else CARD_GLASS,
-                border=ft.border.all(1, GOLD_BORDER),
+                else theme.CARD_GLASS,
+                border=ft.border.all(1, theme.GOLD_BORDER),
                 on_click=make_sell_handler(),
             )
         )
@@ -336,7 +332,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                                 ft.Column(spacing=0, expand=True, controls=[
                                     ft.Text(p.name, size=12, weight=ft.FontWeight.W_500),
                                     ft.Row(spacing=8, tight=True, controls=[
-                                        ft.Text(p.position.value, size=10, color=ft.Colors.AMBER_300),
+                                        ft.Text(p.position.value, size=10, color=theme.GOLD),
                                         ft.Text(f"Age {p.age}", size=10),
                                         ft.Text(f"OVR {ovr}", size=10, weight=ft.FontWeight.BOLD),
                                     ]),
@@ -346,9 +342,9 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                             ],
                         ),
                         padding=ft.padding.symmetric(horizontal=8, vertical=6),
-                        border_radius=CARD_RADIUS_SM,
-                        bgcolor=CARD_GLASS,
-                        border=ft.border.all(1, GOLD_BORDER),
+                        border_radius=theme.CARD_RADIUS_SM,
+                        bgcolor=theme.CARD_GLASS,
+                        border=ft.border.all(1, theme.GOLD_BORDER),
                         on_click=make_free_handler(),
                     )
                 )
@@ -392,9 +388,9 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
             ),
         ]),
         padding=ft.padding.symmetric(horizontal=10, vertical=8),
-        bgcolor=CARD_GLASS_STRONG,
-        border_radius=CARD_RADIUS_SM,
-        border=ft.border.all(1, GOLD_BORDER),
+        bgcolor=theme.CARD_GLASS_STRONG,
+        border_radius=theme.CARD_RADIUS_SM,
+        border=ft.border.all(1, theme.GOLD_BORDER),
     )
 
     # ── Negotiations tab ───────────────────────────────────────────────
@@ -430,7 +426,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
             elif neg.status == "countered":
                 badge = ft.Container(
                     content=ft.Text("↩️ Countered", size=9, color=ft.Colors.WHITE),
-                    bgcolor=ft.Colors.AMBER_700, padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                    bgcolor=theme.ACCENT_DARK, padding=ft.padding.symmetric(horizontal=6, vertical=2),
                     border_radius=4,
                 )
 
@@ -439,7 +435,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                         _show_counter_dialog(page, conn, gs, n)
                     return handler
                 action_btn = ft.ElevatedButton("Respond", on_click=make_counter_handler(), height=30,
-                                                style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
+                                                style=ft.ButtonStyle(bgcolor=theme.ACCENT_DARK,
                                                                       color=ft.Colors.WHITE,
                                                                       text_style=ft.TextStyle(size=11)))
             elif neg.status == "fee_agreed":
@@ -490,7 +486,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                         ]),
                         ft.Text(f"{neg.from_club_name} → {neg.to_club_name}", size=10,
                                  color=ft.Colors.GREY_500),
-                        ft.Text(offer_text, size=11, color=ft.Colors.AMBER_300),
+                        ft.Text(offer_text, size=11, color=theme.GOLD),
                         ft.Text(f"Attempt {neg.attempt}/{neg.max_attempts} | {phase_text} phase",
                                  size=10, color=ft.Colors.GREY_500),
                         ft.Text(negotiation_pacing_hint(neg, gs.current_date),
@@ -502,8 +498,8 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                         ]),
                     ]),
                     padding=ft.padding.all(10),
-                    border_radius=CARD_RADIUS_SM,
-                    bgcolor=CARD_GLASS_STRONG,
+                    border_radius=theme.CARD_RADIUS_SM,
+                    bgcolor=theme.CARD_GLASS_STRONG,
                     border=ft.border.all(1, ft.Colors.with_opacity(0.15, ft.Colors.AMBER)),
                 )
             )
@@ -554,12 +550,12 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     active_tab = [0]
 
     _active_style = ft.ButtonStyle(
-        bgcolor=ft.Colors.AMBER_800, color=ft.Colors.WHITE,
+        bgcolor=theme.ACCENT_DARK, color=ft.Colors.WHITE,
         shape=ft.RoundedRectangleBorder(radius=10),
     )
     _inactive_style = ft.ButtonStyle(
         shape=ft.RoundedRectangleBorder(radius=10),
-        side=ft.BorderSide(1, GOLD_BORDER),
+        side=ft.BorderSide(1, theme.GOLD_BORDER),
     )
 
     tab_contents = [search_content, sell_content, shortlist_content,
@@ -618,7 +614,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                 content=ft.Column(
                     spacing=8,
                     controls=[
-                        header_bar(
+                        theme.header_bar(
                             title=t("transfer_market"),
                             icon=ft.Icons.STORE,
                             page=page,
@@ -716,13 +712,13 @@ def _show_buy_dialog(page, conn, gs, user_club, player, estimated_value, shortli
     expiry_str = expiry.strftime("%b %Y") if expiry else "N/A"
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"📝 Sign {player.name}", color="#FFD54F"),
+        title=ft.Text(f"📝 Sign {player.name}", color=theme.GOLD),
         content=ft.Container(
             content=ft.Column(
                 spacing=6, scroll=ft.ScrollMode.AUTO,
                 controls=[
                     ft.Row(spacing=8, controls=[
-                        ft.Text(f"📍 {player.position.value}", size=12, color=ft.Colors.AMBER_300),
+                        ft.Text(f"📍 {player.position.value}", size=12, color=theme.GOLD),
                         ft.Text(f"Age {player.age}", size=12),
                         ft.Container(
                             content=ft.Text(str(ovr), size=14, weight=ft.FontWeight.BOLD),
@@ -733,14 +729,14 @@ def _show_buy_dialog(page, conn, gs, user_club, player, estimated_value, shortli
                     ]),
                     ft.Text(f"Club: {selling_name}", size=12),
                     ft.Row(spacing=12, controls=[
-                        ft.Text(f"💰 Value: {estimated_value:,} EGP", size=11, color=ft.Colors.AMBER_300),
+                        ft.Text(f"💰 Value: {estimated_value:,} EGP", size=11, color=theme.GOLD),
                         ft.Text(f"📅 Contract: {expiry_str}", size=11, color=ft.Colors.GREY_400),
                     ]),
                     ft.Text(f"Current wage: {player.contract.wage_weekly:,} EGP/wk", size=11,
                              color=ft.Colors.GREY_500),
                     ft.Divider(height=1),
                     ft.Text("📊 Key Stats", size=12, weight=ft.FontWeight.W_500,
-                             color=ft.Colors.AMBER_300),
+                             color=theme.GOLD),
                     *key_stats,
                     ft.Divider(height=1),
                     ft.Text("💼 Step 1: Offer Transfer Fee", size=12, weight=ft.FontWeight.W_500),
@@ -755,7 +751,7 @@ def _show_buy_dialog(page, conn, gs, user_club, player, estimated_value, shortli
         actions=[
             ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),
             ft.ElevatedButton("📨 Submit Offer", on_click=submit_offer,
-                              style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
+                              style=ft.ButtonStyle(bgcolor=theme.ACCENT_DARK,
                                                     color=ft.Colors.WHITE,
                                                     shape=ft.RoundedRectangleBorder(radius=10))),
         ],
@@ -772,11 +768,11 @@ def _show_sell_dialog(page, conn, gs, user_club, player, estimated_value):
     if player.transfer_listed:
         # Already listed — offer to unlist
         dlg = ft.AlertDialog(
-            title=ft.Text(f"📤 {player.name}", color="#FFD54F"),
+            title=ft.Text(f"📤 {player.name}", color=theme.GOLD),
             content=ft.Container(
                 content=ft.Column(spacing=6, controls=[
                     ft.Row(spacing=8, controls=[
-                        ft.Text(f"{player.position.value}", size=12, color=ft.Colors.AMBER_300),
+                        ft.Text(f"{player.position.value}", size=12, color=theme.GOLD),
                         ft.Text(f"Age {player.age}", size=12),
                         ft.Text(f"OVR {ovr}", size=12, weight=ft.FontWeight.BOLD),
                     ]),
@@ -810,18 +806,18 @@ def _show_sell_dialog(page, conn, gs, user_club, player, estimated_value):
             navigate(page, "/transfers")
 
         dlg = ft.AlertDialog(
-            title=ft.Text(f"💰 Sell {player.name}?", color="#FFD54F"),
+            title=ft.Text(f"💰 Sell {player.name}?", color=theme.GOLD),
             content=ft.Container(
                 content=ft.Column(spacing=6, controls=[
                     ft.Row(spacing=8, controls=[
-                        ft.Text(f"{player.position.value}", size=12, color=ft.Colors.AMBER_300),
+                        ft.Text(f"{player.position.value}", size=12, color=theme.GOLD),
                         ft.Text(f"Age {player.age}", size=12),
                         ft.Text(f"OVR {ovr}", size=12, weight=ft.FontWeight.BOLD),
                     ]),
                     ft.Text(f"Wage: {player.contract.wage_weekly:,} EGP/wk", size=11,
                              color=ft.Colors.GREY_500),
                     ft.Text(f"Estimated value: {estimated_value:,} EGP", size=12,
-                             color=ft.Colors.AMBER_300),
+                             color=theme.GOLD),
                     ft.Divider(height=1),
                     ft.Text("AI clubs will make offers once listed.\n"
                              "Higher-value players attract more interest.", size=11,
@@ -833,7 +829,7 @@ def _show_sell_dialog(page, conn, gs, user_club, player, estimated_value):
             actions=[
                 ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),
                 ft.ElevatedButton("📤 List for Transfer", on_click=list_player,
-                                  style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
+                                  style=ft.ButtonStyle(bgcolor=theme.ACCENT_DARK,
                                                         color=ft.Colors.WHITE,
                                                         shape=ft.RoundedRectangleBorder(radius=10))),
             ],
@@ -892,11 +888,11 @@ def _show_free_agent_dialog(page, conn, gs, user_club, player):
         navigate(page, "/transfers")
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"🆓 Sign {player.name}", color="#FFD54F"),
+        title=ft.Text(f"🆓 Sign {player.name}", color=theme.GOLD),
         content=ft.Container(
             content=ft.Column(spacing=6, controls=[
                 ft.Row(spacing=8, controls=[
-                    ft.Text(f"{player.position.value}", size=12, color=ft.Colors.AMBER_300),
+                    ft.Text(f"{player.position.value}", size=12, color=theme.GOLD),
                     ft.Text(f"Age {player.age}", size=12),
                     ft.Text(f"OVR {ovr}", size=12, weight=ft.FontWeight.BOLD),
                 ]),
@@ -959,14 +955,14 @@ def _show_counter_dialog(page, conn, gs, neg):
         navigate(page, "/transfers")
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"↩️ Counter-Offer: {neg.player_name}", color="#FFD54F"),
+        title=ft.Text(f"↩️ Counter-Offer: {neg.player_name}", color=theme.GOLD),
         content=ft.Container(
             content=ft.Column(spacing=6, controls=[
                 ft.Text(f"From: {neg.from_club_name}", size=12, color=ft.Colors.GREY_400),
                 ft.Divider(height=1),
                 ft.Text(f"Your offer: {neg.current_offer:,} EGP", size=12),
                 ft.Text(f"Their counter: {neg.counter_price:,} EGP",
-                         size=13, weight=ft.FontWeight.BOLD, color=ft.Colors.AMBER_300),
+                         size=13, weight=ft.FontWeight.BOLD, color=theme.GOLD),
                 ft.Text(f"Attempt {neg.attempt}/{neg.max_attempts}", size=11,
                          color=ft.Colors.GREY_500),
                 ft.Divider(height=1),
@@ -980,7 +976,7 @@ def _show_counter_dialog(page, conn, gs, neg):
             ft.TextButton("❌ Walk Away", on_click=walk_away),
             ft.OutlinedButton("✅ Accept Counter", on_click=accept_counter),
             ft.ElevatedButton("📨 New Offer", on_click=submit_revised,
-                              style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
+                              style=ft.ButtonStyle(bgcolor=theme.ACCENT_DARK,
                                                     color=ft.Colors.WHITE,
                                                     shape=ft.RoundedRectangleBorder(radius=10))),
         ],
@@ -1023,7 +1019,7 @@ def _show_wage_dialog(page, conn, gs, neg):
         navigate(page, "/transfers")
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"💰 Personal Terms: {neg.player_name}", color="#FFD54F"),
+        title=ft.Text(f"💰 Personal Terms: {neg.player_name}", color=theme.GOLD),
         content=ft.Container(
             content=ft.Column(spacing=6, controls=[
                 ft.Text(f"✅ Transfer fee agreed: {neg.current_offer:,} EGP", size=12,
@@ -1037,7 +1033,7 @@ def _show_wage_dialog(page, conn, gs, neg):
                 ),
                 *(
                     [ft.Text(f"Player wants at least: ~{neg.counter_price:,} EGP/wk", size=11,
-                              color=ft.Colors.AMBER_300)]
+                              color=theme.GOLD)]
                     if neg.counter_price > 0 and neg.phase == "wage" else []
                 ),
                 ft.Divider(height=1),
@@ -1051,7 +1047,7 @@ def _show_wage_dialog(page, conn, gs, neg):
         actions=[
             ft.TextButton("❌ Walk Away", on_click=walk_away),
             ft.ElevatedButton("📨 Offer Wage", on_click=submit_wage,
-                              style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
+                              style=ft.ButtonStyle(bgcolor=theme.ACCENT_DARK,
                                                     color=ft.Colors.WHITE,
                                                     shape=ft.RoundedRectangleBorder(radius=10))),
         ],

@@ -4,6 +4,7 @@ Match result widget — compact result display for Flet.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 
 from src.data.models import MatchResult
 from src.utils.localization import t
@@ -52,7 +53,7 @@ def match_result_row(result: MatchResult, user_club_id: int = 0) -> ft.Container
                     bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.WHITE),
                     padding=ft.padding.symmetric(horizontal=10, vertical=4),
                     border_radius=6,
-                    border=ft.border.all(1, ft.Colors.with_opacity(0.15, "#FFD54F")),
+                    border=ft.border.all(1, ft.Colors.with_opacity(0.15, theme.GOLD)),
                 ),
                 ft.Text(
                     result.away_club_name,

@@ -4,6 +4,7 @@ Main Menu screen — New Game, Continue, Settings.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 
 from src.data.models import Club
 from src.data.database import SAVE_SLOTS, connect, delete_save, peek_save_info
@@ -20,12 +21,6 @@ log = get_logger("ui")
 
 def build_main_menu(page: ft.Page) -> ft.Column:
     """Build the main menu content."""
-    from src.ui.theme import (
-        gradient_bg, BG_DARK, BG_MID, BG_TEAL, BG_SURFACE,
-        GOLD, GOLD_GLOW, GOLD_BORDER, GOLD_BORDER_STRONG,
-        TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
-        PRIMARY_BTN_STYLE, SECONDARY_BTN_STYLE,
-    )
 
     # One-time upgrade: surface a legacy default.db career as Slot 1.
     from src.data.database import migrate_legacy_default_slot
@@ -50,13 +45,13 @@ def build_main_menu(page: ft.Page) -> ft.Column:
         spacing=4,
         controls=[
             ft.Container(
-                content=ft.Icon(ft.Icons.SHIELD, size=56, color=GOLD),
+                content=ft.Icon(ft.Icons.SHIELD, size=56, color=theme.GOLD),
                 width=80, height=80, border_radius=40,
-                bgcolor=ft.Colors.with_opacity(0.10, GOLD),
+                bgcolor=ft.Colors.with_opacity(0.10, theme.GOLD),
                 alignment=ft.Alignment(0, 0),
                 shadow=ft.BoxShadow(
                     spread_radius=2, blur_radius=20,
-                    color=ft.Colors.with_opacity(0.15, GOLD),
+                    color=ft.Colors.with_opacity(0.15, theme.GOLD),
                 ),
             ),
             ft.Container(height=8),
@@ -64,28 +59,45 @@ def build_main_menu(page: ft.Page) -> ft.Column:
                 t("app_title").upper(),
                 size=34, weight=ft.FontWeight.BOLD,
                 text_align=ft.TextAlign.CENTER,
-                color=GOLD,
+                color=theme.GOLD,
             ),
             ft.Container(
                 content=ft.Row(
                     alignment=ft.MainAxisAlignment.CENTER,
                     spacing=8,
                     controls=[
-                        ft.Container(width=30, height=1, bgcolor=GOLD_BORDER_STRONG),
+                        ft.Container(width=30, height=1, bgcolor=theme.GOLD_BORDER_STRONG),
                         ft.Text("⚽", size=12),
-                        ft.Container(width=30, height=1, bgcolor=GOLD_BORDER_STRONG),
+                        ft.Container(width=30, height=1, bgcolor=theme.GOLD_BORDER_STRONG),
                     ],
                 ),
             ),
             ft.Text(
                 t("egyptian_football_manager"),
                 size=15,
-                color=TEXT_SECONDARY,
+                color=theme.TEXT_SECONDARY,
                 text_align=ft.TextAlign.CENTER,
                 italic=True,
             ),
         ],
     )
+
+    if theme.current_theme() == "supporter":
+        from src.utils.localization import is_rtl
+        title_block = ft.Container(
+            padding=24, margin=ft.margin.symmetric(horizontal=20),
+            bgcolor=theme.BG_SURFACE, border_radius=theme.CARD_RADIUS,
+            border=ft.border.only(top=ft.BorderSide(4, theme.SECONDARY_ACCENT)),
+            content=ft.Column(spacing=14, horizontal_alignment=ft.CrossAxisAlignment.START, controls=[
+                ft.Text("موسمك. ناديك. حكايتك." if is_rtl() else "YOUR CLUB. YOUR SEASON.",
+                        size=12, weight=ft.FontWeight.BOLD, color=theme.SECONDARY_ACCENT),
+                ft.Text(t("app_title"), size=34, weight=ft.FontWeight.W_900,
+                        color=theme.TEXT_PRIMARY),
+                ft.Text("من المدرج لدكة المدير الفني" if is_rtl() else "From the stands to the touchline.",
+                        size=19, weight=ft.FontWeight.BOLD, color=theme.GOLD),
+                ft.Text(t("egyptian_football_manager"), size=14, color=theme.TEXT_SECONDARY),
+            ]),
+        )
 
     # Buttons
     button_block = ft.Column(
@@ -95,22 +107,22 @@ def build_main_menu(page: ft.Page) -> ft.Column:
             ft.ElevatedButton(
                 "⚽  " + t("new_game"),
                 width=280, height=56,
-                style=PRIMARY_BTN_STYLE,
+                style=theme.PRIMARY_BTN_STYLE,
                 on_click=new_game_click,
             ),
             ft.ElevatedButton(
                 "📂  " + t("continue_game"),
                 width=280, height=52,
-                style=SECONDARY_BTN_STYLE,
+                style=theme.SECONDARY_BTN_STYLE,
                 on_click=continue_click,
             ),
             ft.OutlinedButton(
                 "⚙️  " + t("settings"),
                 width=280, height=48,
                 style=ft.ButtonStyle(
-                    color=TEXT_SECONDARY,
+                    color=theme.TEXT_SECONDARY,
                     shape=ft.RoundedRectangleBorder(radius=12),
-                    side=ft.BorderSide(1, GOLD_BORDER),
+                    side=ft.BorderSide(1, theme.GOLD_BORDER),
                 ),
                 on_click=settings_click,
             ),
@@ -122,8 +134,8 @@ def build_main_menu(page: ft.Page) -> ft.Column:
         controls=[
             ft.Container(
                 expand=True,
-                gradient=gradient_bg(
-                    colors=[BG_DARK, BG_MID, "#0b1a2d", BG_TEAL],
+                gradient=theme.gradient_bg(
+                    colors=[theme.BG_DARK, theme.BG_MID, theme.BG_MID, theme.BG_TEAL],
                 ),
                 padding=0,
                 content=ft.Column(
@@ -138,7 +150,7 @@ def build_main_menu(page: ft.Page) -> ft.Column:
                         ft.Container(expand=2),
                         ft.Text(
                             f"v{APP_VERSION}",
-                            size=11, color=TEXT_MUTED,
+                            size=11, color=theme.TEXT_MUTED,
                         ),
                         ft.Container(height=16),
                     ],
@@ -154,8 +166,8 @@ def _slot_badge(i: int) -> ft.Container:
     """Small golden circular badge showing the slot number."""
     return ft.Container(
         content=ft.Text(str(i), size=11, weight=ft.FontWeight.BOLD,
-                        color="#0a0e1a", text_align=ft.TextAlign.CENTER),
-        width=24, height=24, border_radius=12, bgcolor="#FFD54F",
+                        color=theme.BG_DARK, text_align=ft.TextAlign.CENTER),
+        width=24, height=24, border_radius=12, bgcolor=theme.GOLD,
         alignment=ft.Alignment(0, 0),
     )
 
@@ -182,7 +194,6 @@ def _confirm_overwrite_then(page: ft.Page, slot: str, info: dict, on_yes):
 
 def _show_new_game_slot_dialog(page: ft.Page):
     """Let the player choose which career slot to start the new game in."""
-    from src.ui.theme import GOLD, TEXT_SECONDARY
 
     tiles = []
     for i, slot in enumerate(SAVE_SLOTS, start=1):
@@ -191,7 +202,7 @@ def _show_new_game_slot_dialog(page: ft.Page):
         if info is None:
             title_line = t_format("slot_label", n=i)
             sub_rows = [ft.Text(t("empty_slot"), size=11,
-                                color=TEXT_SECONDARY)]
+                                color=theme.TEXT_SECONDARY)]
 
             def on_pick(e, s=slot):
                 page.pop_dialog()
@@ -205,14 +216,14 @@ def _show_new_game_slot_dialog(page: ft.Page):
                 ft.Row(spacing=4, tight=True, controls=[
                     ft.Text("👤", size=10),
                     ft.Text(f"{t('manager_label')}: {mgr}",
-                            size=11, color=TEXT_SECONDARY, expand=True,
+                            size=11, color=theme.TEXT_SECONDARY, expand=True,
                             max_lines=1,
                             overflow=ft.TextOverflow.ELLIPSIS),
                 ]),
                 ft.Row(spacing=4, tight=True, controls=[
                     ft.Text("📅", size=10),
                     ft.Text(f"{t('season_short')} {year}/{year + 1}",
-                            size=11, color=TEXT_SECONDARY),
+                            size=11, color=theme.TEXT_SECONDARY),
                 ]),
             ]
 
@@ -225,7 +236,7 @@ def _show_new_game_slot_dialog(page: ft.Page):
         tiles.append(ft.ListTile(
             leading=_slot_badge(i),
             title=ft.Text(title_line,
-                          weight=ft.FontWeight.W_600, color=GOLD,
+                          weight=ft.FontWeight.W_600, color=theme.GOLD,
                           max_lines=1,
                           overflow=ft.TextOverflow.ELLIPSIS),
             subtitle=ft.Column(spacing=1, controls=sub_rows),
@@ -233,8 +244,8 @@ def _show_new_game_slot_dialog(page: ft.Page):
         ))
 
     page.show_dialog(ft.AlertDialog(
-        bgcolor="#0f1729",
-        title=ft.Text("🆕 " + t("save_slots"), color=GOLD,
+        bgcolor=theme.BG_MID,
+        title=ft.Text("🆕 " + t("save_slots"), color=theme.GOLD,
                       weight=ft.FontWeight.BOLD),
         content=ft.Container(
             content=ft.Column(controls=tiles, spacing=4, tight=True),
@@ -247,7 +258,6 @@ def _show_new_game_slot_dialog(page: ft.Page):
 
 def _show_load_game_dialog(page: ft.Page):
     """List all career slots and let the player load or delete one."""
-    from src.ui.theme import GOLD, TEXT_MUTED
 
     tiles = []
     any_save = False
@@ -282,14 +292,14 @@ def _show_load_game_dialog(page: ft.Page):
                         ft.Row(spacing=4, tight=True, controls=[
                             ft.Text("👤", size=10),
                             ft.Text(f"{t('manager_label')}: {mgr}",
-                                    size=11, color=TEXT_MUTED, expand=True,
+                                    size=11, color=theme.TEXT_MUTED, expand=True,
                                     max_lines=1,
                                     overflow=ft.TextOverflow.ELLIPSIS),
                         ]),
                         ft.Row(spacing=4, tight=True, controls=[
                             ft.Text("📅", size=10),
                             ft.Text(f"{t('season_short')} {year}/{year + 1}",
-                                    size=11, color=TEXT_MUTED),
+                                    size=11, color=theme.TEXT_MUTED),
                         ]),
                     ],
                 ),
@@ -302,22 +312,22 @@ def _show_load_game_dialog(page: ft.Page):
             ))
         else:
             tiles.append(ft.ListTile(
-                enabled=False,
+                disabled=True,
                 leading=_slot_badge(i),
-                title=ft.Text(t_format("slot_label", n=i), color=TEXT_MUTED),
-                subtitle=ft.Text(t("empty_slot"), size=12, color=TEXT_MUTED),
+                title=ft.Text(t_format("slot_label", n=i), color=theme.TEXT_MUTED),
+                subtitle=ft.Text(t("empty_slot"), size=12, color=theme.TEXT_MUTED),
             ))
 
     if not any_save:
         tiles.insert(0, ft.Container(
             content=ft.Text(t("no_saves_yet"), size=13,
-                            color=TEXT_MUTED, text_align=ft.TextAlign.CENTER),
+                            color=theme.TEXT_MUTED, text_align=ft.TextAlign.CENTER),
             padding=10,
         ))
 
     page.show_dialog(ft.AlertDialog(
-        bgcolor="#0f1729",
-        title=ft.Text("📂 " + t("load_game"), color=GOLD,
+        bgcolor=theme.BG_MID,
+        title=ft.Text("📂 " + t("load_game"), color=theme.GOLD,
                       weight=ft.FontWeight.BOLD),
         content=ft.Container(
             content=ft.Column(controls=tiles, spacing=4,
@@ -351,7 +361,6 @@ def _confirm_delete_slot(page: ft.Page, slot: str) -> None:
 
 def _show_manager_name_dialog(page: ft.Page, save_name: str = "slot1"):
     """Show a dialog to enter the manager name before club selection."""
-    from src.ui.theme import GOLD, GOLD_BORDER, TEXT_SECONDARY
 
     name_field = ft.TextField(
         label=t("manager_name"),
@@ -370,12 +379,12 @@ def _show_manager_name_dialog(page: ft.Page, save_name: str = "slot1"):
         _show_club_selection(page, manager_name, save_name)
 
     dlg = ft.AlertDialog(
-        title=ft.Text("👤 " + t("your_identity"), color=GOLD),
+        title=ft.Text("👤 " + t("your_identity"), color=theme.GOLD),
         content=ft.Container(
             content=ft.Column(
                 controls=[
                     ft.Text(t("what_should_board_call_you"),
-                            size=13, color=TEXT_SECONDARY),
+                            size=13, color=theme.TEXT_SECONDARY),
                     ft.Container(height=10),
                     name_field,
                 ],
@@ -388,7 +397,7 @@ def _show_manager_name_dialog(page: ft.Page, save_name: str = "slot1"):
         actions=[
             ft.TextButton(t("cancel"), on_click=lambda e: page.pop_dialog()),
             ft.ElevatedButton(t("confirm") + " ➡️", on_click=on_confirm,
-                              style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
+                              style=ft.ButtonStyle(bgcolor=theme.ACCENT_DARK,
                                                     color=ft.Colors.WHITE,
                                                     shape=ft.RoundedRectangleBorder(radius=10))),
         ],
@@ -473,7 +482,7 @@ def _open_club_picker(page: ft.Page, conn, game_state):
 
     dlg = ft.AlertDialog(
         title=ft.Text("🏟️ " + t("choose_your_club"),
-                       color="#FFD54F", weight=ft.FontWeight.BOLD),
+                       color=theme.GOLD, weight=ft.FontWeight.BOLD),
         content=ft.Container(
             content=ft.ListView(
                 controls=club_buttons,
@@ -526,6 +535,13 @@ def _select_club(page: ft.Page, conn, game_state, club: Club, dlg: ft.AlertDialo
             ),
             category="board",
         ))
+
+    # Apply menu preferences to a newly created career.
+    from src.utils.prefs import get_pref
+    from src.ui.screens.settings import _save_settings
+    defaults = {"match_speed": 3, "auto_save": 1, "auto_save_interval": 7, "difficulty": "normal"}
+    defaults.update(get_pref("gameplay_defaults", {}))
+    _save_settings(conn, defaults)
 
     # Store in shared state
     app_state.db_conn = conn

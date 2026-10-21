@@ -4,6 +4,7 @@ Season Summary screen — end-of-season awards, board review, start next season.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 
 from src.data import queries
 from src.core.season import get_season_awards, start_new_season
@@ -40,9 +41,9 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
 
     # Trophy section
     if is_champ:
-        trophy_icon = ft.Icon(ft.Icons.EMOJI_EVENTS, size=80, color=ft.Colors.AMBER_400)
+        trophy_icon = ft.Icon(ft.Icons.EMOJI_EVENTS, size=80, color=theme.ACCENT)
         trophy_text = "🎉 CHAMPIONS! 🎉"
-        trophy_color = ft.Colors.AMBER_300
+        trophy_color = theme.GOLD
     else:
         trophy_icon = ft.Icon(ft.Icons.EMOJI_EVENTS, size=60, color=ft.Colors.GREY_500)
         trophy_text = f"{champion.club_name} are Champions" if champion else "Season Complete"
@@ -95,7 +96,7 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
                          color=ft.Colors.GREEN_300 if is_mine else None,
                          max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                 ft.Text(f"⚽ {s['goals']}", size=12, weight=ft.FontWeight.BOLD,
-                         color=ft.Colors.AMBER_300),
+                         color=theme.GOLD),
                 ft.Text(s.get("club_short", ""), size=10, color=ft.Colors.GREY_500),
             ])
         )
@@ -113,7 +114,7 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
                          color=ft.Colors.GREEN_300 if is_user else None,
                          max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                 ft.Text(f"{s.points} pts", size=12, weight=ft.FontWeight.BOLD,
-                         color=ft.Colors.AMBER_300 if is_user else None),
+                         color=theme.GOLD if is_user else None),
             ])
         )
 
@@ -202,7 +203,7 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
                         ft.Container(
                             content=ft.Text(
                                 expectation_text, size=14, weight=ft.FontWeight.W_500,
-                                color=ft.Colors.AMBER_300, text_align=ft.TextAlign.CENTER,
+                                color=theme.GOLD, text_align=ft.TextAlign.CENTER,
                             ),
                             padding=ft.padding.symmetric(horizontal=12, vertical=6),
                             border_radius=6,
@@ -264,11 +265,11 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
                             "🔄 Start Next Season",
                             width=280, height=55,
                             style=ft.ButtonStyle(
-                                bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
+                                bgcolor=theme.ACCENT_DARK, color=ft.Colors.WHITE,
                                 text_style=ft.TextStyle(size=18, weight=ft.FontWeight.BOLD),
                                 shape=ft.RoundedRectangleBorder(radius=12),
                                 elevation=4,
-                                shadow_color=ft.Colors.with_opacity(0.25, "#FFD54F"),
+                                shadow_color=ft.Colors.with_opacity(0.25, theme.GOLD),
                             ),
                             on_click=start_next,
                         ),
@@ -279,7 +280,7 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
                             on_click=lambda e: navigate(page, "/table"),
                             style=ft.ButtonStyle(
                                 shape=ft.RoundedRectangleBorder(radius=12),
-                                side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, "#FFD54F")),
+                                side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, theme.GOLD)),
                             ),
                         ),
                         ft.OutlinedButton(
@@ -288,7 +289,7 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
                             on_click=lambda e: navigate(page, "/"),
                             style=ft.ButtonStyle(
                                 shape=ft.RoundedRectangleBorder(radius=12),
-                                side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, "#FFD54F")),
+                                side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, theme.GOLD)),
                             ),
                         ),
                     ],
@@ -307,7 +308,7 @@ def _award_card(award_name: str, player_name: str, detail: str, club: str) -> ft
                 ft.Text(award_name.split()[0], size=22),  # emoji
                 ft.Column(spacing=0, expand=True, controls=[
                     ft.Text(" ".join(award_name.split()[1:]), size=12,
-                            color=ft.Colors.AMBER_300, weight=ft.FontWeight.W_500),
+                            color=theme.GOLD, weight=ft.FontWeight.W_500),
                     ft.Text(player_name, size=14, weight=ft.FontWeight.BOLD),
                     ft.Row(spacing=6, controls=[
                         ft.Text(detail, size=11, color=ft.Colors.GREY_400),

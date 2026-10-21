@@ -7,7 +7,7 @@ throughout the simulation engine, database layer, and UI.
 
 import datetime as _dt
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 from src.utils.config import (
     ABILITY_MAX,
@@ -259,6 +259,8 @@ class MatchStats(BaseModel):
 
 class MatchResult(BaseModel):
     """Complete result of a simulated match."""
+
+    _replay: dict = PrivateAttr(default_factory=dict)
 
     match_id: int = 0
     home_club_id: int

@@ -34,7 +34,79 @@ def _per_minute_drain(p: Player) -> float:
     return base
 
 
-def simulate_match(
+def simulate_match(home_club, away_club, home_squad, away_squad,
+                   home_tactics, away_tactics, match_date=None, is_derby=False,
+                   minutes_played_offset=None, controlled_club_id=None):
+    """Create a deterministic match with private in-memory replay context."""
+    from copy import deepcopy
+    inputs = deepcopy(dict(home_club=home_club, away_club=away_club,
+        home_squad=home_squad, away_squad=away_squad,
+        home_tactics=home_tactics, away_tactics=away_tactics,
+        match_date=match_date, is_derby=is_derby,
+        minutes_played_offset=minutes_played_offset,
+        controlled_club_id=controlled_club_id))
+    match_seed = rng.get_rng().getrandbits(64)
+    with rng.isolated(match_seed):
+        result = _simulate_match(**inputs)
+    result._replay = dict(inputs=inputs, seed=match_seed, substitutions=())
+    return result
+
+
+def substitute(result: MatchResult, minute: int, club_id: int,
+               off_id: int, on_id: int) -> MatchResult:
+    """Apply a validated command by deterministic replay, preserving the past.
+
+    Replaying this short text simulation avoids reconstructing hidden fatigue,
+    cards and random state from event descriptions. It does not touch the world RNG.
+    """
+    ctx = result._replay
+    if not ctx or not 0 <= minute < 90:
+        raise ValueError("Match is not available for live substitutions")
+    if ctx['inputs']['controlled_club_id'] != club_id:
+        raise ValueError("This club is not controlled by the manager")
+    commands = ctx['substitutions']
+    if commands and minute < commands[-1][0]:
+        raise ValueError("Cannot change an earlier match minute")
+    commands = commands + ((minute, club_id, off_id, on_id),)
+    with rng.isolated(ctx['seed']):
+        updated = _simulate_match(**ctx['inputs'], substitutions=commands)
+    for field in ('match_id', 'matchday', 'competition', 'date'):
+        setattr(updated, field, getattr(result, field))
+    updated._replay = dict(ctx, substitutions=commands)
+    return updated
+
+
+def lineup_at(result: MatchResult, club_id: int, starters: list[int], minute: int):
+    """Actual players on the field, including dismissals and substitutions."""
+    active = list(starters)
+    for event in result.events:
+        if event.minute > minute or event.club_id != club_id:
+            continue
+        if event.event_type == MatchEventType.RED_CARD and event.player_id in active:
+            active.remove(event.player_id)
+        elif event.event_type == MatchEventType.SUBSTITUTION and event.player_id in active:
+            active[active.index(event.player_id)] = event.second_player_id
+    return active
+
+
+def minutes_played(result: MatchResult, club_id: int, starters: list[int]):
+    """Regulation minutes for appearances, fatigue and persisted player stats."""
+    entered = {pid: 0 for pid in starters}
+    played = {}
+    for event in result.events:
+        if event.club_id != club_id:
+            continue
+        minute = min(90, max(0, event.minute))
+        if event.event_type in (MatchEventType.SUBSTITUTION, MatchEventType.RED_CARD):
+            if event.player_id in entered:
+                played[event.player_id] = minute - entered.pop(event.player_id)
+            if event.event_type == MatchEventType.SUBSTITUTION:
+                entered[event.second_player_id] = minute
+    played.update({pid: 90 - start for pid, start in entered.items()})
+    return played
+
+
+def _simulate_match(
     home_club: Club,
     away_club: Club,
     home_squad: list[Player],
@@ -44,6 +116,8 @@ def simulate_match(
     match_date=None,
     is_derby: bool = False,
     minutes_played_offset: dict[int, int] | None = None,
+    controlled_club_id: int | None = None,
+    substitutions: tuple = (),
 ) -> MatchResult:
     """
     Simulate a full match between two teams.
@@ -211,7 +285,7 @@ def simulate_match(
 
     def _ai_consider_sub(player_map, xi, bench_pool, used_ids, subs_state,
                          club, trailing: bool, minute_now: int):
-        if subs_state[0] >= 3 or not bench_pool:
+        if club.id == controlled_club_id or subs_state[0] >= 3 or not bench_pool:
             return None
         outfield = [pid for pid in xi
                     if pid in player_map
@@ -262,8 +336,62 @@ def simulate_match(
                             f"{getattr(off_p, 'name_ar', '')} ودخول {on_p.name_ar}"),
         )
 
+    # Replay commands at minute boundaries; all earlier events remain identical.
+    def apply_substitution(command):
+        nonlocal home_attack, home_defense, home_gk, away_attack, away_defense, away_gk
+        at, club_id, off_id, on_id = command
+        if club_id == home_club.id:
+            players, xi, bench, used, count, club, tactics = (
+                home_players, home_active_xi, home_bench_pool, home_used_ids,
+                home_subs_state, home_club, home_tactics)
+        elif club_id == away_club.id:
+            players, xi, bench, used, count, club, tactics = (
+                away_players, away_active_xi, away_bench_pool, away_used_ids,
+                away_subs_state, away_club, away_tactics)
+        else:
+            raise ValueError("Unknown club")
+        if count[0] >= 3 or off_id not in xi or on_id not in bench or on_id in used:
+            raise ValueError("Substitution is no longer available")
+        off, on = players[off_id], players[on_id]
+        if on.injury_days_remaining or on.suspension_matches:
+            raise ValueError("Incoming player is unavailable")
+        before_tactics = tactics.model_copy(deep=True)
+        before_tactics.starting_xi = list(xi)
+        before = calculate_team_strength(list(players.values()), before_tactics)
+        xi[xi.index(off_id)] = on_id
+        after_tactics = tactics.model_copy(deep=True)
+        after_tactics.starting_xi = list(xi)
+        after = calculate_team_strength(list(players.values()), after_tactics)
+        attack_ratio = after["attack"] / max(before["attack"], 0.01)
+        defense_ratio = after["defense"] / max(before["defense"], 0.01)
+        gk_ratio = after["goalkeeper"] / max(before["goalkeeper"], 0.01)
+        if club_id == home_club.id:
+            home_attack *= attack_ratio
+            home_defense *= defense_ratio
+            home_gk *= gk_ratio
+        else:
+            away_attack *= attack_ratio
+            away_defense *= defense_ratio
+            away_gk *= gk_ratio
+        bench.remove(on_id)
+        used.update((off_id, on_id))
+        count[0] += 1
+        condition[on_id] = float(on.fitness)
+        cond_factor[on_id] = _tempo_press_factor(tactics)
+        events.append(MatchEvent(
+            minute=at, event_type=MatchEventType.SUBSTITUTION,
+            club_id=club_id, player_id=off_id, second_player_id=on_id,
+            player_name=off.name, player_name_ar=off.name_ar,
+            second_player_name=on.name, second_player_name_ar=on.name_ar,
+            description=f"Substitution: {off.name} off, {on.name} on",
+            description_ar=f"تبديل: خروج {off.name_ar} ودخول {on.name_ar}",
+        ))
+
     # Simulate minute by minute
     for minute in range(1, MATCH_DURATION_MINUTES + second_half_added + 1):
+        for command in substitutions:
+            if command[0] == minute - 1:
+                apply_substitution(command)
         if minute == 46:
             events.append(MatchEvent(
                 minute=45, event_type=MatchEventType.HALF_TIME,
@@ -541,7 +669,7 @@ def simulate_match(
 
     # Full time
     events.append(MatchEvent(
-        minute=90, event_type=MatchEventType.FULL_TIME,
+        minute=MATCH_DURATION_MINUTES + second_half_added, event_type=MatchEventType.FULL_TIME,
         description=commentary.generate(
             MatchEventType.FULL_TIME, lang="en",
             home=home_club.name, away=away_club.name,
@@ -562,6 +690,17 @@ def simulate_match(
     _rate_players(player_ratings, away_tactics.starting_xi, away_players,
                   events, away_club.id, away_goals, home_goals,
                   is_home_team=False, formation=away_tactics.formation)
+
+    # Include substitutes in ratings without changing the original team sheet.
+    for club, players, tactics, scored, conceded in (
+        (home_club, home_players, home_tactics, home_goals, away_goals),
+        (away_club, away_players, away_tactics, away_goals, home_goals),
+    ):
+        incoming = [e.second_player_id for e in events
+                    if e.event_type == MatchEventType.SUBSTITUTION and e.club_id == club.id]
+        _rate_players(player_ratings, incoming, players, events, club.id,
+                      scored, conceded, is_home_team=club.id == home_club.id,
+                      formation=tactics.formation)
 
     # Build result
     return MatchResult(

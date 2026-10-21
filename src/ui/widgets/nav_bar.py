@@ -4,6 +4,7 @@ Shared navigation bar used across all game screens.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 from src.utils.localization import t
 
 
@@ -58,14 +59,14 @@ def build_nav_bar(page: ft.Page, selected_index: int = 0) -> ft.NavigationBar:
         inbox_dest = ft.NavigationBarDestination(
             icon=ft.Icons.MAIL_OUTLINED,
             selected_icon=ft.Icons.MAIL,
-            label="Inbox",
+            label=t("inbox"),
         )
 
     return ft.NavigationBar(
         selected_index=selected_index,
         on_change=on_nav,
-        bgcolor="#0f1729",
-        indicator_color=ft.Colors.with_opacity(0.15, ft.Colors.AMBER),
+        bgcolor=theme.BG_MID,
+        indicator_color=ft.Colors.with_opacity(0.20, theme.SECONDARY_ACCENT if theme.current_theme() == "supporter" else theme.ACCENT),
         shadow_color=ft.Colors.with_opacity(0.3, ft.Colors.BLACK),
         elevation=8,
         destinations=[

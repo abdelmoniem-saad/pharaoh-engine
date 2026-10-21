@@ -455,11 +455,13 @@ def simulate_user_match(conn: sqlite3.Connection,
         user_result = match_engine.simulate_match(
             user_club, opp_club, user_squad, opp_squad,
             user_team_tactics, opp_tactics,
+            match_date=fixture.date, controlled_club_id=game_state.user_club_id,
         )
     else:
         user_result = match_engine.simulate_match(
             opp_club, user_club, opp_squad, user_squad,
             opp_tactics, user_team_tactics,
+            match_date=fixture.date, controlled_club_id=game_state.user_club_id,
         )
 
     user_result.match_id = fixture.fixture_id
@@ -908,7 +910,7 @@ def _update_player_stats_after_match(
     yellow_players: set[int] = set()
 
     for event in result.events:
-        if event.event_type == MatchEventType.GOAL and event.player_id:
+        if event.event_type in (MatchEventType.GOAL, MatchEventType.PENALTY) and event.player_id:
             player = all_players.get(event.player_id)
             if player and event.player_id not in goal_players:
                 player.season_stats.goals += 1
@@ -928,8 +930,10 @@ def _update_player_stats_after_match(
                 yellow_players.add(event.player_id)
 
     # Process all starters — appearances, form, fitness, morale, rating
-    home_starters = set(home_tactics.starting_xi)
-    away_starters = set(away_tactics.starting_xi)
+    home_minutes = match_engine.minutes_played(result, result.home_club_id, home_tactics.starting_xi)
+    home_starters = set(home_minutes)
+    away_minutes = match_engine.minutes_played(result, result.away_club_id, away_tactics.starting_xi)
+    away_starters = set(away_minutes)
 
     # Clean sheet check
     home_clean = result.away_goals == 0
@@ -940,7 +944,7 @@ def _update_player_stats_after_match(
         if not player:
             continue
         player.season_stats.appearances += 1
-        player.season_stats.minutes_played += 90
+        player.season_stats.minutes_played += home_minutes[pid]
         rating = result.player_ratings.get(pid, 6.5)
         player.season_stats.average_rating = round(
             (player.season_stats.average_rating * (player.season_stats.appearances - 1) + rating)
@@ -951,7 +955,7 @@ def _update_player_stats_after_match(
         if rating >= 8.5:
             player.season_stats.man_of_the_match += 1
         update_form(player, rating)
-        update_fitness_after_match(player, 90)
+        update_fitness_after_match(player, home_minutes[pid])
         update_morale(player, home_result, rating, played=True)
         queries.update_player_stats(conn, player)
 
@@ -960,7 +964,7 @@ def _update_player_stats_after_match(
         if not player:
             continue
         player.season_stats.appearances += 1
-        player.season_stats.minutes_played += 90
+        player.season_stats.minutes_played += away_minutes[pid]
         rating = result.player_ratings.get(pid, 6.5)
         player.season_stats.average_rating = round(
             (player.season_stats.average_rating * (player.season_stats.appearances - 1) + rating)
@@ -971,7 +975,7 @@ def _update_player_stats_after_match(
         if rating >= 8.5:
             player.season_stats.man_of_the_match += 1
         update_form(player, rating)
-        update_fitness_after_match(player, 90)
+        update_fitness_after_match(player, away_minutes[pid])
         update_morale(player, away_result, rating, played=True)
         queries.update_player_stats(conn, player)
 

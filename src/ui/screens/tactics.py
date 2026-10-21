@@ -4,12 +4,12 @@ Tactics screen — formation selector, mentality, visual pitch, and presets.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 
 from src.data import queries
 from src.core.tactics import get_available_formations, PRESETS
 from src.utils.config import Mentality, Position, FORMATION_TEMPLATES
 from src.ui.widgets.nav_bar import build_nav_bar
-from src.ui.theme import header_bar, GOLD_BORDER, CARD_GLASS_STRONG
 from src.ui.widgets.cards import collapsible_section
 from src.utils.localization import t, t_format
 
@@ -111,7 +111,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
                     ft.Text(label, size=12, weight=ft.FontWeight.W_500),
-                    ft.Text(str(value), size=12, color=ft.Colors.AMBER_400,
+                    ft.Text(str(value), size=12, color=theme.ACCENT,
                             weight=ft.FontWeight.BOLD),
                 ],
             ),
@@ -121,7 +121,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                     min=1, max=10, divisions=9, value=value,
                     on_change=_make_slider_handler(attr_name, label),
                     expand=True,
-                    active_color=ft.Colors.AMBER_400,
+                    active_color=theme.ACCENT,
                 ),
                 ft.Text(high_label, size=9, color=ft.Colors.GREY_500),
             ]),
@@ -163,8 +163,8 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                         on_click=make_preset_handler(key),
                     ),
                     padding=ft.padding.symmetric(vertical=0),
-                    bgcolor=CARD_GLASS_STRONG if is_active else ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
-                    border=ft.border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.GREEN) if is_active else GOLD_BORDER),
+                    bgcolor=theme.CARD_GLASS_STRONG if is_active else ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
+                    border=ft.border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.GREEN) if is_active else theme.GOLD_BORDER),
                     border_radius=10,
                 ),
             )
@@ -179,7 +179,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                 content=ft.Column(
                     spacing=10,
                     controls=[
-                        header_bar(
+                        theme.header_bar(
                             title=t("tactics"),
                             subtitle=(
                                 f"{gs.user_club_name} — {club.formation} | "
@@ -234,7 +234,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                             "⚡ Quick Presets",
                             preset_cards,
                             initially_expanded=False,
-                            title_color=ft.Colors.AMBER_400,
+                            title_color=theme.ACCENT,
                             subtitle=t("tap_to_apply_preset"),
                         ),
                     ],
@@ -246,9 +246,9 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
 
 def _build_formation_pitch(formation: str, page: ft.Page = None) -> ft.Container:
     """Build a visual pitch showing player positions for the given formation."""
-    from src.ui.theme import pitch_width as pw_fn, pitch_height as ph_fn
-    pw = pw_fn(page) if page else 280
-    ph = ph_fn(page) if page else 360
+    pass
+    pw = theme.pitch_width(page) if page else 280
+    ph = theme.pitch_height(page) if page else 360
 
     positions = FORMATION_TEMPLATES.get(formation, FORMATION_TEMPLATES["4-2-3-1"])
 
@@ -282,8 +282,8 @@ def _build_formation_pitch(formation: str, page: ft.Page = None) -> ft.Container
 
         # Marker style
         is_gk = pos == Position.GK
-        marker_color = ft.Colors.AMBER_400 if is_gk else ft.Colors.WHITE
-        marker_bg = ft.Colors.with_opacity(0.9, ft.Colors.AMBER_800 if is_gk else ft.Colors.BLUE_GREY_700)
+        marker_color = theme.ACCENT if is_gk else ft.Colors.WHITE
+        marker_bg = ft.Colors.with_opacity(0.9, theme.ACCENT_DARK if is_gk else ft.Colors.BLUE_GREY_700)
         marker_size = 32
 
         markers.append(
@@ -294,10 +294,10 @@ def _build_formation_pitch(formation: str, page: ft.Page = None) -> ft.Container
                 border_radius=marker_size // 2,
                 bgcolor=marker_bg,
                 alignment=ft.Alignment(0, 0),
-                border=ft.border.all(2, ft.Colors.with_opacity(0.5, ft.Colors.AMBER_400)),
+                border=ft.border.all(2, ft.Colors.with_opacity(0.5, theme.ACCENT)),
                 shadow=ft.BoxShadow(
                     spread_radius=0, blur_radius=6,
-                    color=ft.Colors.with_opacity(0.25, ft.Colors.AMBER_400 if is_gk else ft.Colors.WHITE),
+                    color=ft.Colors.with_opacity(0.25, theme.ACCENT if is_gk else ft.Colors.WHITE),
                 ),
                 left=x / 100 * pw - marker_size // 2,
                 top=y / 100 * ph - marker_size // 2,

@@ -3,14 +3,7 @@ Settings screen -- match speed, difficulty, auto-save, language.
 """
 from __future__ import annotations
 import flet as ft
-from src.ui.theme import (
-    header_bar, golden_divider, glass_card,
-    GOLD, GOLD_BORDER, TEXT_SECONDARY, TEXT_MUTED,
-    TEXT_DANGER, ACCENT, ACCENT_DARK,
-    PRIMARY_BTN_STYLE, SECONDARY_BTN_STYLE, DANGER_BTN_STYLE,
-    CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS, CARD_RADIUS_SM,
-    PAGE_PADDING,
-)
+from src.ui import theme
 
 
 def build_settings_screen(page: ft.Page) -> ft.Column:
@@ -20,16 +13,10 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
 
     page.navigation_bar = None
 
-    # Get a DB connection — either the game's or a standalone one for settings
+    # Opening Settings must not manufacture a blank legacy career.
+    from src.utils.prefs import get_pref, set_pref
     conn = app_state.db_conn
-    if conn is None:
-        try:
-            from src.data.database import connect
-            conn = connect()
-        except Exception:
-            conn = None
-
-    settings = _load_settings(conn) if conn else {}
+    settings = _load_settings(conn) if conn else get_pref("gameplay_defaults", {})
     match_speed = settings.get("match_speed", 3)
     auto_save = settings.get("auto_save", 1)
     auto_save_interval = settings.get("auto_save_interval", 7)
@@ -60,6 +47,7 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
             "difficulty": diff_dd.value or "normal",
             # "sound_enabled": 1 if sound_switch.value else 0,  # [SOUND DISABLED]
         }
+        set_pref("gameplay_defaults", s)
         if conn:
             _save_settings(conn, s)
         # set_audio_enabled(bool(sound_switch.value))  # [SOUND DISABLED]
@@ -85,12 +73,12 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
             actions=[
                 ft.TextButton(t("cancel"), on_click=lambda e2: page.pop_dialog()),
                 ft.ElevatedButton(t("delete"), on_click=confirm_delete,
-                    style=DANGER_BTN_STYLE),
+                    style=theme.DANGER_BTN_STYLE),
             ],
         ))
 
     controls_list = [
-        header_bar(
+        theme.header_bar(
             title=t("settings"),
             icon=ft.Icons.SETTINGS,
             page=page,
@@ -98,24 +86,49 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
         ),
 
         # Gameplay section
-        glass_card(
+        theme.glass_card(
             content=ft.Column(spacing=10, controls=[
-                ft.Text("🎮 " + t("gameplay"), size=16, weight=ft.FontWeight.W_600, color=GOLD),
+                ft.Text("🎮 " + t("gameplay"), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
                 speed_dd,
                 diff_dd,
             ]),
         ),
 
         # Save section
-        glass_card(
+        theme.glass_card(
             content=ft.Column(spacing=10, controls=[
-                ft.Text("💾 " + t("save"), size=16, weight=ft.FontWeight.W_600, color=GOLD),
+                ft.Text("💾 " + t("save"), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
                 auto_save_switch,
                 interval_dd,
                 # sound_switch,  # [SOUND DISABLED]
             ]),
         ),
     ]
+
+    # Appearance is app-wide and independent of career saves.
+    from src.utils.prefs import set_pref
+
+    def on_theme_change(e):
+        theme.configure(e.control.value)
+        set_pref("ui_theme", theme.current_theme())
+        theme.apply_to_page(page)
+        navigate(page, "/settings")
+
+    appearance = ft.RadioGroup(
+        value=theme.current_theme(), on_change=on_theme_change,
+        content=ft.Column(controls=[
+            ft.Radio(value=key, label=names[1 if is_rtl() else 0])
+            for key, names in theme.THEME_NAMES.items()
+        ]),
+    )
+    controls_list.insert(1, theme.glass_card(ft.Column(spacing=10, controls=[
+        ft.Text("المظهر" if is_rtl() else "Appearance", size=18,
+                weight=ft.FontWeight.BOLD, color=theme.GOLD),
+        appearance,
+        ft.Text("المدرج: تصور مستوحى من ألوان ارزع، بدون شعار أو شراكة رسمية."
+                if is_rtl() else "Supporter: an Erza3-inspired concept. No logo or official partnership.",
+                size=12, color=theme.TEXT_SECONDARY),
+    ])))
 
     # Language section — use RadioGroup for reliable on_change
     current_lang = get_language()
@@ -124,6 +137,7 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
         new_lang = e.control.value or "en"
         print(f"DEBUG: Language toggle fired → '{new_lang}' (was '{get_language()}')")
         set_language(new_lang)
+        set_pref("language", new_lang)
         # Persist to DB
         if conn:
             try:
@@ -156,14 +170,14 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
     )
 
     controls_list.append(
-        glass_card(
+        theme.glass_card(
             content=ft.Column(spacing=10, controls=[
-                ft.Text("🌍 " + t("language"), size=16, weight=ft.FontWeight.W_600, color=GOLD),
+                ft.Text("🌍 " + t("language"), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
                 lang_radio,
                 ft.Text(
                     "Switch between English and Arabic (العربية). "
                     "Arabic enables right-to-left layout.",
-                    size=11, color=TEXT_MUTED, italic=True,
+                    size=11, color=theme.TEXT_MUTED, italic=True,
                 ),
             ]),
         ),
@@ -172,16 +186,16 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
     controls_list.extend([
         ft.Container(height=10),
         ft.ElevatedButton("💾 " + t("save") + " " + t("settings"), width=280, height=48,
-            style=PRIMARY_BTN_STYLE,
+            style=theme.PRIMARY_BTN_STYLE,
             on_click=save_click),
         ft.Container(height=16),
 
         # Danger zone
-        glass_card(
+        theme.glass_card(
             content=ft.Column(spacing=10, controls=[
-                ft.Text("⚠️ " + t("danger_zone"), size=16, weight=ft.FontWeight.W_600, color=TEXT_DANGER),
+                ft.Text("⚠️ " + t("danger_zone"), size=16, weight=ft.FontWeight.W_600, color=theme.TEXT_DANGER),
                 ft.OutlinedButton("🗑️ " + t("delete_save"), width=250, height=42,
-                    style=DANGER_BTN_STYLE,
+                    style=theme.DANGER_BTN_STYLE,
                     on_click=delete_save_click),
             ]),
             border_color=ft.Colors.with_opacity(0.2, ft.Colors.RED),
@@ -191,7 +205,7 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
     return ft.Column(
         expand=True, scroll=ft.ScrollMode.AUTO,
         controls=[ft.Container(
-            padding=ft.padding.all(PAGE_PADDING),
+            padding=ft.padding.all(theme.PAGE_PADDING),
             content=ft.Column(spacing=14, controls=controls_list),
         )],
     )

@@ -4,17 +4,11 @@ Inbox screen — game messages with card-based mobile layout.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 
 from src.data import queries
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.utils.localization import t, t_format
-from src.ui.theme import (
-    ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
-    CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS, CARD_RADIUS_SM,
-    PAGE_PADDING, SECTION_SPACING,
-    TITLE_SIZE, BODY_SIZE, CAPTION_SIZE, TINY_SIZE, ACCENT_BG,
-    GOLD_BORDER, header_bar,
-)
 
 
 # Category styling
@@ -22,7 +16,7 @@ _CAT_COLORS = {
     "match": ft.Colors.GREEN_400,
     "media": ft.Colors.BLUE_400,
     "board": ft.Colors.PURPLE_400,
-    "transfer": ft.Colors.AMBER_400,
+    "transfer": theme.ACCENT,
     "general": ft.Colors.GREY_400,
 }
 _CAT_ICONS = {
@@ -55,11 +49,11 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                 content=ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        ft.Icon(ft.Icons.INBOX, size=48, color=TEXT_MUTED),
+                        ft.Icon(ft.Icons.INBOX, size=48, color=theme.TEXT_MUTED),
                         ft.Container(height=8),
-                        ft.Text(t("no_messages_yet"), size=BODY_SIZE, color=TEXT_SECONDARY),
+                        ft.Text(t("no_messages_yet"), size=theme.BODY_SIZE, color=theme.TEXT_SECONDARY),
                         ft.Text(t("play_matches_updates"),
-                                size=CAPTION_SIZE, color=TEXT_MUTED),
+                                size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED),
                     ],
                 ),
                 padding=40,
@@ -69,9 +63,9 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
         for msg in messages:
             cat_color = _CAT_COLORS.get(msg.category, ft.Colors.GREY_400)
             cat_icon = _CAT_ICONS.get(msg.category, ft.Icons.MAIL)
-            icon_color = cat_color if not msg.is_read else TEXT_MUTED
+            icon_color = cat_color if not msg.is_read else theme.TEXT_MUTED
             title_weight = ft.FontWeight.W_600 if not msg.is_read else ft.FontWeight.NORMAL
-            bg = ft.Colors.with_opacity(0.04, ft.Colors.AMBER) if not msg.is_read else CARD_BG
+            bg = ft.Colors.with_opacity(0.04, ft.Colors.AMBER) if not msg.is_read else theme.CARD_BG
 
             def make_handler(m=msg):
                 def handler(e):
@@ -107,29 +101,29 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                             # Content
                             ft.Column(spacing=2, expand=True, controls=[
                                 ft.Row(spacing=4, tight=True, controls=[
-                                    ft.Text(msg.subject, size=BODY_SIZE, weight=title_weight,
+                                    ft.Text(msg.subject, size=theme.BODY_SIZE, weight=title_weight,
                                             max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                             expand=True),
                                     *unread_badge,
                                 ]),
                                 ft.Text(
                                     f"{msg.date.strftime('%d %b')} — {msg.body}",
-                                    size=CAPTION_SIZE, color=TEXT_SECONDARY,
+                                    size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY,
                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                 ),
                             ]),
                             # Chevron
-                            ft.Icon(ft.Icons.CHEVRON_RIGHT, size=16, color=ACCENT),
+                            ft.Icon(ft.Icons.CHEVRON_RIGHT, size=16, color=theme.ACCENT),
                         ],
                     ),
                     padding=ft.padding.symmetric(horizontal=12, vertical=10),
-                    border_radius=CARD_RADIUS_SM,
-                    bgcolor=CARD_GLASS_STRONG if not msg.is_read else CARD_GLASS,
+                    border_radius=theme.CARD_RADIUS_SM,
+                    bgcolor=theme.CARD_GLASS_STRONG if not msg.is_read else theme.CARD_GLASS,
                     border=ft.border.only(
                         left=ft.BorderSide(3, cat_color),
-                        top=ft.BorderSide(1, GOLD_BORDER),
-                        right=ft.BorderSide(1, GOLD_BORDER),
-                        bottom=ft.BorderSide(1, GOLD_BORDER),
+                        top=ft.BorderSide(1, theme.GOLD_BORDER),
+                        right=ft.BorderSide(1, theme.GOLD_BORDER),
+                        bottom=ft.BorderSide(1, theme.GOLD_BORDER),
                     ),
                     on_click=make_handler(),
                     ink=True,
@@ -163,7 +157,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                     continue
                 cat_color = _CAT_COLORS.get(msg.category, ft.Colors.GREY_400)
                 cat_icon = _CAT_ICONS.get(msg.category, ft.Icons.MAIL)
-                icon_color = cat_color if not msg.is_read else TEXT_MUTED
+                icon_color = cat_color if not msg.is_read else theme.TEXT_MUTED
                 title_weight = ft.FontWeight.W_600 if not msg.is_read else ft.FontWeight.NORMAL
 
                 def make_handler(m=msg):
@@ -197,28 +191,28 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                                 ),
                                 ft.Column(spacing=2, expand=True, controls=[
                                     ft.Row(spacing=4, tight=True, controls=[
-                                        ft.Text(msg.subject, size=BODY_SIZE, weight=title_weight,
+                                        ft.Text(msg.subject, size=theme.BODY_SIZE, weight=title_weight,
                                                 max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                                 expand=True),
                                         *unread_badge,
                                     ]),
                                     ft.Text(
                                         f"{msg.date.strftime('%d %b')} — {msg.body}",
-                                        size=CAPTION_SIZE, color=TEXT_SECONDARY,
+                                        size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY,
                                         max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                     ),
                                 ]),
-                                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=16, color=ACCENT),
+                                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=16, color=theme.ACCENT),
                             ],
                         ),
                         padding=ft.padding.symmetric(horizontal=12, vertical=10),
-                        border_radius=CARD_RADIUS_SM,
-                        bgcolor=CARD_GLASS_STRONG if not msg.is_read else CARD_GLASS,
+                        border_radius=theme.CARD_RADIUS_SM,
+                        bgcolor=theme.CARD_GLASS_STRONG if not msg.is_read else theme.CARD_GLASS,
                         border=ft.border.only(
                             left=ft.BorderSide(3, cat_color),
-                            top=ft.BorderSide(1, GOLD_BORDER),
-                            right=ft.BorderSide(1, GOLD_BORDER),
-                            bottom=ft.BorderSide(1, GOLD_BORDER),
+                            top=ft.BorderSide(1, theme.GOLD_BORDER),
+                            right=ft.BorderSide(1, theme.GOLD_BORDER),
+                            bottom=ft.BorderSide(1, theme.GOLD_BORDER),
                         ),
                         on_click=make_handler(),
                         ink=True,
@@ -226,15 +220,15 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                 )
             if not msg_tiles_col.controls:
                 msg_tiles_col.controls.append(
-                    ft.Text(t("no_messages_category"), size=12, color=TEXT_SECONDARY))
+                    ft.Text(t("no_messages_category"), size=12, color=theme.TEXT_SECONDARY))
             # Update chip styles
             for chip_cat, chip_ctrl in filter_chips:
                 if chip_cat == category:
-                    chip_ctrl.bgcolor = ft.Colors.with_opacity(0.15, ACCENT)
-                    chip_ctrl.border = ft.border.all(1, ACCENT)
+                    chip_ctrl.bgcolor = ft.Colors.with_opacity(0.15, theme.ACCENT)
+                    chip_ctrl.border = ft.border.all(1, theme.ACCENT)
                 else:
-                    chip_ctrl.bgcolor = CARD_GLASS
-                    chip_ctrl.border = ft.border.all(1, GOLD_BORDER)
+                    chip_ctrl.bgcolor = theme.CARD_GLASS
+                    chip_ctrl.border = ft.border.all(1, theme.GOLD_BORDER)
             page.update()
         return handler
 
@@ -247,11 +241,11 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
         chip = ft.Container(
             content=ft.Text(cat_labels.get(cat, cat.title()), size=10,
                             weight=ft.FontWeight.W_500,
-                            color=ACCENT if cat == "all" else TEXT_SECONDARY),
+                            color=theme.ACCENT if cat == "all" else theme.TEXT_SECONDARY),
             padding=ft.padding.symmetric(horizontal=10, vertical=5),
             border_radius=12,
-            bgcolor=ft.Colors.with_opacity(0.15, ACCENT) if cat == "all" else CARD_GLASS,
-            border=ft.border.all(1, ACCENT if cat == "all" else GOLD_BORDER),
+            bgcolor=ft.Colors.with_opacity(0.15, theme.ACCENT) if cat == "all" else theme.CARD_GLASS,
+            border=ft.border.all(1, theme.ACCENT if cat == "all" else theme.GOLD_BORDER),
             on_click=_apply_filter(cat),
             ink=True,
         )
@@ -265,11 +259,11 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
         scroll=ft.ScrollMode.AUTO,
         controls=[
             ft.Container(
-                padding=ft.padding.all(PAGE_PADDING),
+                padding=ft.padding.all(theme.PAGE_PADDING),
                 content=ft.Column(
-                    spacing=SECTION_SPACING,
+                    spacing=theme.SECTION_SPACING,
                     controls=[
-                        header_bar(
+                        theme.header_bar(
                             title=t("inbox"),
                             subtitle=f"{unread} {t('unread')}" if unread > 0 else t("all_caught_up"),
                             icon=ft.Icons.MAIL,
@@ -346,7 +340,7 @@ def _show_message_detail(page: ft.Page, conn, msg):
 
     dlg = ft.AlertDialog(
         title=ft.Text(f"{cat_emoji} {msg.subject}", size=16,
-                      weight=ft.FontWeight.BOLD, color="#FFD54F"),
+                      weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
             content=ft.Column(
                 controls=[
@@ -361,7 +355,7 @@ def _show_message_detail(page: ft.Page, conn, msg):
                                 ft.Container(
                                     content=ft.Text(
                                         msg.category.title(),
-                                        size=9, color=ft.Colors.AMBER_400,
+                                        size=9, color=theme.ACCENT,
                                         weight=ft.FontWeight.W_500,
                                     ),
                                     padding=ft.padding.symmetric(horizontal=8, vertical=2),
@@ -373,7 +367,7 @@ def _show_message_detail(page: ft.Page, conn, msg):
                     ),
                     ft.Container(
                         height=1,
-                        bgcolor=ft.Colors.with_opacity(0.18, "#FFD54F"),
+                        bgcolor=ft.Colors.with_opacity(0.18, theme.GOLD),
                         margin=ft.margin.symmetric(vertical=4),
                     ),
                     ft.Container(height=3),

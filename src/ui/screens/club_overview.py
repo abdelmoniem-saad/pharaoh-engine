@@ -4,6 +4,7 @@ Club Overview screen — finances, board confidence, fan happiness, top scorers.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 
 from src.data import queries
 from src.core.finance import calculate_monthly_income, calculate_monthly_expenses, monthly_cash_flow
@@ -12,11 +13,6 @@ from src.core.fans import get_fan_happiness_level, get_atmosphere_description
 from src.core.club import get_squad_average_age, get_squad_average_ability, calculate_wage_bill
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.widgets.cards import section_card, info_tile, kv_row, action_card
-from src.ui.theme import (
-    ACCENT, TEXT_SECONDARY, TEXT_MUTED, TEXT_SUCCESS, TEXT_WARNING, TEXT_DANGER,
-    PAGE_PADDING, SECTION_SPACING, TITLE_SIZE, CAPTION_SIZE,
-    GOLD_BORDER, header_bar, CARD_GLASS, CARD_GLASS_STRONG,
-)
 from src.utils.config import expectation_display, expectation_description
 from src.utils.localization import t, t_format
 
@@ -94,11 +90,11 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         section_card(f"🎯 {t('season_expectation_title')}", [
             ft.Text(
                 expectation_display(club.season_expectation),
-                size=15, weight=ft.FontWeight.BOLD, color=ACCENT,
+                size=15, weight=ft.FontWeight.BOLD, color=theme.ACCENT,
             ),
             ft.Text(
                 expectation_description(club.season_expectation),
-                size=12, color=TEXT_SECONDARY, italic=True,
+                size=12, color=theme.TEXT_SECONDARY, italic=True,
             ),
         ], title_color=ft.Colors.ORANGE_400),
 
@@ -109,18 +105,18 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         *_build_form_trend(conn, gs),
     ]
 
-    overview_content = ft.Column(spacing=SECTION_SPACING, controls=overview_controls)
+    overview_content = ft.Column(spacing=theme.SECTION_SPACING, controls=overview_controls)
 
     # ── Finances tab ─────────────────────────────────────────────────
     finances_controls = [
         section_card(f"💰 {t('monthly_finances')}", [
             kv_row(t("balance"), f"{club.finances.balance:,} EGP"),
-            kv_row(t("monthly_income"), f"+{income:,} EGP", TEXT_SUCCESS),
-            kv_row(t("monthly_expenses"), f"-{expenses:,} EGP", TEXT_DANGER),
+            kv_row(t("monthly_income"), f"+{income:,} EGP", theme.TEXT_SUCCESS),
+            kv_row(t("monthly_expenses"), f"-{expenses:,} EGP", theme.TEXT_DANGER),
             kv_row(t("net_cash_flow"), f"{'+' if net >= 0 else ''}{net:,} EGP", net_color),
             kv_row(t("weekly_wage_bill"), f"{wage_bill:,} EGP"),
             kv_row(t("transfer_budget"), f"{club.finances.transfer_budget:,} EGP"),
-        ], title_color=TEXT_SUCCESS),
+        ], title_color=theme.TEXT_SUCCESS),
 
         section_card(f"🏟️ {t('club_info_title')}", [
             kv_row(t("stadium"), f"{club.stadium_name} ({club.stadium_capacity:,})"),
@@ -133,7 +129,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         ], title_color=ft.Colors.BLUE_400),
     ]
 
-    finances_content = ft.Column(spacing=SECTION_SPACING, controls=finances_controls,
+    finances_content = ft.Column(spacing=theme.SECTION_SPACING, controls=finances_controls,
                                   visible=False)
 
     # ── Squad Health tab ─────────────────────────────────────────────
@@ -143,24 +139,24 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
     injured_players = [p for p in squad if p.injury_days_remaining > 0]
     if injured_players:
         injury_rows = [
-            kv_row(p.name, f"{p.injury_type} ({p.injury_days_remaining}d)", TEXT_DANGER)
+            kv_row(p.name, f"{p.injury_type} ({p.injury_days_remaining}d)", theme.TEXT_DANGER)
             for p in injured_players
         ]
         squad_health_controls.append(
-            section_card(f"🏥 {t('injured_players')}", injury_rows, title_color=TEXT_DANGER))
+            section_card(f"🏥 {t('injured_players')}", injury_rows, title_color=theme.TEXT_DANGER))
     else:
         squad_health_controls.append(
-            ft.Text(f"{t('no_injuries')} ✅", size=12, color=TEXT_SUCCESS))
+            ft.Text(f"{t('no_injuries')} ✅", size=12, color=theme.TEXT_SUCCESS))
 
     # Suspended players
     suspended_players = [p for p in squad if p.suspension_matches > 0]
     if suspended_players:
         susp_rows = [
-            kv_row(p.name, f"{p.suspension_matches} match(es)", TEXT_WARNING)
+            kv_row(p.name, f"{p.suspension_matches} match(es)", theme.TEXT_WARNING)
             for p in suspended_players
         ]
         squad_health_controls.append(
-            section_card(f"🚫 {t('suspended_players')}", susp_rows, title_color=TEXT_WARNING))
+            section_card(f"🚫 {t('suspended_players')}", susp_rows, title_color=theme.TEXT_WARNING))
 
     # Squad top scorers
     if squad_scorers:
@@ -175,9 +171,9 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
                                     overflow=ft.TextOverflow.ELLIPSIS),
                             ft.Row(spacing=8, tight=True, controls=[
                                 ft.Text(f"⚽{p.season_stats.goals}", size=12,
-                                        weight=ft.FontWeight.BOLD, color=ACCENT),
+                                        weight=ft.FontWeight.BOLD, color=theme.ACCENT),
                                 ft.Text(f"🅰️{p.season_stats.assists}", size=12),
-                                ft.Text(p.position.value, size=10, color=TEXT_SECONDARY),
+                                ft.Text(p.position.value, size=10, color=theme.TEXT_SECONDARY),
                             ]),
                         ],
                     ),
@@ -185,7 +181,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
                 )
             )
         squad_health_controls.append(
-            section_card(f"⚽ {t('top_scorers_label')}", scorer_rows, title_color=ACCENT))
+            section_card(f"⚽ {t('top_scorers_label')}", scorer_rows, title_color=theme.ACCENT))
 
     # League top scorers
     if league_scorers:
@@ -197,14 +193,14 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
                     content=ft.Row(
                         spacing=4,
                         controls=[
-                            ft.Text(f"{i}.", size=CAPTION_SIZE, width=18, color=TEXT_MUTED),
+                            ft.Text(f"{i}.", size=theme.CAPTION_SIZE, width=18, color=theme.TEXT_MUTED),
                             ft.Text(scorer["name"], size=12, expand=True,
                                     weight=ft.FontWeight.BOLD if is_user_player else ft.FontWeight.NORMAL,
-                                    color=TEXT_SUCCESS if is_user_player else None,
+                                    color=theme.TEXT_SUCCESS if is_user_player else None,
                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                             ft.Text(f"⚽{scorer['goals']}", size=12,
-                                    weight=ft.FontWeight.BOLD, color=ACCENT),
-                            ft.Text(scorer.get("club_short", ""), size=10, color=TEXT_MUTED,
+                                    weight=ft.FontWeight.BOLD, color=theme.ACCENT),
+                            ft.Text(scorer.get("club_short", ""), size=10, color=theme.TEXT_MUTED,
                                     width=40),
                         ],
                     ),
@@ -214,7 +210,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         squad_health_controls.append(
             section_card(f"🏆 {t('league_top_scorers')}", league_rows))
 
-    squad_health_content = ft.Column(spacing=SECTION_SPACING,
+    squad_health_content = ft.Column(spacing=theme.SECTION_SPACING,
                                       controls=squad_health_controls, visible=False)
 
     # ── Tab switching ────────────────────────────────────────────────
@@ -229,13 +225,13 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
             for i, btn in enumerate(tab_buttons):
                 if i == idx:
                     btn.style = ft.ButtonStyle(
-                        bgcolor=ft.Colors.AMBER_800, color=ft.Colors.WHITE,
+                        bgcolor=theme.ACCENT_DARK, color=ft.Colors.WHITE,
                         shape=ft.RoundedRectangleBorder(radius=10),
                     )
                 else:
                     btn.style = ft.ButtonStyle(
                         shape=ft.RoundedRectangleBorder(radius=10),
-                        side=ft.BorderSide(1, GOLD_BORDER),
+                        side=ft.BorderSide(1, theme.GOLD_BORDER),
                     )
             page.update()
         return handler
@@ -243,18 +239,18 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
     tab_buttons = [
         ft.ElevatedButton(f"📋 {t('overview_tab')}", on_click=switch_tab(0), height=34,
                            style=ft.ButtonStyle(
-                               bgcolor=ft.Colors.AMBER_800, color=ft.Colors.WHITE,
+                               bgcolor=theme.ACCENT_DARK, color=ft.Colors.WHITE,
                                shape=ft.RoundedRectangleBorder(radius=10),
                            )),
         ft.OutlinedButton(f"💰 {t('finances_tab_btn')}", on_click=switch_tab(1), height=34,
                            style=ft.ButtonStyle(
                                shape=ft.RoundedRectangleBorder(radius=10),
-                               side=ft.BorderSide(1, GOLD_BORDER),
+                               side=ft.BorderSide(1, theme.GOLD_BORDER),
                            )),
         ft.OutlinedButton(f"🏥 {t('squad_tab')}", on_click=switch_tab(2), height=34,
                            style=ft.ButtonStyle(
                                shape=ft.RoundedRectangleBorder(radius=10),
-                               side=ft.BorderSide(1, GOLD_BORDER),
+                               side=ft.BorderSide(1, theme.GOLD_BORDER),
                            )),
     ]
 
@@ -276,11 +272,11 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         scroll=ft.ScrollMode.AUTO,
         controls=[
             ft.Container(
-                padding=ft.padding.all(PAGE_PADDING),
+                padding=ft.padding.all(theme.PAGE_PADDING),
                 content=ft.Column(
-                    spacing=SECTION_SPACING,
+                    spacing=theme.SECTION_SPACING,
                     controls=[
-                        header_bar(
+                        theme.header_bar(
                             title=club.name,
                             subtitle=f"👤 {gs.manager_name}  •  📅 {gs.current_date.strftime('%d %b %Y')}",
                             icon=ft.Icons.STADIUM,
@@ -355,22 +351,22 @@ def _build_next_match_card(conn, gs, club) -> list:
         ft.Card(
             content=ft.Container(
                 padding=15,
-                bgcolor=CARD_GLASS_STRONG,
+                bgcolor=theme.CARD_GLASS_STRONG,
                 border_radius=14,
-                border=ft.border.all(1, GOLD_BORDER),
+                border=ft.border.all(1, theme.GOLD_BORDER),
                 content=ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=6,
                     controls=[
                         ft.Text(f"⚽ {t('next_match_card')}", size=14, weight=ft.FontWeight.W_500,
-                                color=ft.Colors.AMBER_300),
+                                color=theme.GOLD),
                         ft.Row(
                             alignment=ft.MainAxisAlignment.CENTER, spacing=15,
                             controls=[
                                 ft.Text(gs.user_club_name, size=14, weight=ft.FontWeight.BOLD,
                                         width=100, text_align=ft.TextAlign.RIGHT),
                                 ft.Text("VS", size=16, weight=ft.FontWeight.BOLD,
-                                        color=ft.Colors.AMBER_400),
+                                        color=theme.ACCENT),
                                 ft.Text(opp_name, size=14, weight=ft.FontWeight.BOLD,
                                         width=100, text_align=ft.TextAlign.LEFT),
                             ],
@@ -433,7 +429,7 @@ def _build_mini_table(conn, gs) -> list:
                                 text_align=ft.TextAlign.CENTER),
                         ft.Text(f"{s.points}", size=11, width=25,
                                 weight=ft.FontWeight.BOLD,
-                                color=ft.Colors.AMBER_300 if is_user else None,
+                                color=theme.GOLD if is_user else None,
                                 text_align=ft.TextAlign.CENTER),
                     ],
                 ),
@@ -461,8 +457,8 @@ def _build_mini_table(conn, gs) -> list:
             ]),
             padding=ft.padding.symmetric(horizontal=4, vertical=4),
             border_radius=10,
-            bgcolor=CARD_GLASS,
-            border=ft.border.all(1, GOLD_BORDER),
+            bgcolor=theme.CARD_GLASS,
+            border=ft.border.all(1, theme.GOLD_BORDER),
         ),
     ]
 
@@ -506,6 +502,6 @@ def _build_form_trend(conn, gs) -> list:
     trend = club_form_trend_line(results, width=320, height=90)
 
     return [
-        section_card(f"📊 {t('recent_form')}", [chips, trend], title_color=ACCENT),
+        section_card(f"📊 {t('recent_form')}", [chips, trend], title_color=theme.ACCENT),
     ]
 

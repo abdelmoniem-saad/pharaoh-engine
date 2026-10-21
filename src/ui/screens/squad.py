@@ -4,6 +4,7 @@ Squad management screen — view players, tap for detailed stats.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 
 from src.data import queries
 from src.core.player import calculate_overall_rating
@@ -14,13 +15,6 @@ from src.ui.widgets.cards import (
     action_card, form_chips, kv_row, collapsible_section,
 )
 from src.utils.localization import t, t_format, display_name
-from src.ui.theme import (
-    ACCENT, TEXT_SECONDARY, TEXT_MUTED,
-    CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_RADIUS, PAGE_PADDING, SECTION_SPACING,
-    TITLE_SIZE, BODY_SIZE, CAPTION_SIZE,
-    GOLD_BORDER, header_bar, golden_divider,
-    PRIMARY_BTN_STYLE, SECONDARY_BTN_STYLE,
-)
 
 
 def build_squad_screen(page: ft.Page) -> ft.Column:
@@ -145,19 +139,19 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
         scroll=ft.ScrollMode.AUTO,
         controls=[
             ft.Container(
-                padding=ft.padding.all(PAGE_PADDING),
+                padding=ft.padding.all(theme.PAGE_PADDING),
                 content=ft.Column(
-                    spacing=SECTION_SPACING,
+                    spacing=theme.SECTION_SPACING,
                     controls=[
                         # ── Header (minimal) ────────────────────────────
-                        header_bar(
+                        theme.header_bar(
                             title=display_name(queries.get_club(conn, gs.user_club_id)),
                             subtitle=f"👤 {gs.manager_name}  •  📅 {gs.current_date.strftime('%d %b %Y')}",
                             icon=ft.Icons.SHIELD,
                             page=page,
                             extra_controls=[
                                 ft.IconButton(icon=ft.Icons.SAVE_OUTLINED, icon_size=18,
-                                              icon_color=TEXT_SECONDARY,
+                                              icon_color=theme.TEXT_SECONDARY,
                                               tooltip=t("save"),
                                               on_click=lambda e: _save_game(page, conn, gs)),
                             ],
@@ -170,14 +164,14 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                                               style=ft.ButtonStyle(
                                                   padding=ft.padding.symmetric(horizontal=12),
                                                   shape=ft.RoundedRectangleBorder(radius=10),
-                                                  side=ft.BorderSide(1, GOLD_BORDER),
+                                                  side=ft.BorderSide(1, theme.GOLD_BORDER),
                                               )),
                             ft.OutlinedButton(f"🔁 {t('transfers')}", height=32,
                                               on_click=lambda e: navigate(page, "/transfers"),
                                               style=ft.ButtonStyle(
                                                   padding=ft.padding.symmetric(horizontal=12),
                                                   shape=ft.RoundedRectangleBorder(radius=10),
-                                                  side=ft.BorderSide(1, GOLD_BORDER),
+                                                  side=ft.BorderSide(1, theme.GOLD_BORDER),
                                               )),
                         ]),
 
@@ -200,14 +194,14 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                                         controls=[
                                             ft.Row(spacing=6, tight=True, controls=[
-                                                ft.Text(f"{t('form_label')}:", size=CAPTION_SIZE, color=TEXT_MUTED),
+                                                ft.Text(f"{t('form_label')}:", size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED),
                                                 form_chips(form_results),
                                             ]),
                                             ft.Row(spacing=4, tight=True, controls=[
-                                                *([ ft.Text(f"🏥 {injured_count}", size=CAPTION_SIZE,
+                                                *([ ft.Text(f"🏥 {injured_count}", size=theme.CAPTION_SIZE,
                                                             color=ft.Colors.RED_400)
                                                 ] if injured_count > 0 else []),
-                                                *([ ft.Text(f"🚫 {suspended_count}", size=CAPTION_SIZE,
+                                                *([ ft.Text(f"🚫 {suspended_count}", size=theme.CAPTION_SIZE,
                                                             color=ft.Colors.ORANGE_400)
                                                 ] if suspended_count > 0 else []),
                                             ]),
@@ -215,8 +209,8 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                                     ),
                                     padding=ft.padding.symmetric(horizontal=8, vertical=6),
                                     border_radius=8,
-                                    bgcolor=CARD_GLASS,
-                                    border=ft.border.all(1, GOLD_BORDER),
+                                    bgcolor=theme.CARD_GLASS,
+                                    border=ft.border.all(1, theme.GOLD_BORDER),
                                 ),
                             ],
                             initially_expanded=False,
@@ -228,11 +222,11 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
                                 ft.Text("Tap a player for details",
-                                        size=CAPTION_SIZE, color=TEXT_MUTED, italic=True),
+                                        size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED, italic=True),
                                 ft.Row(spacing=4, tight=True, controls=[
                                     ft.IconButton(
                                         icon=ft.Icons.COMPARE_ARROWS, icon_size=18,
-                                        icon_color=TEXT_SECONDARY, tooltip="Compare Players",
+                                        icon_color=theme.TEXT_SECONDARY, tooltip="Compare Players",
                                         on_click=lambda e: _start_compare(page, players),
                                     ),
                                     ft.Dropdown(
@@ -269,7 +263,7 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
     morale_desc = get_morale_description(player)
     morale_color = (
         ft.Colors.GREEN_400 if player.morale >= 70
-        else ft.Colors.AMBER_300 if player.morale >= 40
+        else theme.GOLD if player.morale >= 40
         else ft.Colors.RED_400
     )
 
@@ -336,7 +330,7 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
     if player.position.value == "GK":
         gk_section = [
             ft.Text("🧤 Goalkeeping", size=13, weight=ft.FontWeight.W_500,
-                     color=ft.Colors.AMBER_300),
+                     color=theme.GOLD),
             stat_bar("Reflexes", a.gk_reflexes),
             stat_bar("Handling", a.gk_handling),
             stat_bar("GK Pos.", a.gk_positioning),
@@ -488,7 +482,7 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
         title=ft.Row(
             controls=[
                 ft.Text(player.name, size=18, weight=ft.FontWeight.BOLD,
-                        color="#FFD54F", expand=True),
+                        color=theme.GOLD, expand=True),
                 ft.Container(
                     content=ft.Text(str(ovr), size=18, weight=ft.FontWeight.BOLD,
                                     color=ft.Colors.GREEN_300 if ovr >= 70 else ft.Colors.WHITE),
@@ -509,7 +503,7 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
                         spacing=10, wrap=True,
                         controls=[
                             ft.Text(f"📍 {player.position.value}", size=12,
-                                    color=ft.Colors.AMBER_300, weight=ft.FontWeight.BOLD),
+                                    color=theme.GOLD, weight=ft.FontWeight.BOLD),
                             ft.Text(f"Age {player.age}", size=12),
                             ft.Text(f"🦶 {player.preferred_foot.value}", size=12),
                             ft.Text(f"#{player.shirt_number or '–'}", size=12,
@@ -538,7 +532,7 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
                     ft.Divider(height=1),
                     # Season stats
                     ft.Text("📈 Season Stats", size=13, weight=ft.FontWeight.W_500,
-                             color=ft.Colors.AMBER_300),
+                             color=theme.GOLD),
                     season_info,
                     ft.Row(
                         spacing=12, wrap=True,
@@ -551,39 +545,39 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
                     ft.Divider(height=1),
                     # Form chart
                     ft.Text("📊 Form Trend", size=13, weight=ft.FontWeight.W_500,
-                             color=ft.Colors.AMBER_300),
+                             color=theme.GOLD),
                     form_chart,
                     ft.Divider(height=1),
                     # Attribute overview chart
                     ft.Text("📈 Attribute Overview", size=13, weight=ft.FontWeight.W_500,
-                             color=ft.Colors.AMBER_300),
+                             color=theme.GOLD),
                     attr_chart,
                     ft.Divider(height=1),
                     # GK section (if applicable)
                     *gk_section,
                     # Technical
                     ft.Text("⚽ Technical", size=13, weight=ft.FontWeight.W_500,
-                             color=ft.Colors.AMBER_300),
+                             color=theme.GOLD),
                     *tech_stats,
                     ft.Divider(height=1),
                     # Defensive
                     ft.Text("🛡️ Defensive", size=13, weight=ft.FontWeight.W_500,
-                             color=ft.Colors.AMBER_300),
+                             color=theme.GOLD),
                     *def_stats,
                     ft.Divider(height=1),
                     # Physical
                     ft.Text("🏃 Physical", size=13, weight=ft.FontWeight.W_500,
-                             color=ft.Colors.AMBER_300),
+                             color=theme.GOLD),
                     *phys_stats,
                     ft.Divider(height=1),
                     # Mental
                     ft.Text("🧠 Mental", size=13, weight=ft.FontWeight.W_500,
-                             color=ft.Colors.AMBER_300),
+                             color=theme.GOLD),
                     *mental_stats,
                     ft.Divider(height=1),
                     # Contract
                     ft.Text("📝 Contract", size=13, weight=ft.FontWeight.W_500,
-                             color=ft.Colors.AMBER_300),
+                             color=theme.GOLD),
                     ft.Row(
                         spacing=15,
                         controls=[
@@ -594,10 +588,10 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
                     ft.Divider(height=1),
                     # Training
                     ft.Text("🏋️ Training", size=13, weight=ft.FontWeight.W_500,
-                             color=ft.Colors.AMBER_300),
+                             color=theme.GOLD),
                     training_dd,
                     ft.Text("🎯 Development Plan", size=13, weight=ft.FontWeight.W_500,
-                             color=ft.Colors.AMBER_300),
+                             color=theme.GOLD),
                     ft.Text(
                         "Season-long arc: weekly attribute growth toward a target "
                         "role. Retrain plans can change a player's position.",
@@ -615,7 +609,7 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
             ft.TextButton(
                 "© Captain" if not player.is_captain else "✓ Captain",
                 on_click=lambda e, pid=player.id: _set_captain(page, pid),
-                style=ft.ButtonStyle(color="#FFD54F"),
+                style=ft.ButtonStyle(color=theme.GOLD),
             ),
             ft.TextButton(
                 "🗣️ Talk",
@@ -758,8 +752,8 @@ def _talk_to_player(page, player_id, player_name):
                 ]),
                 padding=ft.padding.symmetric(horizontal=10, vertical=10),
                 border_radius=10,
-                bgcolor=CARD_GLASS,
-                border=ft.border.all(1, GOLD_BORDER),
+                bgcolor=theme.CARD_GLASS,
+                border=ft.border.all(1, theme.GOLD_BORDER),
                 on_click=make_handler(talk_type, resp),
                 ink=True,
             )
@@ -767,7 +761,7 @@ def _talk_to_player(page, player_id, player_name):
 
     dlg = ft.AlertDialog(
         title=ft.Text(f"🗣️ Talk to {player_name}", size=15,
-                       weight=ft.FontWeight.BOLD, color="#FFD54F"),
+                       weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
             content=ft.Column(spacing=6, controls=[
                 ft.Text(f"Current mood: {morale_desc}", size=12, color=ft.Colors.GREY_400),
@@ -868,7 +862,7 @@ def _renew_contract(page, player_id):
 
     renewal_dlg = ft.AlertDialog(
         title=ft.Text(f"📝 Renew: {player.name}", size=16,
-                       weight=ft.FontWeight.BOLD, color="#FFD54F"),
+                       weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
             content=ft.Column(spacing=8, controls=[
                 ft.Row(spacing=10, controls=[
@@ -876,7 +870,7 @@ def _renew_contract(page, player_id):
                     ft.Text(f"Expires: {expiry_str}", size=12, color=ft.Colors.GREY_400),
                 ]),
                 ft.Text(f"Player expects: ≥{min_acceptable:,} EGP/wk (+{min_raise_pct}%)",
-                        size=11, color=ft.Colors.AMBER_300, italic=True),
+                        size=11, color=theme.GOLD, italic=True),
                 years_dd,
                 wage_field,
                 result_text,
@@ -886,7 +880,7 @@ def _renew_contract(page, player_id):
         actions=[
             ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),
             ft.ElevatedButton("Offer", on_click=submit_renewal,
-                              style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
+                              style=ft.ButtonStyle(bgcolor=theme.ACCENT_DARK,
                                                    color=ft.Colors.WHITE)),
         ],
     )
@@ -926,7 +920,7 @@ def _start_compare(page, players):
         )
 
     step_text = ft.Text("Pick Player 1", size=14, weight=ft.FontWeight.BOLD,
-                         color=ft.Colors.AMBER_300)
+                         color=theme.GOLD)
 
     def rebuild_for_p2():
         """After picking player 1, rebuild list for player 2."""
@@ -964,7 +958,7 @@ def _start_compare(page, players):
         )
 
     dlg = ft.AlertDialog(
-        title=ft.Text("⚖️ Compare Players", color="#FFD54F"),
+        title=ft.Text("⚖️ Compare Players", color=theme.GOLD),
         content=ft.Container(
             content=ft.Column(controls=[step_text, list_view], spacing=6, tight=True),
             width=290, height=400,
@@ -1011,12 +1005,12 @@ def _show_compare_dialog(page, p1, p2):
             controls=[
                 ft.Column(spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
                     ft.Text(p1.name, size=13, weight=ft.FontWeight.BOLD),
-                    ft.Text(f"{p1.position.value} | OVR {ovr1}", size=10, color=ft.Colors.AMBER_300),
+                    ft.Text(f"{p1.position.value} | OVR {ovr1}", size=10, color=theme.GOLD),
                 ]),
                 ft.Text("VS", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_500),
                 ft.Column(spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
                     ft.Text(p2.name, size=13, weight=ft.FontWeight.BOLD),
-                    ft.Text(f"{p2.position.value} | OVR {ovr2}", size=10, color=ft.Colors.AMBER_300),
+                    ft.Text(f"{p2.position.value} | OVR {ovr2}", size=10, color=theme.GOLD),
                 ]),
             ],
         ),
@@ -1052,7 +1046,7 @@ def _build_career_bar(conn, page) -> list:
 
     rating_color = (
         ft.Colors.GREEN_400 if career["manager_rating"] >= 65
-        else ft.Colors.AMBER_300 if career["manager_rating"] >= 45
+        else theme.GOLD if career["manager_rating"] >= 45
         else ft.Colors.RED_400
     )
 
@@ -1065,7 +1059,7 @@ def _build_career_bar(conn, page) -> list:
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
                     ft.Text("📊 Manager Career", size=12, weight=ft.FontWeight.W_500,
-                            color=ft.Colors.AMBER_300),
+                            color=theme.GOLD),
                     ft.Container(
                         content=ft.Text(f"⭐ {career['manager_rating']:.0f}",
                                         size=12, weight=ft.FontWeight.BOLD,
@@ -1108,8 +1102,8 @@ def _build_career_bar(conn, page) -> list:
         ]),
         padding=ft.padding.symmetric(horizontal=10, vertical=8),
         border_radius=10,
-        bgcolor=CARD_GLASS,
-        border=ft.border.all(1, GOLD_BORDER),
+        bgcolor=theme.CARD_GLASS,
+        border=ft.border.all(1, theme.GOLD_BORDER),
     )
     return [career_row]
 
@@ -1127,7 +1121,7 @@ def _show_achievements_dialog(page, conn):
                     ft.Text(a["icon"], size=22),
                     ft.Column(spacing=0, expand=True, controls=[
                         ft.Text(a["title"], size=12, weight=ft.FontWeight.BOLD,
-                                color=ft.Colors.AMBER_300),
+                                color=theme.GOLD),
                         ft.Text(a["description"], size=10, color=ft.Colors.GREY_400),
                     ]),
                     ft.Text(a["unlock_date"][:10] if a["unlock_date"] else "",
@@ -1155,7 +1149,7 @@ def _show_achievements_dialog(page, conn):
 
     dlg = ft.AlertDialog(
         title=ft.Text("🏆 Achievements", size=16,
-                       weight=ft.FontWeight.BOLD, color="#FFD54F"),
+                       weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
             content=ft.Column(spacing=4, controls=rows, scroll=ft.ScrollMode.AUTO),
             width=300, height=400,

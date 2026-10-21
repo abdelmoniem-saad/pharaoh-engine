@@ -4,16 +4,13 @@ Pre-Match screen — review and edit starting XI before playing.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 
 from src.data import queries
 from src.core.tactics import auto_select_xi, get_formation_positions
 from src.core.player import calculate_overall_rating
 from src.core.calendar import simulate_user_match
 from src.ui.widgets.nav_bar import build_nav_bar
-from src.ui.theme import (
-    pitch_width as pw_fn, pitch_height as ph_fn, PAGE_PADDING,
-    header_bar, GOLD_BORDER, CARD_GLASS, PRIMARY_BTN_STYLE,
-)
 from src.utils.config import Position
 from src.utils.localization import t, display_name, display_home_name, display_away_name
 
@@ -122,7 +119,7 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
     selected_bench_idx = [None]    # index into current_bench
 
     # Responsive pitch dimensions
-    _pw = pw_fn(page)
+    _pw = theme.pitch_width(page)
     _ph = int(_pw * 0.875)  # slightly shorter for pre-match view
 
     def _rebuild_ui():
@@ -180,7 +177,7 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
             fit_ok = p.fitness >= 70
             is_selected = selected_starter_idx[0] == i
 
-            border = ft.border.all(2, ft.Colors.AMBER_400) if is_selected else None
+            border = ft.border.all(2, theme.ACCENT) if is_selected else None
 
             def make_starter_click(idx=i):
                 def handler(e):
@@ -268,15 +265,15 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                                 alignment=ft.Alignment(0, 0),
                             ),
                             ft.Text(bench_display, size=11, expand=True),
-                            ft.Text(p.position.value, size=10, color=ft.Colors.AMBER_300),
+                            ft.Text(p.position.value, size=10, color=theme.GOLD),
                             ft.Text(f"{p.fitness}%", size=10,
                                      color=ft.Colors.GREEN_400 if p.fitness >= 70 else ft.Colors.RED_400),
                         ],
                     ),
                     padding=ft.padding.symmetric(horizontal=8, vertical=8),
                     border_radius=8,
-                    bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.AMBER) if is_selected else CARD_GLASS,
-                    border=ft.border.all(1, ft.Colors.AMBER_400 if is_selected else GOLD_BORDER),
+                    bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.AMBER) if is_selected else theme.CARD_GLASS,
+                    border=ft.border.all(1, theme.ACCENT if is_selected else theme.GOLD_BORDER),
                     on_click=make_bench_click(),
                     ink=True,
                 )
@@ -318,18 +315,12 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                 # Navigate to live match screen for FIFA-style replay
                 from src.ui.screens.live_match import build_live_match_screen
                 page.navigation_bar = None
-                page.controls.clear()
                 live_content = build_live_match_screen(page, outcome)
-                # Live match uses its own dedicated SafeArea as it destroys the root stack
-                safe = ft.SafeArea(
-                    content=live_content,
-                    avoid_intrusions_top=True,
-                    avoid_intrusions_bottom=True,
-                    avoid_intrusions_left=True,
-                    avoid_intrusions_right=True,
-                    minimum_padding=ft.Padding(top=4, bottom=0, left=0, right=0),
-                )
-                page.controls.append(safe)
+                if app_state._transition_container is not None:
+                    app_state._transition_container.content = live_content
+                else:
+                    page.controls.clear()
+                    page.controls.append(ft.SafeArea(content=live_content, expand=True))
                 page.update()
             else:
                 show_snackbar(page, "Could not simulate match!", bgcolor=ft.Colors.RED_800)
@@ -361,7 +352,7 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=8,
                     controls=[
-                        header_bar(
+                        theme.header_bar(
                             title="Starting XI",
                             subtitle=f"vs {opp_name} {venue}  •  {club.formation}",
                             icon=ft.Icons.FORMAT_LIST_NUMBERED,
@@ -407,7 +398,7 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                         ft.ElevatedButton(
                             "⚽ Confirm & Play",
                             width=280, height=56,
-                            style=PRIMARY_BTN_STYLE,
+                            style=theme.PRIMARY_BTN_STYLE,
                             on_click=play_match,
                         ),
                         ft.Container(height=60), # Extra space for mobile bottom safe area/nav bar

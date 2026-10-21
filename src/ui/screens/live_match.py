@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 
 import flet as ft
+from src.ui import theme
 
 from src.utils.config import MatchEventType
 from src.data.models import MatchEvent
@@ -76,6 +77,9 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
     """Build the live match simulation view."""
     from src.ui.app import app_state, navigate
 
+    match_token = object()
+    app_state._live_match_token = match_token
+
     # Store outcome for the post-match screen
     app_state._last_outcome = outcome
     app_state._post_match_nav_in_progress = False
@@ -85,7 +89,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
     gs = app_state.game_state
     user_is_home = result.home_club_id == gs.user_club_id
 
-    # Mutable active XI state used for live substitution resimulation.
+    # Mutable active XI displayed by the live substitution picker.
     active_user_xi = [list(outcome.home_starting_xi if user_is_home else outcome.away_starting_xi)]
     if not active_user_xi[0] and conn and gs:
         club = queries.get_club(conn, gs.user_club_id)
@@ -122,34 +126,34 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
     # ── UI Controls ──────────────────────────────────────────────────
     score_text = ft.Text(
         "0 - 0", size=36, weight=ft.FontWeight.BOLD,
-        color="#FFD54F", text_align=ft.TextAlign.CENTER,
+        color=theme.GOLD, text_align=ft.TextAlign.CENTER,
     )
     minute_text = ft.Text(
         "0'", size=20, color=ft.Colors.GREY_400,
         weight=ft.FontWeight.W_500, text_align=ft.TextAlign.CENTER,
     )
     progress_bar = ft.ProgressBar(
-        value=0, color=ft.Colors.AMBER_600,
+        value=0, color=theme.ACCENT_DARK,
         bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
     )
     status_text = ft.Text(
-        "⏳ Pre-Match", size=13, color=ft.Colors.GREY_500,
+        ("⏳ قبل المباراة" if is_rtl() else "⏳ Pre-Match"), size=13, color=ft.Colors.GREY_500,
         text_align=ft.TextAlign.CENTER,
     )
-    event_list = ft.ListView(spacing=4, height=300, auto_scroll=True)
+    event_list = ft.ListView(spacing=6, height=max(180, min(340, (page.height or 844) - 400)), auto_scroll=True)
 
     skip_btn = ft.ElevatedButton(
-        "⏩ Skip to End", width=140, height=42,
+        ("⏩ تخطي للنهاية" if is_rtl() else "⏩ Skip to End"), width=140, height=42,
         style=ft.ButtonStyle(
             bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
             color=ft.Colors.WHITE,
             text_style=ft.TextStyle(size=13),
             shape=ft.RoundedRectangleBorder(radius=10),
-            side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, "#FFD54F")),
+            side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, theme.GOLD)),
         ),
     )
     subs_btn = ft.ElevatedButton(
-        f"🔄 Subs ({subs_remaining[0]})", width=120, height=42, visible=False,
+        f"🔄 {t('substitution')} ({subs_remaining[0]})", width=120, height=42, visible=False,
         style=ft.ButtonStyle(
             bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.BLUE),
             color=ft.Colors.WHITE,
@@ -159,13 +163,13 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         ),
     )
     continue_btn = ft.ElevatedButton(
-        "Continue ➡️", width=200, height=48, visible=False,
+        t("continue_btn"), width=200, height=48, visible=False,
         style=ft.ButtonStyle(
-            bgcolor=ft.Colors.AMBER_700, color=ft.Colors.WHITE,
+            bgcolor=theme.ACCENT_DARK, color=ft.Colors.WHITE,
             text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
             shape=ft.RoundedRectangleBorder(radius=12),
             elevation=4,
-            shadow_color=ft.Colors.with_opacity(0.25, "#FFD54F"),
+            shadow_color=ft.Colors.with_opacity(0.25, theme.GOLD),
         ),
     )
 
@@ -209,7 +213,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         except Exception as ex:
             app_state._post_match_nav_in_progress = False
             continue_btn.disabled = False
-            continue_btn.text = "Continue ➡️"
+            continue_btn.text = t("continue_btn")
             page.update()
             show_snackbar(page, f"{t('error')}: {ex}", bgcolor=ft.Colors.RED_800)
 
@@ -289,13 +293,24 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         Using asyncio.sleep() yields to the Flet event loop each tick,
         so page.update() flushes to the client immediately — no focus needed.
         """
-        SECONDS_PER_MINUTE = 0.12
+        speed = 3
+        if conn:
+            row = conn.execute("SELECT match_speed FROM game_settings WHERE id=1").fetchone()
+            if row:
+                speed = int(row[0])
+        SECONDS_PER_MINUTE = {1: 0.6, 2: 0.3, 3: 0.12, 4: 0.04, 5: 0.01}.get(speed, 0.12)
         GOAL_PAUSE = 1.5
         MAJOR_PAUSE = 0.8
         HALF_TIME_PAUSE = 1.2
         MINOR_EVENT_EXTRA = 0.15
 
         for minute in range(total_minutes):
+            if app_state._live_match_token is not match_token:
+                return
+            while sub_pending[0] and not skip_flag[0]:
+                if app_state._live_match_token is not match_token:
+                    return
+                await asyncio.sleep(0.1)
             if skip_flag[0]:
                 break
 
@@ -304,16 +319,16 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
             progress_bar.value = min(minute / max(total_minutes - 1, 1), 1.0)
 
             if minute == 0:
-                status_text.value = "🏟️ Kick Off!"
+                status_text.value = ("🏟️ انطلاق المباراة" if is_rtl() else "🏟️ Kick Off!")
                 status_text.color = ft.Colors.GREEN_400
             elif minute < 45:
-                status_text.value = f"1st Half — {minute}'"
+                status_text.value = (f"الشوط الأول — {minute}'" if is_rtl() else f"1st Half — {minute}'")
                 status_text.color = ft.Colors.GREY_500
             elif minute == 45:
-                status_text.value = "1st Half — 45'"
+                status_text.value = ("الشوط الأول — 45'" if is_rtl() else "1st Half — 45'")
                 status_text.color = ft.Colors.GREY_500
             elif minute <= 90:
-                status_text.value = f"2nd Half — {minute}'"
+                status_text.value = (f"الشوط الثاني — {minute}'" if is_rtl() else f"2nd Half — {minute}'")
                 status_text.color = ft.Colors.GREY_500
                 # Show subs button in second half
                 if subs_remaining[0] > 0 and minute >= 46 and minute <= 85:
@@ -321,8 +336,8 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                 else:
                     subs_btn.visible = False
             else:
-                status_text.value = f"Added Time — {minute}'"
-                status_text.color = ft.Colors.AMBER_400
+                status_text.value = (f"الوقت بدل الضائع — {minute}'" if is_rtl() else f"Added Time — {minute}'")
+                status_text.color = theme.ACCENT
                 subs_btn.visible = False
 
             page.update()
@@ -335,7 +350,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                 if skip_flag[0]:
                     break
 
-                if ev.event_type == MatchEventType.GOAL:
+                if ev.event_type in (MatchEventType.GOAL, MatchEventType.PENALTY):
                     if ev.club_id == result.home_club_id:
                         home_goals[0] += 1
                     else:
@@ -344,7 +359,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                     # play_goal()  # [SOUND DISABLED]
 
                 if ev.event_type == MatchEventType.HALF_TIME:
-                    status_text.value = "⏸️ Half Time"
+                    status_text.value = ("⏸️ استراحة" if is_rtl() else "⏸️ Half Time")
                     status_text.color = ft.Colors.BLUE_400
                     # Show team talk at halftime (unless skipping)
                     if not skip_flag[0] and not halftime_done[0]:
@@ -353,6 +368,8 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                         page.update()
                         # Wait until user makes a choice
                         while halftime_choice[0] is None and not skip_flag[0]:
+                            if app_state._live_match_token is not match_token:
+                                return
                             await asyncio.sleep(0.15)
                         if halftime_choice[0]:
                             event_list.controls.append(ft.Container(
@@ -369,14 +386,14 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                             ))
                             page.update()
                 elif ev.event_type == MatchEventType.FULL_TIME:
-                    status_text.value = "🏁 Full Time"
-                    status_text.color = ft.Colors.AMBER_300
+                    status_text.value = f"🏁 {t('full_time')}"
+                    status_text.color = theme.GOLD
                     # play_full_time()  # [SOUND DISABLED]
 
                 event_list.controls.append(_make_event_row(ev))
                 page.update()
 
-                if ev.event_type == MatchEventType.GOAL:
+                if ev.event_type in (MatchEventType.GOAL, MatchEventType.PENALTY):
                     extra_pause = max(extra_pause, GOAL_PAUSE)
                 elif ev.event_type == MatchEventType.HALF_TIME:
                     extra_pause = max(extra_pause, HALF_TIME_PAUSE)
@@ -390,6 +407,8 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                 await asyncio.sleep(extra_pause if extra_pause > 0 else SECONDS_PER_MINUTE)
                 # Pause while substitution dialog is open
                 while sub_pending[0] and not skip_flag[0]:
+                    if app_state._live_match_token is not match_token:
+                        return
                     await asyncio.sleep(0.1)
 
         # ── Finish ───────────────────────────────────────────────
@@ -399,7 +418,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         minute_text.value = "FT"
         progress_bar.value = 1.0
         status_text.value = f"🏁 {t('full_time')}"
-        status_text.color = ft.Colors.AMBER_300
+        status_text.color = theme.GOLD
         skip_btn.visible = False
         subs_btn.visible = False          # ← hide subs at full time
         continue_btn.visible = True
@@ -426,11 +445,11 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                     controls=[
                         # Header
                         ft.Container(
-                            content=ft.Text(comp_text, size=12, color="#FFD54F",
+                            content=ft.Text(comp_text, size=12, color=theme.GOLD,
                                              weight=ft.FontWeight.W_600),
                             padding=ft.padding.symmetric(horizontal=12, vertical=4),
                             border_radius=8,
-                            bgcolor=ft.Colors.with_opacity(0.10, "#FFD54F"),
+                            bgcolor=ft.Colors.with_opacity(0.10, theme.GOLD),
                         ),
                         ft.Text(matchday_label, size=11, color=ft.Colors.GREY_600),
 
@@ -467,10 +486,10 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                             padding=ft.padding.symmetric(horizontal=12, vertical=14),
                             border_radius=14,
                             bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.WHITE),
-                            border=ft.border.all(1, ft.Colors.with_opacity(0.18, "#FFD54F")),
+                            border=ft.border.all(1, ft.Colors.with_opacity(0.18, theme.GOLD)),
                             shadow=ft.BoxShadow(
                                 spread_radius=0, blur_radius=8,
-                                color=ft.Colors.with_opacity(0.08, "#FFD54F"),
+                                color=ft.Colors.with_opacity(0.08, theme.GOLD),
                             ),
                         ),
 
@@ -567,20 +586,23 @@ def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi
     # user's submitted XI plus any in-match substitutions so far. Previously
     # this rebuilt tactics from scratch (auto_select_xi), which resurrected
     # pre-match-subbed-out players and hid subbed-on ones.
-    active_ids = list(dict.fromkeys(active_user_xi[0]))
+    current_minute = int(minute_text.value.replace("'", ""))
+    active_ids = match_engine.lineup_at(result, user_club_id, original_user_xi or active_user_xi[0], current_minute)
     starters = [player_map[pid] for pid in active_ids if pid in player_map]
 
-    # Players who already featured in a substitution can neither come off
-    # again nor return to the pitch. IDs are tracked (names are not unique).
+    # Used players cannot return from the bench. Incoming players may come off. IDs are tracked (names are not unique).
     original_ids = set(original_user_xi or [])
     # Tuple layout: (off_name, on_name, minute_str, off_id, on_id)
     off_history = {s[3] for s in subs_made if len(s) > 3}   # sent to the bench
     on_history = {s[4] for s in subs_made if len(s) > 3}    # came onto the pitch
     used_ids = (set(active_ids) | on_history | off_history | original_ids)
 
+    match_tactics = result._replay.get("inputs", {}).get(
+        "home_tactics" if result.home_club_id == user_club_id else "away_tactics")
+    allowed_bench = set(match_tactics.bench if match_tactics else [])
     available_squad = [
         p for p in squad
-        if p.injury_days_remaining <= 0 and p.suspension_matches <= 0
+        if p.id in allowed_bench and p.injury_days_remaining <= 0 and p.suspension_matches <= 0
     ]
     bench = sorted(
         (p for p in available_squad if p.id not in used_ids),
@@ -629,7 +651,7 @@ def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi
 
         return ft.Container(
             content=ft.Row(spacing=6, controls=[
-                ft.Text(player.position.value, size=10, color=ft.Colors.AMBER_300, width=30),
+                ft.Text(player.position.value, size=10, color=theme.GOLD, width=30),
                 ft.Text(player.name, size=12, expand=True, max_lines=1,
                          overflow=ft.TextOverflow.ELLIPSIS),
                 ft.Text(str(ovr), size=11, weight=ft.FontWeight.BOLD, color=color),
@@ -654,97 +676,24 @@ def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi
             return
         off_p = selected_off[0]
         on_p = selected_on[0]
-        subs_remaining[0] -= 1
-
-        # ── Make the substitution count: update the live match state ─────
-        # Estimate current match minute from the simulation progress
+        current_min = int(minute_text.value.replace("'", ""))
         try:
-            current_min = int(float(minute_text.value.replace("'", "").replace("FT", "90")))
-        except (ValueError, AttributeError):
-            current_min = 60
-
+            updated = match_engine.substitute(result, current_min, gs.user_club_id,
+                                              off_p.id, on_p.id)
+        except ValueError as exc:
+            summary.value = str(exc)
+            page.update()
+            return
+        for field in ("events", "home_goals", "away_goals", "home_stats", "away_stats", "player_ratings"):
+            setattr(result, field, getattr(updated, field))
+        result._replay = updated._replay
+        subs_remaining[0] -= 1
         subs_made.append((off_p.name, on_p.name, str(current_min), off_p.id, on_p.id))
-
-        # Update active XI immediately so further substitutions and resim use current state.
-        if off_p.id in active_user_xi[0]:
-            idx = active_user_xi[0].index(off_p.id)
-            active_user_xi[0][idx] = on_p.id
-
-        # Record an actual substitution event in the match result for downstream processing.
-        sub_event = MatchEvent(
-            minute=current_min,
-            event_type=MatchEventType.SUBSTITUTION,
-            player_id=off_p.id,
-            player_name=off_p.name,
-            player_name_ar=off_p.name_ar,
-            second_player_id=on_p.id,
-            second_player_name=on_p.name,
-            second_player_name_ar=on_p.name_ar,
-            club_id=gs.user_club_id,
-            description=f"Substitution: {off_p.name} off, {on_p.name} on",
-            description_ar=f"تبديل: خروج {off_p.name_ar} ودخول {on_p.name_ar}",
-        )
-        result.events.append(sub_event)
-        events_by_minute.setdefault(current_min, []).append(sub_event)
-
-        # Re-simulate the remaining match window with the updated active XI.
-        if conn and gs:
-            home_club = queries.get_club(conn, result.home_club_id)
-            away_club = queries.get_club(conn, result.away_club_id)
-            if home_club and away_club:
-                home_squad = queries.get_players_by_club(conn, home_club.id)
-                away_squad = queries.get_players_by_club(conn, away_club.id)
-                home_tactics = club_module.prepare_team_for_match(home_club, home_squad)
-                away_tactics = club_module.prepare_team_for_match(away_club, away_squad)
-
-                if result.home_club_id == gs.user_club_id:
-                    home_tactics.starting_xi = list(active_user_xi[0])
-                    outcome.home_starting_xi = list(active_user_xi[0])
-                else:
-                    away_tactics.starting_xi = list(active_user_xi[0])
-                    outcome.away_starting_xi = list(active_user_xi[0])
-
-                # Fatigue carry-over: everyone except the incoming sub has
-                # been on the pitch for `current_min` minutes, so the tail
-                # simulation starts from real tiredness — fresh legs bite.
-                minutes_offset: dict[int, int] = {}
-                for pid in set(home_tactics.starting_xi) | set(away_tactics.starting_xi):
-                    if pid != on_p.id:
-                        minutes_offset[pid] = current_min
-
-                future_sim = match_engine.simulate_match(
-                    home_club,
-                    away_club,
-                    home_squad,
-                    away_squad,
-                    home_tactics,
-                    away_tactics,
-                    match_date=result.date,
-                    minutes_played_offset=minutes_offset,
-                )
-
-                # Preserve events up to now (including this substitution), then replace the tail.
-                past_events = [ev for ev in result.events if ev.minute <= current_min]
-                future_events = [
-                    ev for ev in future_sim.events
-                    if ev.minute > current_min and ev.event_type not in {
-                        MatchEventType.KICKOFF,
-                        MatchEventType.HALF_TIME,
-                    }
-                ]
-                result.events = sorted(past_events + future_events, key=lambda ev: (ev.minute, ev.event_type.value))
-
-                # Rebuild minute index used by the live ticker.
-                events_by_minute.clear()
-                for ev in result.events:
-                    events_by_minute.setdefault(ev.minute, []).append(ev)
-
-                # Use resimulated outputs so persisted result reflects updated match state.
-                result.home_goals = future_sim.home_goals
-                result.away_goals = future_sim.away_goals
-                result.home_stats = future_sim.home_stats
-                result.away_stats = future_sim.away_stats
-                result.player_ratings = future_sim.player_ratings
+        active_user_xi[0] = match_engine.lineup_at(result, gs.user_club_id,
+                                                 original_user_xi, current_min)
+        events_by_minute.clear()
+        for ev in result.events:
+            events_by_minute.setdefault(ev.minute, []).append(ev)
 
         # Add substitution event to the event feed
         event_list.controls.append(ft.Container(
@@ -761,7 +710,7 @@ def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi
             bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.CYAN),
         ))
 
-        subs_btn.text = f"🔄 Subs ({subs_remaining[0]})"
+        subs_btn.text = f"🔄 {t('substitution')} ({subs_remaining[0]})"
         if subs_remaining[0] <= 0:
             subs_btn.visible = False
 
@@ -777,8 +726,9 @@ def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi
     confirm_btn.on_click = do_sub
 
     dlg = ft.AlertDialog(
+        on_dismiss=lambda e: sub_pending.__setitem__(0, False),
         title=ft.Text(f"🔄 {t('substitution')} ({subs_remaining[0]})",
-                       size=15, weight=ft.FontWeight.BOLD, color="#FFD54F"),
+                       size=15, weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
             content=ft.Column(
                 scroll=ft.ScrollMode.AUTO, spacing=6,

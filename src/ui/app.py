@@ -8,11 +8,13 @@ import sys
 import time
 import sqlite3
 import threading
+import asyncio
 
 # Ensure src is on the path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import flet as ft
+from src.ui import theme
 
 from src.data.models import GameState
 from src.utils.config import APP_NAME, APP_VERSION
@@ -57,11 +59,11 @@ _NOTIFY_ICONS = {
 
 _NOTIFY_COLORS = {
     "match":    ft.Colors.GREEN_400,
-    "transfer": ft.Colors.AMBER_400,
+    "transfer": theme.ACCENT,
     "board":    ft.Colors.PURPLE_400,
     "media":    ft.Colors.BLUE_400,
     "injury":   ft.Colors.RED_400,
-    "trophy":   ft.Colors.AMBER_300,
+    "trophy":   theme.GOLD,
     "general":  ft.Colors.GREY_400,
     "success":  ft.Colors.GREEN_400,
     "warning":  ft.Colors.ORANGE_400,
@@ -92,11 +94,11 @@ def show_notification(page: ft.Page, message: str,
         ),
         padding=ft.padding.symmetric(horizontal=14, vertical=10),
         border_radius=10,
-        bgcolor="#141e33",
+        bgcolor=theme.BG_SURFACE,
         border=ft.border.only(left=ft.BorderSide(3, accent),
-                              top=ft.BorderSide(1, ft.Colors.with_opacity(0.15, "#FFD54F")),
-                              right=ft.BorderSide(1, ft.Colors.with_opacity(0.15, "#FFD54F")),
-                              bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.15, "#FFD54F"))),
+                              top=ft.BorderSide(1, ft.Colors.with_opacity(0.15, theme.GOLD)),
+                              right=ft.BorderSide(1, ft.Colors.with_opacity(0.15, theme.GOLD)),
+                              bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.15, theme.GOLD))),
         shadow=ft.BoxShadow(spread_radius=0, blur_radius=12,
                             color=ft.Colors.with_opacity(0.3, ft.Colors.BLACK)),
         width=330,
@@ -118,29 +120,28 @@ def show_notification(page: ft.Page, message: str,
     card.offset = ft.Offset(0, 0)
     page.update()
 
-    def _dismiss():
+    async def _dismiss():
+        await asyncio.sleep(duration)
         try:
             card.opacity = 0
             card.offset = ft.Offset(0.05, 0)
             page.update()
             import time
-            time.sleep(0.3)
+            await asyncio.sleep(0.3)
             if card in col.controls:
                 col.controls.remove(card)
                 page.update()
         except Exception:
             pass
 
-    t = threading.Timer(duration, _dismiss)
-    t.daemon = True
-    t.start()
+    page.run_task(_dismiss)
 
 
 def show_breaking_news(page: ft.Page, headline: str,
                        body: str = "",
                        category: str = "general") -> None:
     """Show a prominent 'Breaking News' banner that auto-dismisses."""
-    accent = _NOTIFY_COLORS.get(category, ft.Colors.AMBER_400)
+    accent = _NOTIFY_COLORS.get(category, theme.ACCENT)
 
     banner = ft.Container(
         content=ft.Column(
@@ -152,7 +153,7 @@ def show_breaking_news(page: ft.Page, headline: str,
                                     weight=ft.FontWeight.BOLD,
                                     color=ft.Colors.BLACK,
                                     text_align=ft.TextAlign.CENTER),
-                    bgcolor="#FFD54F",
+                    bgcolor=theme.GOLD,
                     padding=ft.padding.symmetric(horizontal=10, vertical=2),
                     border_radius=4,
                 ),
@@ -166,10 +167,10 @@ def show_breaking_news(page: ft.Page, headline: str,
         ),
         padding=ft.padding.symmetric(horizontal=16, vertical=10),
         border_radius=12,
-        bgcolor="#0f1729",
-        border=ft.border.all(1, ft.Colors.with_opacity(0.35, "#FFD54F")),
+        bgcolor=theme.BG_MID,
+        border=ft.border.all(1, ft.Colors.with_opacity(0.35, theme.GOLD)),
         shadow=ft.BoxShadow(spread_radius=0, blur_radius=16,
-                            color=ft.Colors.with_opacity(0.25, "#FFD54F")),
+                            color=ft.Colors.with_opacity(0.25, theme.GOLD)),
         width=340,
         opacity=0,
         animate_opacity=ft.Animation(350, ft.AnimationCurve.EASE_OUT),
@@ -188,28 +189,28 @@ def show_breaking_news(page: ft.Page, headline: str,
     banner.scale = ft.Scale(1.0)
     page.update()
 
-    def _dismiss():
+    async def _dismiss():
+        await asyncio.sleep(5.0)
         try:
             banner.opacity = 0
             banner.scale = ft.Scale(0.95)
             page.update()
             import time
-            time.sleep(0.4)
+            await asyncio.sleep(0.4)
             if banner in col.controls:
                 col.controls.remove(banner)
                 page.update()
         except Exception:
             pass
 
-    t = threading.Timer(5.0, _dismiss)
-    t.daemon = True
-    t.start()
+    page.run_task(_dismiss)
 
 
 def show_snackbar(page: ft.Page, message: str,
                   color: str = ft.Colors.WHITE,
-                  bgcolor: str = "#141e33") -> None:
+                  bgcolor: str = None) -> None:
     """Show a brief snackbar notification at the bottom of the screen."""
+    bgcolor = theme.BG_SURFACE if bgcolor is None else bgcolor
     # Clear any existing snackbars to avoid overlay pile-up
     page.overlay[:] = [ctrl for ctrl in page.overlay if not isinstance(ctrl, ft.SnackBar)]
 
@@ -267,7 +268,7 @@ def show_tutorial_overlay(page: ft.Page) -> None:
 
     steps = [
         {
-            "icon": ft.Icons.WELCOME_HEADER,
+            "icon": ft.Icons.SPORTS_SOCCER,
             "title": "Welcome to Pharaoh Engine! ⚽",
             "desc": "You are now in charge. Your decisions on and off the pitch will shape the future of your club."
         },
@@ -290,9 +291,9 @@ def show_tutorial_overlay(page: ft.Page) -> None:
 
     current_step = [0]
 
-    title_text = ft.Text(steps[0]["title"], size=22, weight=ft.FontWeight.BOLD, color="#FFD54F", text_align=ft.TextAlign.CENTER)
+    title_text = ft.Text(steps[0]["title"], size=22, weight=ft.FontWeight.BOLD, color=theme.GOLD, text_align=ft.TextAlign.CENTER)
     desc_text = ft.Text(steps[0]["desc"], size=16, color="#EAEAEA", text_align=ft.TextAlign.CENTER)
-    icon_ctrl = ft.Icon(steps[0]["icon"], size=64, color="#FFD54F")
+    icon_ctrl = ft.Icon(steps[0]["icon"], size=64, color=theme.GOLD)
     step_indicator = ft.Text(f"Step 1 of {len(steps)}", size=12, color="#9E9E9E")
 
     def _next_step(e):
@@ -316,7 +317,7 @@ def show_tutorial_overlay(page: ft.Page) -> None:
             page.update()
 
     btn = ft.ElevatedButton("Next", on_click=_next_step, style=ft.ButtonStyle(
-        bgcolor={"": "#FFD54F"}, color={"": "#0a0e1a"}, padding=16
+        bgcolor={"": theme.GOLD}, color={"": theme.BG_DARK}, padding=16
     ), width=200)
 
     card = ft.Container(
@@ -326,20 +327,20 @@ def show_tutorial_overlay(page: ft.Page) -> None:
             alignment=ft.MainAxisAlignment.CENTER,
             spacing=15,
         ),
-        bgcolor="#141e33",
+        bgcolor=theme.BG_SURFACE,
         padding=30,
         border_radius=16,
         width=320,
         height=380,
-        border=ft.border.all(2, "#FFD54F"),
-        shadow=ft.BoxShadow(spread_radius=5, blur_radius=25, color=ft.colors.with_opacity(0.5, "#000000")),
+        border=ft.border.all(2, theme.GOLD),
+        shadow=ft.BoxShadow(spread_radius=5, blur_radius=25, color=ft.Colors.with_opacity(0.5, "#000000")),
     )
 
     overlay_container = ft.Container(
         content=card,
         expand=True,
-        bgcolor=ft.colors.with_opacity(0.8, "#000000"),
-        alignment=ft.alignment.center,
+        bgcolor=ft.Colors.with_opacity(0.8, "#000000"),
+        alignment=ft.Alignment(0, 0),
         on_click=lambda e: None,  # Consume clicks to prevent interacting with background
     )
 
@@ -355,7 +356,6 @@ def build_error_screen(page: ft.Page, route: str = "?") -> ft.Column:
     Guarantees the player always sees something usable and their save stays
     intact, instead of a blank screen or a dead app.
     """
-    from src.ui.theme import PRIMARY_BTN_STYLE
 
     def retry(e):
         navigate(page, route)
@@ -380,7 +380,7 @@ def build_error_screen(page: ft.Page, route: str = "?") -> ft.Column:
             ),
             ft.Container(height=18),
             ft.ElevatedButton("🔄 Try Again", width=220, height=44,
-                              style=PRIMARY_BTN_STYLE, on_click=retry),
+                              style=theme.PRIMARY_BTN_STYLE, on_click=retry),
             ft.Container(height=8),
             ft.OutlinedButton("🏠 Back", width=220, height=40, on_click=go_home),
         ],
@@ -400,7 +400,7 @@ def show_busy_overlay(page: ft.Page, text: str = "Simulating…"):
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             alignment=ft.MainAxisAlignment.CENTER,
             controls=[
-                ft.ProgressRing(width=46, height=46, color="#FFD54F"),
+                ft.ProgressRing(width=46, height=46, color=theme.GOLD),
                 ft.Container(height=14),
                 ft.Text(text, size=14, color="#EAEAEA",
                         text_align=ft.TextAlign.CENTER),
@@ -484,6 +484,7 @@ def navigate(page: ft.Page, route: str):
     """
     Navigate to a screen with a smooth fade transition.
     """
+    app_state._live_match_token = None
     purge_expired_notifications(page)
 
     from src.ui.screens.main_menu import build_main_menu
@@ -579,11 +580,9 @@ def main(page: ft.Page):
     page.window.height = 844
     page.window.resizable = True
     page.theme_mode = ft.ThemeMode.DARK
-    page.bgcolor = "#0a0e1a"
-    page.theme = ft.Theme(
-        color_scheme_seed=ft.Colors.AMBER,
-        font_family="Roboto",
-    )
+    from src.utils.prefs import get_pref
+    theme.configure(get_pref("ui_theme", "classic"))
+    theme.apply_to_page(page)
     # Safe area accounts for mobile status bar and home indicator
     page.padding = 0
     page.spacing = 0
@@ -641,37 +640,10 @@ def main(page: ft.Page):
     page.controls.append(ft.SafeArea(content=root, expand=True))
     page.update()
 
-    # ── Load language preference (once, at startup) ────────────────────
-    try:
-        from src.utils.localization import set_language, get_language, is_rtl
-        # from src.utils.audio import set_audio_enabled  # [SOUND DISABLED]
-        _lang_conn = app_state.db_conn
-        if _lang_conn is None:
-            try:
-                from src.data.database import connect as _connect
-                _lang_conn = _connect()
-            except Exception:
-                _lang_conn = None
-        if _lang_conn:
-            try:
-                # Ensure the settings row + language column exist
-                _lang_conn.execute(
-                    "INSERT OR IGNORE INTO game_settings (id) VALUES (1)"
-                )
-                _lang_conn.commit()
-                row = _lang_conn.execute(
-                    "SELECT language FROM game_settings WHERE id=1"
-                ).fetchone()
-                if row and row["language"] and row["language"] != "en":
-                    set_language(row["language"])
-                    page.rtl = is_rtl()
-                    page.update()
-                    log.debug("Startup language loaded from DB: '%s'", row["language"])
-                # [SOUND DISABLED] set_audio_enabled(bool(row["sound_enabled"])) if row and "sound_enabled" in row.keys() else set_audio_enabled(True)
-            except Exception as ex:
-                log.warning("Startup language load skipped: %s", ex)
-    except Exception:
-        pass
+    # App preferences work before a career exists and never create a save.
+    from src.utils.localization import set_language, is_rtl
+    set_language(get_pref("language", "en"))
+    page.rtl = is_rtl()
 
     # Show main menu
     navigate(page, "/")

@@ -40,7 +40,7 @@ SECTION_BG = ft.Colors.with_opacity(0.05, ft.Colors.WHITE)
 # ── Text ────────────────────────────────────────────────────────────────────
 TEXT_PRIMARY = "#EAEAEA"
 TEXT_SECONDARY = "#9E9E9E"
-TEXT_MUTED = "#616161"
+TEXT_MUTED = "#91A0B3"
 TEXT_SUCCESS = "#66BB6A"
 TEXT_WARNING = "#FFCA28"
 TEXT_DANGER = "#EF5350"
@@ -74,9 +74,9 @@ NAV_BAR_HEIGHT = 60
 # ── Typography ──────────────────────────────────────────────────────────────
 TITLE_SIZE = 22
 SUBTITLE_SIZE = 15
-BODY_SIZE = 13
-CAPTION_SIZE = 11
-TINY_SIZE = 9
+BODY_SIZE = 14
+CAPTION_SIZE = 12
+TINY_SIZE = 11
 
 # ── Responsive helpers ──────────────────────────────────────────────────────
 
@@ -177,12 +177,14 @@ def screen_container(content: ft.Control, page: ft.Page | None = None) -> ft.Con
 def glass_card(
     content: ft.Control,
     padding: int | ft.Padding = CARD_PADDING,
-    border_color: str = GOLD_BORDER,
-    border_radius: int = CARD_RADIUS,
+    border_color: str | None = None,
+    border_radius: int | None = None,
     glow: bool = False,
     on_click=None,
 ) -> ft.Container:
     """Frosted-glass styled card with optional golden glow border."""
+    border_color = GOLD_BORDER if border_color is None else border_color
+    border_radius = CARD_RADIUS if border_radius is None else border_radius
     shadow = None
     if glow:
         shadow = ft.BoxShadow(
@@ -289,7 +291,8 @@ def header_bar(
             colors=[BG_SURFACE, ft.Colors.with_opacity(0, BG_SURFACE)],
             begin=ft.Alignment(0, -1), end=ft.Alignment(0, 1),
         ),
-        border=ft.border.only(bottom=ft.BorderSide(1, GOLD_BORDER)),
+        border=ft.border.only(bottom=ft.BorderSide(3 if current_theme() == "supporter" else 1,
+                                                       SECONDARY_ACCENT if current_theme() == "supporter" else GOLD_BORDER)),
     )
 
 
@@ -329,3 +332,52 @@ DANGER_BTN_STYLE = ft.ButtonStyle(
 )
 
 
+
+# Theme names describe the game UI, not a claimed brand partnership.
+THEME_NAMES = {"classic": ("Classic Pharaoh", "الفرعون الكلاسيكي"),
+               "supporter": ("Supporter", "المدرج")}
+SECONDARY_ACCENT = "#69C5DD"
+_classic = {key: value for key, value in globals().copy().items() if key.isupper()}
+_active = "classic"
+
+
+def current_theme() -> str:
+    return _active
+
+
+def configure(name: str) -> None:
+    """Select a palette; consumers access this module when building controls."""
+    global _active, PRIMARY_BTN_STYLE, SECONDARY_BTN_STYLE
+    _active = name if name in THEME_NAMES else "classic"
+    globals().update(_classic)
+    if _active == "supporter":
+        globals().update(
+            BG_DARK="#11191F", BG_MID="#18252D", BG_SURFACE="#23343E", BG_TEAL="#123B48",
+            GOLD="#FFAC7A", GOLD_DARK="#C34A15", ACCENT="#FFAC7A", ACCENT_DARK="#AA3D10",
+            ACCENT_BG="#332D27", GOLD_GLOW="#334F2818", GOLD_BORDER="#38515D",
+            GOLD_BORDER_STRONG="#69C5DD", CARD_BG="#23343E", CARD_GLASS="#1D2C35",
+            CARD_GLASS_STRONG="#23343E", CARD_BG_HOVER="#304652", SECTION_BG="#18252D",
+            TEXT_PRIMARY="#F5F3ED", TEXT_SECONDARY="#BDC9CD", TEXT_MUTED="#A4B5BD",
+            CARD_RADIUS=8, CARD_RADIUS_SM=6, TITLE_SIZE=24, BODY_SIZE=14,
+            CAPTION_SIZE=12, TINY_SIZE=11, SECTION_SPACING=14,
+        )
+    PRIMARY_BTN_STYLE = ft.ButtonStyle(
+        bgcolor=ACCENT_DARK, color="#FFFFFF",
+        text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
+        shape=ft.RoundedRectangleBorder(radius=CARD_RADIUS_SM), elevation=0,
+    )
+    SECONDARY_BTN_STYLE = ft.ButtonStyle(
+        bgcolor=CARD_GLASS_STRONG, color=TEXT_PRIMARY,
+        text_style=ft.TextStyle(size=15),
+        shape=ft.RoundedRectangleBorder(radius=CARD_RADIUS_SM),
+        side=ft.BorderSide(1, GOLD_BORDER),
+    )
+
+
+def apply_to_page(page: ft.Page) -> None:
+    page.bgcolor = BG_DARK
+    page.theme = ft.Theme(color_scheme_seed=ACCENT, font_family="Roboto")
+
+
+def theme_label(arabic: bool = False) -> str:
+    return THEME_NAMES[_active][1 if arabic else 0]

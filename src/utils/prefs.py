@@ -13,7 +13,9 @@ import threading
 from pathlib import Path
 from typing import Any
 
-_FILE = Path(__file__).resolve().parents[2] / "saves" / "app_prefs.json"
+from src.utils.storage import save_directory
+
+_FILE = save_directory() / "app_prefs.json"
 
 _lock = threading.Lock()
 _cache: dict[str, Any] | None = None

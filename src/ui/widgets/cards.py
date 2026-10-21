@@ -7,17 +7,8 @@ raw ft.Container / ft.Row layouts inline.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 from src.utils.localization import t
-from src.ui.theme import (
-    ACCENT, ACCENT_DARK, ACCENT_BG,
-    CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_BG_HIGHLIGHT, CARD_BG_DANGER,
-    CARD_RADIUS, CARD_RADIUS_SM, CARD_PADDING, CARD_PADDING_SM,
-    TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
-    TEXT_SUCCESS, TEXT_WARNING, TEXT_DANGER,
-    SECTION_SPACING, ITEM_SPACING,
-    BODY_SIZE, CAPTION_SIZE, TINY_SIZE,
-    GOLD_BORDER, GOLD_GLOW,
-)
 
 
 # ── Empty State ─────────────────────────────────────────────────────────────
@@ -25,15 +16,15 @@ from src.ui.theme import (
 def empty_state(icon, title: str, subtitle: str = "") -> ft.Container:
     """Friendly centered placeholder for empty lists and screens."""
     controls = [
-        ft.Icon(icon, size=52, color=TEXT_MUTED),
+        ft.Icon(icon, size=52, color=theme.TEXT_MUTED),
         ft.Container(height=10),
-        ft.Text(title, size=BODY_SIZE, weight=ft.FontWeight.W_600,
-                color=TEXT_SECONDARY, text_align=ft.TextAlign.CENTER),
+        ft.Text(title, size=theme.BODY_SIZE, weight=ft.FontWeight.W_600,
+                color=theme.TEXT_SECONDARY, text_align=ft.TextAlign.CENTER),
     ]
     if subtitle:
         controls.append(ft.Container(height=4))
-        controls.append(ft.Text(subtitle, size=CAPTION_SIZE,
-                                color=TEXT_MUTED, text_align=ft.TextAlign.CENTER))
+        controls.append(ft.Text(subtitle, size=theme.CAPTION_SIZE,
+                                color=theme.TEXT_MUTED, text_align=ft.TextAlign.CENTER))
     return ft.Container(
         content=ft.Column(
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -50,13 +41,14 @@ def section_card(
     title: str,
     controls: list,
     icon: str | None = None,
-    title_color: str = ACCENT,
+    title_color: str = None,
     collapsed: bool = False,
     extra_action: ft.Control | None = None,
 ) -> ft.Container:
     """
     A titled card section — frosted glass style with golden accent border.
     """
+    title_color = theme.ACCENT if title_color is None else title_color
     header_controls = []
     if icon:
         header_controls.append(ft.Icon(icon, size=16, color=title_color))
@@ -68,20 +60,20 @@ def section_card(
 
     return ft.Container(
         content=ft.Column(
-            spacing=ITEM_SPACING,
+            spacing=theme.ITEM_SPACING,
             controls=[
                 ft.Row(controls=header_controls, spacing=6),
                 *(controls if not collapsed else []),
             ],
         ),
-        padding=CARD_PADDING,
-        border_radius=CARD_RADIUS,
-        bgcolor=CARD_GLASS_STRONG,
+        padding=theme.CARD_PADDING,
+        border_radius=theme.CARD_RADIUS,
+        bgcolor=theme.CARD_GLASS_STRONG,
         border=ft.border.only(
             left=ft.BorderSide(3, title_color),
-            top=ft.BorderSide(1, GOLD_BORDER),
-            right=ft.BorderSide(1, GOLD_BORDER),
-            bottom=ft.BorderSide(1, GOLD_BORDER),
+            top=ft.BorderSide(1, theme.GOLD_BORDER),
+            right=ft.BorderSide(1, theme.GOLD_BORDER),
+            bottom=ft.BorderSide(1, theme.GOLD_BORDER),
         ),
         shadow=ft.BoxShadow(
             spread_radius=0, blur_radius=6,
@@ -96,7 +88,7 @@ def collapsible_section(
     title: str,
     controls: list,
     initially_expanded: bool = False,
-    title_color: str = ACCENT,
+    title_color: str = None,
     icon: str | None = None,
     subtitle: str | None = None,
 ) -> ft.Container:
@@ -104,6 +96,7 @@ def collapsible_section(
     A collapsible card section — tap header to expand / collapse.
     Same visual language as section_card but with progressive disclosure.
     """
+    title_color = theme.ACCENT if title_color is None else title_color
     leading = None
     if icon:
         leading = ft.Icon(icon, size=16, color=title_color)
@@ -112,7 +105,7 @@ def collapsible_section(
         content=ft.ExpansionTile(
             title=ft.Text(title, size=13, weight=ft.FontWeight.W_600,
                           color=title_color),
-            subtitle=ft.Text(subtitle, size=TINY_SIZE, color=TEXT_MUTED) if subtitle else None,
+            subtitle=ft.Text(subtitle, size=theme.TINY_SIZE, color=theme.TEXT_MUTED) if subtitle else None,
             leading=leading,
             controls=controls,
             expanded=initially_expanded,
@@ -120,20 +113,20 @@ def collapsible_section(
             controls_padding=ft.padding.only(left=8, right=8, bottom=8),
             tile_padding=ft.padding.symmetric(horizontal=10, vertical=4),
             icon_color=title_color,
-            collapsed_icon_color=TEXT_MUTED,
+            collapsed_icon_color=theme.TEXT_MUTED,
             text_color=title_color,
-            collapsed_text_color=TEXT_SECONDARY,
+            collapsed_text_color=theme.TEXT_SECONDARY,
             bgcolor=ft.Colors.TRANSPARENT,
             collapsed_bgcolor=ft.Colors.TRANSPARENT,
             dense=True,
         ),
-        border_radius=CARD_RADIUS,
-        bgcolor=CARD_GLASS_STRONG,
+        border_radius=theme.CARD_RADIUS,
+        bgcolor=theme.CARD_GLASS_STRONG,
         border=ft.border.only(
             left=ft.BorderSide(3, title_color),
-            top=ft.BorderSide(1, GOLD_BORDER),
-            right=ft.BorderSide(1, GOLD_BORDER),
-            bottom=ft.BorderSide(1, GOLD_BORDER),
+            top=ft.BorderSide(1, theme.GOLD_BORDER),
+            right=ft.BorderSide(1, theme.GOLD_BORDER),
+            bottom=ft.BorderSide(1, theme.GOLD_BORDER),
         ),
     )
 
@@ -144,7 +137,7 @@ def info_tile(
     label: str,
     value: str,
     icon=None,
-    color: str = TEXT_PRIMARY,
+    color: str = None,
     width: int | None = None,
 ) -> ft.Container:
     """
@@ -152,22 +145,23 @@ def info_tile(
 
     Displays icon + label + value in a compact pill.
     """
+    color = theme.TEXT_PRIMARY if color is None else color
     inner = ft.Row(
         spacing=4, tight=True,
         controls=[
-            *([ ft.Icon(icon, size=13, color=ACCENT) ] if icon else []),
+            *([ ft.Icon(icon, size=13, color=theme.ACCENT) ] if icon else []),
             ft.Column(spacing=0, controls=[
-                ft.Text(label, size=TINY_SIZE, color=TEXT_MUTED),
-                ft.Text(value, size=CAPTION_SIZE, weight=ft.FontWeight.BOLD, color=color),
+                ft.Text(label, size=theme.TINY_SIZE, color=theme.TEXT_MUTED),
+                ft.Text(value, size=theme.CAPTION_SIZE, weight=ft.FontWeight.BOLD, color=color),
             ]),
         ],
     )
     return ft.Container(
         content=inner,
         padding=ft.padding.symmetric(horizontal=10, vertical=5),
-        border_radius=CARD_RADIUS_SM,
-        bgcolor=CARD_GLASS_STRONG,
-        border=ft.border.all(1, GOLD_BORDER),
+        border_radius=theme.CARD_RADIUS_SM,
+        bgcolor=theme.CARD_GLASS_STRONG,
+        border=ft.border.all(1, theme.GOLD_BORDER),
         width=width,
     )
 
@@ -186,10 +180,10 @@ def kv_row(
         content=ft.Row(
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             controls=[
-                ft.Text(label, size=BODY_SIZE, color=TEXT_SECONDARY),
-                ft.Text(value, size=BODY_SIZE,
+                ft.Text(label, size=theme.BODY_SIZE, color=theme.TEXT_SECONDARY),
+                ft.Text(value, size=theme.BODY_SIZE,
                         weight=ft.FontWeight.BOLD if bold else ft.FontWeight.NORMAL,
-                        color=color or TEXT_PRIMARY),
+                        color=color or theme.TEXT_PRIMARY),
             ],
         ),
         padding=ft.padding.symmetric(horizontal=8, vertical=3),
@@ -221,19 +215,19 @@ def form_chips(results: list[str]) -> ft.Row:
 
     results: list of "W", "D", "L" strings.
     """
-    color_map = {"W": TEXT_SUCCESS, "D": TEXT_WARNING, "L": TEXT_DANGER}
+    color_map = {"W": theme.TEXT_SUCCESS, "D": theme.TEXT_WARNING, "L": theme.TEXT_DANGER}
     chips = [
         ft.Container(
             content=ft.Text(r, size=10, weight=ft.FontWeight.BOLD,
                             color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER),
             width=22, height=22, border_radius=11,
-            bgcolor=color_map.get(r, TEXT_MUTED),
+            bgcolor=color_map.get(r, theme.TEXT_MUTED),
             alignment=ft.Alignment(0, 0),
         )
         for r in results
     ]
     return ft.Row(spacing=3, controls=chips if chips else [
-        ft.Text("—", size=CAPTION_SIZE, color=TEXT_MUTED)
+        ft.Text("—", size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED)
     ])
 
 
@@ -259,7 +253,7 @@ def stat_comparison_bar(
         content=ft.Column(spacing=2, controls=[
             ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
                 ft.Text(home_val, size=12, weight=ft.FontWeight.BOLD),
-                ft.Text(label, size=10, color=TEXT_MUTED),
+                ft.Text(label, size=10, color=theme.TEXT_MUTED),
                 ft.Text(away_val, size=12, weight=ft.FontWeight.BOLD),
             ]),
             ft.Row(spacing=2, controls=[
@@ -284,11 +278,12 @@ def action_card(
     subtitle: str = "",
     icon: str = ft.Icons.ARROW_FORWARD,
     on_click=None,
-    color: str = ACCENT,
+    color: str = None,
 ) -> ft.Container:
     """
     Full-width tappable navigation card — for "Go to Transfers", "View Table", etc.
     """
+    color = theme.ACCENT if color is None else color
     return ft.Container(
         content=ft.Row(
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -296,18 +291,18 @@ def action_card(
                 ft.Row(spacing=10, tight=True, controls=[
                     ft.Icon(icon, size=20, color=color),
                     ft.Column(spacing=0, controls=[
-                        ft.Text(title, size=BODY_SIZE, weight=ft.FontWeight.W_600),
-                        *([ ft.Text(subtitle, size=CAPTION_SIZE, color=TEXT_SECONDARY) ]
+                        ft.Text(title, size=theme.BODY_SIZE, weight=ft.FontWeight.W_600),
+                        *([ ft.Text(subtitle, size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY) ]
                           if subtitle else []),
                     ]),
                 ]),
-                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=18, color=ACCENT),
+                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=18, color=theme.ACCENT),
             ],
         ),
         padding=ft.padding.symmetric(horizontal=14, vertical=12),
-        border_radius=CARD_RADIUS,
-        bgcolor=CARD_GLASS_STRONG,
-        border=ft.border.all(1, GOLD_BORDER),
+        border_radius=theme.CARD_RADIUS,
+        bgcolor=theme.CARD_GLASS_STRONG,
+        border=ft.border.all(1, theme.GOLD_BORDER),
         on_click=on_click,
         ink=True,
     )
@@ -328,34 +323,34 @@ def match_score_card(
     """
     home_weight = ft.FontWeight.BOLD if is_home else ft.FontWeight.NORMAL
     away_weight = ft.FontWeight.BOLD if not is_home else ft.FontWeight.NORMAL
-    home_icon_color = TEXT_SUCCESS if is_home else TEXT_MUTED
-    away_icon_color = TEXT_SUCCESS if not is_home else TEXT_MUTED
+    home_icon_color = theme.TEXT_SUCCESS if is_home else theme.TEXT_MUTED
+    away_icon_color = theme.TEXT_SUCCESS if not is_home else theme.TEXT_MUTED
 
     score = f"{home_goals} - {away_goals}" if home_goals != "" else "VS"
-    score_color = ACCENT if home_goals == "" else TEXT_PRIMARY
+    score_color = theme.ACCENT if home_goals == "" else theme.TEXT_PRIMARY
 
     return ft.Card(
         content=ft.Container(
             padding=ft.padding.symmetric(horizontal=16, vertical=16),
-            bgcolor=CARD_GLASS_STRONG,
-            border_radius=CARD_RADIUS,
-            border=ft.border.all(1, GOLD_BORDER),
+            bgcolor=theme.CARD_GLASS_STRONG,
+            border_radius=theme.CARD_RADIUS,
+            border=ft.border.all(1, theme.GOLD_BORDER),
             shadow=ft.BoxShadow(
                 spread_radius=0, blur_radius=8,
-                color=ft.Colors.with_opacity(0.10, ACCENT),
+                color=ft.Colors.with_opacity(0.10, theme.ACCENT),
             ),
             content=ft.Column(
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 spacing=6,
                 controls=[
                     *([ ft.Container(
-                        content=ft.Text(competition, size=CAPTION_SIZE, color=ACCENT,
+                        content=ft.Text(competition, size=theme.CAPTION_SIZE, color=theme.ACCENT,
                                         weight=ft.FontWeight.W_600),
                         padding=ft.padding.symmetric(horizontal=10, vertical=3),
                         border_radius=8,
-                        bgcolor=ft.Colors.with_opacity(0.10, ACCENT),
+                        bgcolor=ft.Colors.with_opacity(0.10, theme.ACCENT),
                     )] if competition else []),
-                    *([ ft.Text(matchday, size=TINY_SIZE, color=TEXT_MUTED) ] if matchday else []),
+                    *([ ft.Text(matchday, size=theme.TINY_SIZE, color=theme.TEXT_MUTED) ] if matchday else []),
                     ft.Container(height=4),
                     ft.Row(
                         alignment=ft.MainAxisAlignment.SPACE_EVENLY,
@@ -396,7 +391,7 @@ def match_score_card(
                             ),
                         ],
                     ),
-                    *([ ft.Text(date_str, size=TINY_SIZE, color=TEXT_MUTED) ] if date_str else []),
+                    *([ ft.Text(date_str, size=theme.TINY_SIZE, color=theme.TEXT_MUTED) ] if date_str else []),
                 ],
             ),
         ),
@@ -429,16 +424,15 @@ def player_card_h(
     │  [POS]  Age XX  Form 7.2                     │
     └──────────────────────────────────────────────┘
     """
-    from src.ui.theme import position_color, ovr_color, fitness_color
 
-    pos_clr = position_color(position)
-    ovr_clr = ovr_color(ovr)
-    fit_clr = fitness_color(fitness)
+    pos_clr = theme.position_color(position)
+    ovr_clr = theme.ovr_color(ovr)
+    fit_clr = theme.fitness_color(fitness)
 
     # Name with badges
     name_badges = []
     if is_captain:
-        name_badges.append(badge("C", bgcolor=ACCENT_DARK, size=8))
+        name_badges.append(badge("C", bgcolor=theme.ACCENT_DARK, size=8))
     if is_injured:
         name_badges.append(badge("🏥", bgcolor=ft.Colors.RED_800, size=8))
     if is_suspended:
@@ -485,20 +479,20 @@ def player_card_h(
                     spacing=2, expand=True,
                     controls=[
                         ft.Row(spacing=4, tight=True, controls=[
-                            ft.Text(name, size=BODY_SIZE, weight=ft.FontWeight.W_600,
+                            ft.Text(name, size=theme.BODY_SIZE, weight=ft.FontWeight.W_600,
                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                             *name_badges,
                         ]),
                         ft.Row(spacing=8, tight=True, controls=[
-                            ft.Text(f"Age {age}", size=CAPTION_SIZE, color=TEXT_SECONDARY),
-                            ft.Text(f"Form {form:.1f}", size=CAPTION_SIZE, color=TEXT_SECONDARY),
+                            ft.Text(f"Age {age}", size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY),
+                            ft.Text(f"Form {form:.1f}", size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY),
                         ]),
                     ],
                 ),
                 # Right: Fitness + Morale + Training
                 ft.Row(spacing=6, tight=True, controls=[
                     ft.Container(
-                        content=ft.Text(f"{fitness}", size=CAPTION_SIZE,
+                        content=ft.Text(f"{fitness}", size=theme.CAPTION_SIZE,
                                         weight=ft.FontWeight.BOLD, color=fit_clr),
                         width=30, alignment=ft.Alignment(1, 0),
                     ),
@@ -508,13 +502,13 @@ def player_card_h(
             ],
         ),
         padding=ft.padding.symmetric(horizontal=12, vertical=8),
-        border_radius=CARD_RADIUS_SM,
-        bgcolor=CARD_BG_HIGHLIGHT if highlight else CARD_GLASS,
+        border_radius=theme.CARD_RADIUS_SM,
+        bgcolor=theme.CARD_BG_HIGHLIGHT if highlight else theme.CARD_GLASS,
         border=ft.border.only(
             left=ft.BorderSide(3, pos_clr),
-            top=ft.BorderSide(1, GOLD_BORDER),
-            right=ft.BorderSide(1, GOLD_BORDER),
-            bottom=ft.BorderSide(1, GOLD_BORDER),
+            top=ft.BorderSide(1, theme.GOLD_BORDER),
+            right=ft.BorderSide(1, theme.GOLD_BORDER),
+            bottom=ft.BorderSide(1, theme.GOLD_BORDER),
         ),
         on_click=on_click,
         ink=True,
@@ -536,9 +530,9 @@ def player_card_compact(
     """
     Compact player card for transfer search / shortlist (~56px).
     """
-    from src.ui.theme import position_color, ovr_color
-    pos_clr = position_color(position)
-    ovr_clr = ovr_color(ovr)
+    pass
+    pos_clr = theme.position_color(position)
+    ovr_clr = theme.ovr_color(ovr)
 
     badges_text = " ".join(badges_list) if badges_list else ""
 
@@ -561,24 +555,24 @@ def player_card_compact(
                             *([ ft.Text(badges_text, size=9) ] if badges_text else []),
                         ]),
                         ft.Row(spacing=8, tight=True, controls=[
-                            ft.Text(f"Age {age}", size=10, color=TEXT_SECONDARY),
+                            ft.Text(f"Age {age}", size=10, color=theme.TEXT_SECONDARY),
                             ft.Text(str(ovr), size=10, weight=ft.FontWeight.BOLD, color=ovr_clr),
-                            *([ ft.Text(club_name, size=10, color=TEXT_MUTED) ] if club_name else []),
+                            *([ ft.Text(club_name, size=10, color=theme.TEXT_MUTED) ] if club_name else []),
                         ]),
                     ]),
                 ]),
                 *([ ft.Column(spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END,
                               controls=[
-                        ft.Text(value_str, size=CAPTION_SIZE, weight=ft.FontWeight.BOLD,
-                                color=ACCENT),
-                        ft.Text("EGP", size=TINY_SIZE, color=TEXT_MUTED),
+                        ft.Text(value_str, size=theme.CAPTION_SIZE, weight=ft.FontWeight.BOLD,
+                                color=theme.ACCENT),
+                        ft.Text("EGP", size=theme.TINY_SIZE, color=theme.TEXT_MUTED),
                     ]) ] if value_str else []),
             ],
         ),
         padding=ft.padding.symmetric(horizontal=10, vertical=7),
-        border_radius=CARD_RADIUS_SM,
-        bgcolor=CARD_GLASS,
-        border=ft.border.all(1, GOLD_BORDER),
+        border_radius=theme.CARD_RADIUS_SM,
+        bgcolor=theme.CARD_GLASS,
+        border=ft.border.all(1, theme.GOLD_BORDER),
         on_click=on_click,
         ink=True,
     )
@@ -588,11 +582,11 @@ def player_card_compact(
 
 def position_group_header(group_name: str, count: int) -> ft.Container:
     """Section header for player position groups (GK, DEF, MID, FWD)."""
-    from src.ui.theme import POS_GK, POS_DEF, POS_MID, POS_FWD
+    pass
     group_colors = {
-        "GK": POS_GK, "DEF": POS_DEF, "MID": POS_MID, "FWD": POS_FWD,
+        "GK": theme.POS_GK, "DEF": theme.POS_DEF, "MID": theme.POS_MID, "FWD": theme.POS_FWD,
     }
-    clr = group_colors.get(group_name, TEXT_MUTED)
+    clr = group_colors.get(group_name, theme.TEXT_MUTED)
 
     return ft.Container(
         content=ft.Row(
@@ -600,10 +594,10 @@ def position_group_header(group_name: str, count: int) -> ft.Container:
             controls=[
                 ft.Row(spacing=6, tight=True, controls=[
                     ft.Container(width=3, height=14, bgcolor=clr, border_radius=2),
-                    ft.Text(group_name, size=CAPTION_SIZE, weight=ft.FontWeight.BOLD,
+                    ft.Text(group_name, size=theme.CAPTION_SIZE, weight=ft.FontWeight.BOLD,
                             color=clr),
                 ]),
-                ft.Text(f"{count}", size=CAPTION_SIZE, color=TEXT_MUTED),
+                ft.Text(f"{count}", size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED),
             ],
         ),
         padding=ft.padding.symmetric(horizontal=10, vertical=4),

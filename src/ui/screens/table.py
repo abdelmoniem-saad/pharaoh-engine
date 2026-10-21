@@ -4,19 +4,12 @@ League Table screen — standings display with card-based mobile layout.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 
 from src.data import queries
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.widgets.cards import section_card, info_tile, action_card
 from src.utils.localization import t, t_format
-from src.ui.theme import (
-    ACCENT, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
-    TEXT_SUCCESS, TEXT_WARNING, TEXT_DANGER,
-    CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_BG_HIGHLIGHT, CARD_RADIUS_SM,
-    PAGE_PADDING, SECTION_SPACING,
-    TITLE_SIZE, BODY_SIZE, CAPTION_SIZE, TINY_SIZE,
-    GOLD_BORDER, header_bar,
-)
 
 
 def build_table_screen(page: ft.Page) -> ft.Column:
@@ -48,18 +41,18 @@ def build_table_screen(page: ft.Page) -> ft.Column:
                 ft.TextButton(
                     t("egyptian_premier_league").upper() if len(t("egyptian_premier_league")) < 15 else "LEAGUE",
                     style=ft.ButtonStyle(
-                        color=ACCENT if active_view == "league" else TEXT_SECONDARY,
-                        bgcolor=ft.Colors.with_opacity(0.1, ACCENT) if active_view == "league" else ft.Colors.TRANSPARENT,
+                        color=theme.ACCENT if active_view == "league" else theme.TEXT_SECONDARY,
+                        bgcolor=ft.Colors.with_opacity(0.1, theme.ACCENT) if active_view == "league" else ft.Colors.TRANSPARENT,
                         shape=ft.RoundedRectangleBorder(radius=8),
                     ),
                     on_click=lambda _: switch_view("league"),
                 ),
-                ft.Icon(ft.Icons.SWAP_HORIZ, size=16, color=TEXT_MUTED),
+                ft.Icon(ft.Icons.SWAP_HORIZ, size=16, color=theme.TEXT_MUTED),
                 ft.TextButton(
                     t("egypt_cup").upper(),
                     style=ft.ButtonStyle(
-                        color=ACCENT if active_view == "cup" else TEXT_SECONDARY,
-                        bgcolor=ft.Colors.with_opacity(0.1, ACCENT) if active_view == "cup" else ft.Colors.TRANSPARENT,
+                        color=theme.ACCENT if active_view == "cup" else theme.TEXT_SECONDARY,
+                        bgcolor=ft.Colors.with_opacity(0.1, theme.ACCENT) if active_view == "cup" else ft.Colors.TRANSPARENT,
                         shape=ft.RoundedRectangleBorder(radius=8),
                     ),
                     on_click=lambda _: switch_view("cup"),
@@ -79,12 +72,12 @@ def build_table_screen(page: ft.Page) -> ft.Column:
         scroll=ft.ScrollMode.AUTO,
         controls=[
             ft.Container(
-                padding=ft.padding.all(PAGE_PADDING),
+                padding=ft.padding.all(theme.PAGE_PADDING),
                 content=ft.Column(
-                    spacing=SECTION_SPACING,
+                    spacing=theme.SECTION_SPACING,
                     controls=[
                         # Header
-                        header_bar(
+                        theme.header_bar(
                             title=t("competition"),
                             subtitle=f"{t_format('season_label', y1=gs.season_year, y2=gs.season_year + 1)}",
                             icon=ft.Icons.LEADERBOARD,
@@ -118,26 +111,26 @@ def _build_league_view(page: ft.Page, conn, gs) -> ft.Column:
     header_row = ft.Container(
         content=ft.Row(
             controls=[
-                ft.Text("#", size=TINY_SIZE, color=TEXT_MUTED, width=22,
+                ft.Text("#", size=theme.TINY_SIZE, color=theme.TEXT_MUTED, width=22,
                         text_align=ft.TextAlign.CENTER),
-                ft.Text(t("team"), size=TINY_SIZE, color=TEXT_MUTED, expand=True),
-                ft.Text("P", size=TINY_SIZE, color=TEXT_MUTED, width=22,
+                ft.Text(t("team"), size=theme.TINY_SIZE, color=theme.TEXT_MUTED, expand=True),
+                ft.Text("P", size=theme.TINY_SIZE, color=theme.TEXT_MUTED, width=22,
                         text_align=ft.TextAlign.CENTER),
-                ft.Text("W", size=TINY_SIZE, color=TEXT_MUTED, width=22,
+                ft.Text("W", size=theme.TINY_SIZE, color=theme.TEXT_MUTED, width=22,
                         text_align=ft.TextAlign.CENTER),
-                ft.Text("D", size=TINY_SIZE, color=TEXT_MUTED, width=22,
+                ft.Text("D", size=theme.TINY_SIZE, color=theme.TEXT_MUTED, width=22,
                         text_align=ft.TextAlign.CENTER),
-                ft.Text("L", size=TINY_SIZE, color=TEXT_MUTED, width=22,
+                ft.Text("L", size=theme.TINY_SIZE, color=theme.TEXT_MUTED, width=22,
                         text_align=ft.TextAlign.CENTER),
-                ft.Text("GD", size=TINY_SIZE, color=TEXT_MUTED, width=28,
+                ft.Text("GD", size=theme.TINY_SIZE, color=theme.TEXT_MUTED, width=28,
                         text_align=ft.TextAlign.CENTER),
-                ft.Text("Pts", size=TINY_SIZE, color=TEXT_MUTED, width=28,
+                ft.Text("Pts", size=theme.TINY_SIZE, color=theme.TEXT_MUTED, width=28,
                         text_align=ft.TextAlign.CENTER, weight=ft.FontWeight.BOLD),
             ],
         ),
         padding=ft.padding.symmetric(horizontal=10, vertical=4),
-        bgcolor=CARD_GLASS,
-        border_radius=CARD_RADIUS_SM,
+        bgcolor=theme.CARD_GLASS,
+        border_radius=theme.CARD_RADIUS_SM,
     )
 
     # ── Table Rows ──────────────────────────────────────────────────
@@ -147,9 +140,9 @@ def _build_league_view(page: ft.Page, conn, gs) -> ft.Column:
 
         # Zone coloring
         if is_user:
-            bg = CARD_BG_HIGHLIGHT
+            bg = theme.CARD_BG_HIGHLIGHT
             left_border = ft.border.only(
-                left=ft.BorderSide(3, TEXT_SUCCESS),
+                left=ft.BorderSide(3, theme.TEXT_SUCCESS),
             )
         elif pos <= 2:
             bg = ft.Colors.with_opacity(0.08, ft.Colors.BLUE)
@@ -161,14 +154,14 @@ def _build_league_view(page: ft.Page, conn, gs) -> ft.Column:
             bg = ft.Colors.with_opacity(0.08, ft.Colors.RED)
             left_border = ft.border.only(left=ft.BorderSide(3, ft.Colors.RED_400))
         else:
-            bg = CARD_GLASS
-            left_border = ft.border.all(1, GOLD_BORDER)
+            bg = theme.CARD_GLASS
+            left_border = ft.border.all(1, theme.GOLD_BORDER)
 
         name_weight = ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL
-        pts_color = ACCENT if is_user else TEXT_PRIMARY
+        pts_color = theme.ACCENT if is_user else theme.TEXT_PRIMARY
 
         gd_val = s.goal_difference
-        gd_color = TEXT_SUCCESS if gd_val > 0 else TEXT_DANGER if gd_val < 0 else TEXT_MUTED
+        gd_color = theme.TEXT_SUCCESS if gd_val > 0 else theme.TEXT_DANGER if gd_val < 0 else theme.TEXT_MUTED
 
         from src.utils.localization import get_language, display_name
         club_display = display_name(s.club_name, getattr(s, "club_name_ar", ""))
@@ -177,31 +170,31 @@ def _build_league_view(page: ft.Page, conn, gs) -> ft.Column:
             ft.Container(
                 content=ft.Row(
                     controls=[
-                        ft.Text(str(pos), size=CAPTION_SIZE, width=22,
+                        ft.Text(str(pos), size=theme.CAPTION_SIZE, width=22,
                                 text_align=ft.TextAlign.CENTER,
                                 weight=ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL,
-                                color=ACCENT if is_user else TEXT_SECONDARY),
+                                color=theme.ACCENT if is_user else theme.TEXT_SECONDARY),
                         ft.Text(club_display[:16], size=12, expand=True,
                                 weight=name_weight,
-                                color=TEXT_SUCCESS if is_user else TEXT_PRIMARY,
+                                color=theme.TEXT_SUCCESS if is_user else theme.TEXT_PRIMARY,
                                 max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                        ft.Text(str(s.played), size=CAPTION_SIZE, width=22,
-                                text_align=ft.TextAlign.CENTER, color=TEXT_SECONDARY),
-                        ft.Text(str(s.won), size=CAPTION_SIZE, width=22,
-                                text_align=ft.TextAlign.CENTER, color=TEXT_SUCCESS),
-                        ft.Text(str(s.drawn), size=CAPTION_SIZE, width=22,
-                                text_align=ft.TextAlign.CENTER, color=TEXT_WARNING),
-                        ft.Text(str(s.lost), size=CAPTION_SIZE, width=22,
-                                text_align=ft.TextAlign.CENTER, color=TEXT_DANGER),
-                        ft.Text(f"{gd_val:+d}", size=CAPTION_SIZE, width=28,
+                        ft.Text(str(s.played), size=theme.CAPTION_SIZE, width=22,
+                                text_align=ft.TextAlign.CENTER, color=theme.TEXT_SECONDARY),
+                        ft.Text(str(s.won), size=theme.CAPTION_SIZE, width=22,
+                                text_align=ft.TextAlign.CENTER, color=theme.TEXT_SUCCESS),
+                        ft.Text(str(s.drawn), size=theme.CAPTION_SIZE, width=22,
+                                text_align=ft.TextAlign.CENTER, color=theme.TEXT_WARNING),
+                        ft.Text(str(s.lost), size=theme.CAPTION_SIZE, width=22,
+                                text_align=ft.TextAlign.CENTER, color=theme.TEXT_DANGER),
+                        ft.Text(f"{gd_val:+d}", size=theme.CAPTION_SIZE, width=28,
                                 text_align=ft.TextAlign.CENTER, color=gd_color),
-                        ft.Text(str(s.points), size=BODY_SIZE, width=28,
+                        ft.Text(str(s.points), size=theme.BODY_SIZE, width=28,
                                 text_align=ft.TextAlign.CENTER,
                                 weight=ft.FontWeight.BOLD, color=pts_color),
                     ],
                 ),
                 padding=ft.padding.symmetric(horizontal=10, vertical=6),
-                border_radius=CARD_RADIUS_SM,
+                border_radius=theme.CARD_RADIUS_SM,
                 bgcolor=bg,
                 border=left_border,
             )
@@ -217,25 +210,25 @@ def _build_league_view(page: ft.Page, conn, gs) -> ft.Column:
         )
 
     return ft.Column(
-        spacing=SECTION_SPACING,
+        spacing=theme.SECTION_SPACING,
         controls=[
-            ft.Text(f"{t('standings')} — {t('matchday')} {current_md}", size=14, color=TEXT_SECONDARY),
+            ft.Text(f"{t('standings')} — {t('matchday')} {current_md}", size=14, color=theme.TEXT_SECONDARY),
             
             # User position callout
             *([ ft.Container(
                 content=ft.Column(spacing=2, controls=[
-                    ft.Text(f"📍 {t_format('you_are_pos', pos=f'{user_pos}{pos_suffix}')}", size=BODY_SIZE,
-                            weight=ft.FontWeight.W_600, color=TEXT_SUCCESS),
-                    ft.Text(user_pts_text, size=CAPTION_SIZE, color=TEXT_SECONDARY),
+                    ft.Text(f"📍 {t_format('you_are_pos', pos=f'{user_pos}{pos_suffix}')}", size=theme.BODY_SIZE,
+                            weight=ft.FontWeight.W_600, color=theme.TEXT_SUCCESS),
+                    ft.Text(user_pts_text, size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY),
                 ]),
                 padding=ft.padding.symmetric(horizontal=12, vertical=8),
-                bgcolor=CARD_GLASS_STRONG,
-                border_radius=CARD_RADIUS_SM,
+                bgcolor=theme.CARD_GLASS_STRONG,
+                border_radius=theme.CARD_RADIUS_SM,
                 border=ft.border.only(
-                    left=ft.BorderSide(3, TEXT_SUCCESS),
-                    top=ft.BorderSide(1, GOLD_BORDER),
-                    right=ft.BorderSide(1, GOLD_BORDER),
-                    bottom=ft.BorderSide(1, GOLD_BORDER),
+                    left=ft.BorderSide(3, theme.TEXT_SUCCESS),
+                    top=ft.BorderSide(1, theme.GOLD_BORDER),
+                    right=ft.BorderSide(1, theme.GOLD_BORDER),
+                    bottom=ft.BorderSide(1, theme.GOLD_BORDER),
                 ),
             )] if user_pos else []),
 
@@ -246,7 +239,7 @@ def _build_league_view(page: ft.Page, conn, gs) -> ft.Column:
             # Quick nav
             ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[
                 ft.OutlinedButton(f"📅 {t('fixtures_btn')}", on_click=lambda e: navigate(page, "/fixtures"),
-                                  style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), side=ft.BorderSide(1, GOLD_BORDER))),
+                                  style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), side=ft.BorderSide(1, theme.GOLD_BORDER))),
             ]),
         ]
     )
@@ -262,8 +255,8 @@ def _build_cup_view(page: ft.Page, conn, gs) -> ft.Column:
     if not cup:
         return ft.Column(horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
             ft.Container(height=40),
-            ft.Icon(ft.Icons.LOCK, size=48, color=TEXT_MUTED),
-            ft.Text(t("no_data"), color=TEXT_MUTED),
+            ft.Icon(ft.Icons.LOCK, size=48, color=theme.TEXT_MUTED),
+            ft.Text(t("no_data"), color=theme.TEXT_MUTED),
         ])
 
     lang = get_language()
@@ -298,10 +291,10 @@ def _build_cup_view(page: ft.Page, conn, gs) -> ft.Column:
                 score = f"{row['home_goals']} - {row['away_goals']}"
                 if row['penalties_json']:
                     score += " (P)"
-                score_color = TEXT_PRIMARY
+                score_color = theme.TEXT_PRIMARY
             else:
                 score = "vs"
-                score_color = TEXT_MUTED
+                score_color = theme.TEXT_MUTED
                 
             is_user_match = row["home_club_id"] == gs.user_club_id or row["away_club_id"] == gs.user_club_id
             
@@ -310,18 +303,18 @@ def _build_cup_view(page: ft.Page, conn, gs) -> ft.Column:
                     content=ft.Row(
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         controls=[
-                            ft.Text(h_name[:14], size=11, color=TEXT_PRIMARY, expand=True, max_lines=1),
+                            ft.Text(h_name[:14], size=11, color=theme.TEXT_PRIMARY, expand=True, max_lines=1),
                             ft.Container(
                                 content=ft.Text(score, size=10, weight=ft.FontWeight.BOLD, color=score_color),
-                                bgcolor=CARD_GLASS, padding=ft.padding.symmetric(horizontal=8, vertical=2),
+                                bgcolor=theme.CARD_GLASS, padding=ft.padding.symmetric(horizontal=8, vertical=2),
                                 border_radius=4,
                             ),
-                            ft.Text(a_name[:14], size=11, color=TEXT_PRIMARY, expand=True, text_align=ft.TextAlign.RIGHT, max_lines=1),
+                            ft.Text(a_name[:14], size=11, color=theme.TEXT_PRIMARY, expand=True, text_align=ft.TextAlign.RIGHT, max_lines=1),
                         ],
                     ),
                     padding=4,
-                    border=ft.border.all(1, ft.Colors.with_opacity(0.15, ACCENT)) if is_user_match else None,
-                    bgcolor=ft.Colors.with_opacity(0.08, ACCENT) if is_user_match else None,
+                    border=ft.border.all(1, ft.Colors.with_opacity(0.15, theme.ACCENT)) if is_user_match else None,
+                    bgcolor=ft.Colors.with_opacity(0.08, theme.ACCENT) if is_user_match else None,
                     border_radius=4,
                 )
             )
@@ -332,7 +325,7 @@ def _build_cup_view(page: ft.Page, conn, gs) -> ft.Column:
             rnd_display = rnd_name # fallback
 
         status_text = "Complete" if rnd.is_complete else ("In Progress" if is_current else "Upcoming")
-        status_color = TEXT_SUCCESS if rnd.is_complete else (ACCENT if is_current else TEXT_MUTED)
+        status_color = theme.TEXT_SUCCESS if rnd.is_complete else (theme.ACCENT if is_current else theme.TEXT_MUTED)
 
         card = section_card(
             title=rnd_display,
@@ -353,13 +346,13 @@ def _build_cup_view(page: ft.Page, conn, gs) -> ft.Column:
         ))
 
     return ft.Column(
-        spacing=SECTION_SPACING,
+        spacing=theme.SECTION_SPACING,
         controls=[
             *round_cards,
             # Quick nav
             ft.Row(alignment=ft.MainAxisAlignment.CENTER, controls=[
                 ft.OutlinedButton(f"📅 {t('fixtures_btn')}", on_click=lambda e: navigate(page, "/fixtures"),
-                                  style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), side=ft.BorderSide(1, GOLD_BORDER))),
+                                  style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), side=ft.BorderSide(1, theme.GOLD_BORDER))),
             ]),
         ]
     )

@@ -4,13 +4,14 @@ News ticker and notification banner widgets for the match day screen.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 from src.utils.localization import t
 
-_GOLD = "#FFD54F"
-_GOLD_BORDER = ft.Colors.with_opacity(0.18, "#FFD54F")
+_GOLD = theme.GOLD
+_GOLD_BORDER = ft.Colors.with_opacity(0.18, theme.GOLD)
 _TEXT_PRIMARY = "#EAEAEA"
 _TEXT_MUTED = "#616161"
-_BG_SURFACE = "#141e33"
+_BG_SURFACE = theme.BG_SURFACE
 
 _CAT_ICONS = {
     "match": "⚽", "media": "📰", "board": "🏛️",

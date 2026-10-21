@@ -1,0 +1,4 @@
+# Browser preview compatibility for the pinned Flet runtime.
+-r requirements.txt
+flet-web==0.80.5
+fastapi==0.115.12

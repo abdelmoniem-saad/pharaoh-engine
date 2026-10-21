@@ -17,7 +17,9 @@ log = get_logger("db")
 
 
 # Default DB path — will be set to app storage dir on mobile
-_DEFAULT_DB_DIR = Path(__file__).parent.parent.parent / "saves"
+from src.utils.storage import save_directory
+
+_DEFAULT_DB_DIR = save_directory()
 _db_connection: sqlite3.Connection | None = None
 _active_save_name: str | None = None
 _startup_backup_done: set[str] = set()

@@ -4,6 +4,7 @@ Player card widget — reusable player info display for Flet.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 
 from src.data.models import Player
 from src.core.player import calculate_overall_rating
@@ -39,7 +40,7 @@ def player_card(player: Player) -> ft.ListTile:
         subtitle_parts.append(f"🅰️{player.season_stats.assists}")
 
     return ft.ListTile(
-        leading=ft.Text(player.position.value, size=12, color=ft.Colors.AMBER_300),
+        leading=ft.Text(player.position.value, size=12, color=theme.GOLD),
         title=ft.Text(
             f"{player.name} {badge_text}".strip(),
             size=13, weight=ft.FontWeight.W_500,

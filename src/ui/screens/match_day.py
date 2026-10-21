@@ -4,6 +4,7 @@ Match Day screen — pre-match info, simulate, and show results.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 
 from src.data import queries
 from src.core.calendar import simulate_user_match, advance_to_next_match, advance_day
@@ -11,18 +12,6 @@ from src.core.league import is_season_complete, get_champion
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.widgets.cards import (
     section_card, info_tile, match_score_card, form_chips, action_card,
-)
-from src.ui.theme import (
-    ACCENT, ACCENT_DARK, TEXT_PRIMARY, TEXT_SECONDARY, TEXT_MUTED,
-    TEXT_SUCCESS, TEXT_WARNING, TEXT_DANGER,
-    CARD_BG, CARD_GLASS, CARD_GLASS_STRONG, CARD_BG_HIGHLIGHT,
-    CARD_RADIUS, CARD_RADIUS_SM,
-    PAGE_PADDING, SECTION_SPACING,
-    TITLE_SIZE, BODY_SIZE, CAPTION_SIZE, TINY_SIZE,
-    GOLD, GOLD_BORDER, GOLD_BORDER_STRONG, GOLD_GLOW,
-    BG_DARK, BG_MID, BG_TEAL, BG_SURFACE,
-    header_bar, gradient_bg, glass_card, golden_divider,
-    PRIMARY_BTN_STYLE, SECONDARY_BTN_STYLE,
 )
 from src.utils.config import MatchEventType, expectation_display
 from src.utils.localization import t, t_format, display_name, display_home_name, display_away_name
@@ -92,7 +81,7 @@ def _tips_block(page, gs) -> list:
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     controls=[
                         ft.Text("💡 Manager Tips", size=14,
-                                weight=ft.FontWeight.BOLD, color=GOLD),
+                                weight=ft.FontWeight.BOLD, color=theme.GOLD),
                         ft.IconButton(ft.Icons.CLOSE, icon_size=16,
                                       icon_color="#9E9E9E",
                                       tooltip="Dismiss",
@@ -108,10 +97,10 @@ def _tips_block(page, gs) -> list:
                 ],
             ],
         ),
-        bgcolor="#141e33",
+        bgcolor=theme.BG_SURFACE,
         border_radius=12,
         padding=ft.padding.symmetric(horizontal=12, vertical=8),
-        border=ft.border.all(1, GOLD_BORDER),
+        border=ft.border.all(1, theme.GOLD_BORDER),
     )
     return [card, ft.Container(height=6)]
 
@@ -135,7 +124,7 @@ def build_match_day_screen(page: ft.Page) -> ft.Column:
                 ft.ElevatedButton(
                     f"🏠 {t('main_menu')}",
                     width=250, height=48,
-                    style=PRIMARY_BTN_STYLE,
+                    style=theme.PRIMARY_BTN_STYLE,
                     on_click=lambda e: navigate(page, "/"),
                 ),
             ],
@@ -156,7 +145,7 @@ def build_match_day_screen(page: ft.Page) -> ft.Column:
         champ_pts = champ.points if champ else 0
         is_user_champ = champ and champ.club_id == gs.user_club_id
 
-        trophy_color = ft.Colors.AMBER_400 if is_user_champ else ft.Colors.GREY_400
+        trophy_color = theme.ACCENT if is_user_champ else ft.Colors.GREY_400
         congrats_text = t("you_are_champions") if is_user_champ else t_format("are_champions", club=champ_name)
 
         return ft.Column(
@@ -167,7 +156,7 @@ def build_match_day_screen(page: ft.Page) -> ft.Column:
                 ft.Icon(ft.Icons.EMOJI_EVENTS, size=80, color=trophy_color),
                 ft.Container(height=10),
                 ft.Text(t("season_complete_title"), size=28, weight=ft.FontWeight.BOLD,
-                         color=GOLD, text_align=ft.TextAlign.CENTER),
+                         color=theme.GOLD, text_align=ft.TextAlign.CENTER),
                 ft.Container(height=5),
                 ft.Text(congrats_text, size=18, weight=ft.FontWeight.W_500,
                          text_align=ft.TextAlign.CENTER),
@@ -175,20 +164,20 @@ def build_match_day_screen(page: ft.Page) -> ft.Column:
                          text_align=ft.TextAlign.CENTER),
                 ft.Container(height=30),
                 ft.ElevatedButton(f"📊 {t('season_summary_btn')}", width=250, height=48,
-                                   style=PRIMARY_BTN_STYLE,
+                                   style=theme.PRIMARY_BTN_STYLE,
                                    on_click=lambda e: navigate(page, "/season_summary")),
                 ft.Container(height=10),
                 ft.OutlinedButton(f"📊 {t('view_final_table')}", width=250, height=45,
                                    on_click=lambda e: navigate(page, "/table"),
-                                   style=SECONDARY_BTN_STYLE),
+                                   style=theme.SECONDARY_BTN_STYLE),
                 ft.Container(height=10),
                 ft.OutlinedButton(f"💾 {t('save_game')}", width=250, height=45,
                                    on_click=lambda e: _save_and_notify(page, conn, gs),
-                                   style=SECONDARY_BTN_STYLE),
+                                   style=theme.SECONDARY_BTN_STYLE),
                 ft.Container(height=10),
                 ft.OutlinedButton(f"🏠 {t('main_menu')}", width=250, height=45,
                                    on_click=lambda e: navigate(page, "/"),
-                                   style=SECONDARY_BTN_STYLE),
+                                   style=theme.SECONDARY_BTN_STYLE),
             ],
         )
 
@@ -247,7 +236,7 @@ def _build_match_preview(page, conn, gs, fixture):
             ft.ElevatedButton(
                 f"⚽ {t('play_match_btn')}",
                 width=280, height=56,
-                style=PRIMARY_BTN_STYLE,
+                style=theme.PRIMARY_BTN_STYLE,
                 on_click=simulate_click,
             )
         )
@@ -256,25 +245,25 @@ def _build_match_preview(page, conn, gs, fixture):
             ft.Container(
                 content=ft.Text(
                     f"⏳ {t_format('days_until_match_label', n=days_until)}",
-                    size=14, color=GOLD, weight=ft.FontWeight.W_500,
+                    size=14, color=theme.GOLD, weight=ft.FontWeight.W_500,
                     text_align=ft.TextAlign.CENTER,
                 ),
                 padding=ft.padding.symmetric(horizontal=16, vertical=10),
                 border_radius=10,
-                bgcolor=ft.Colors.with_opacity(0.08, GOLD),
-                border=ft.border.all(1, GOLD_BORDER),
+                bgcolor=ft.Colors.with_opacity(0.08, theme.GOLD),
+                border=ft.border.all(1, theme.GOLD_BORDER),
             )
         )
         action_controls.append(
             ft.ElevatedButton(
                 f"⏩ {t('skip_to_match_day')}", width=280, height=50,
-                style=PRIMARY_BTN_STYLE,
+                style=theme.PRIMARY_BTN_STYLE,
                 on_click=advance_to_match_click,
             )
         )
         action_controls.append(
             ft.OutlinedButton(f"📅 {t('advance_1_day')}", width=280, height=45,
-                               style=SECONDARY_BTN_STYLE,
+                               style=theme.SECONDARY_BTN_STYLE,
                                on_click=advance_one_day),
         )
 
@@ -313,10 +302,10 @@ def _build_match_preview(page, conn, gs, fixture):
     suspended_count = sum(1 for p in user_squad if p.suspension_matches > 0)
     if injured_count > 0:
         info_items.append(info_tile(t("injured_label"), str(injured_count),
-                                     icon=ft.Icons.LOCAL_HOSPITAL, color=TEXT_DANGER))
+                                     icon=ft.Icons.LOCAL_HOSPITAL, color=theme.TEXT_DANGER))
     if suspended_count > 0:
         info_items.append(info_tile(t("suspended_label"), str(suspended_count),
-                                     icon=ft.Icons.BLOCK, color=TEXT_WARNING))
+                                     icon=ft.Icons.BLOCK, color=theme.TEXT_WARNING))
     if info_items:
         intel_controls.append(
             ft.Row(alignment=ft.MainAxisAlignment.CENTER,
@@ -384,7 +373,7 @@ def _build_match_preview(page, conn, gs, fixture):
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=12,
                     controls=[
-                        header_bar(
+                        theme.header_bar(
                             title=t("match_day"),
                             subtitle=f"📅 {gs.current_date.strftime('%d %B %Y')}",
                             icon=ft.Icons.SPORTS_SOCCER,
@@ -429,7 +418,7 @@ def _build_no_match_view(page, conn, gs):
             ft.Text(t("try_advancing"), size=14, color=ft.Colors.GREY_500, text_align=ft.TextAlign.CENTER),
             ft.Container(height=20),
             ft.ElevatedButton(f"⏩ {t('skip_to_next_match')}", width=260, height=48,
-                               style=ft.ButtonStyle(bgcolor=ft.Colors.AMBER_700,
+                               style=ft.ButtonStyle(bgcolor=theme.ACCENT_DARK,
                                                      color=ft.Colors.WHITE,
                                                      text_style=ft.TextStyle(size=16)),
                                on_click=advance_to_match),
@@ -447,7 +436,7 @@ def _info_chip(label: str, value: str, icon) -> ft.Container:
         content=ft.Row(
             spacing=5, tight=True,
             controls=[
-                ft.Icon(icon, size=14, color=ft.Colors.AMBER_300),
+                ft.Icon(icon, size=14, color=theme.GOLD),
                 ft.Column(spacing=0, controls=[
                     ft.Text(label, size=9, color=ft.Colors.GREY_500),
                     ft.Text(value, size=12, weight=ft.FontWeight.BOLD),
@@ -639,7 +628,7 @@ def _show_result_dialog(page, outcome):
         other_results_widgets.append(ft.Divider())
         other_results_widgets.append(
             ft.Text(f"📋 Other Matchday {outcome.matchday} Results",
-                     size=14, weight=ft.FontWeight.W_500, color=ft.Colors.AMBER_300))
+                     size=14, weight=ft.FontWeight.W_500, color=theme.GOLD))
         for r in outcome.other_results:
             other_results_widgets.append(
                 ft.Container(
@@ -694,7 +683,7 @@ def _show_result_dialog(page, outcome):
 
         commentary_dlg = ft.AlertDialog(
             title=ft.Text(f"📜 {t('match_commentary')}", size=16,
-                           weight=ft.FontWeight.BOLD, color="#FFD54F"),
+                           weight=ft.FontWeight.BOLD, color=theme.GOLD),
             content=ft.Container(
                 content=ft.Column(controls=event_rows, spacing=3, scroll=ft.ScrollMode.AUTO),
                 width=290, height=400,
@@ -758,7 +747,7 @@ def _show_result_dialog(page, outcome):
         # Home team section
         rating_controls.append(
             ft.Text(f"🏠 {result.home_club_name}", size=13,
-                     weight=ft.FontWeight.BOLD, color=ft.Colors.AMBER_300)
+                     weight=ft.FontWeight.BOLD, color=theme.GOLD)
         )
         if home_ratings:
             for pid, r in home_ratings:
@@ -771,7 +760,7 @@ def _show_result_dialog(page, outcome):
         # Away team section
         rating_controls.append(
             ft.Text(f"✈️ {result.away_club_name}", size=13,
-                     weight=ft.FontWeight.BOLD, color=ft.Colors.AMBER_300)
+                     weight=ft.FontWeight.BOLD, color=theme.GOLD)
         )
         if away_ratings:
             for pid, r in away_ratings:
@@ -781,7 +770,7 @@ def _show_result_dialog(page, outcome):
 
         ratings_dlg = ft.AlertDialog(
             title=ft.Text(f"📊 {t('player_ratings_title')}", size=16,
-                           weight=ft.FontWeight.BOLD, color="#FFD54F"),
+                           weight=ft.FontWeight.BOLD, color=theme.GOLD),
             content=ft.Container(
                 content=ft.Column(
                     controls=rating_controls,
@@ -800,7 +789,7 @@ def _show_result_dialog(page, outcome):
             controls=[
                 ft.Text(t("full_time_label"), size=12, color=ft.Colors.GREY_500),
                 ft.Text(result.score_display, size=20, weight=ft.FontWeight.BOLD,
-                         text_align=ft.TextAlign.CENTER, color=ft.Colors.AMBER_300),
+                         text_align=ft.TextAlign.CENTER, color=theme.GOLD),
                 *pos_widgets,
                 *(
                     [ft.Text(attendance_text, size=11, color=ft.Colors.GREY_500)]
@@ -862,7 +851,7 @@ def _show_event_dialog(page, event):
                 gs = app_state.game_state
                 if conn and gs:
                     response = apply_event_choice(conn, gs, event, idx)
-                    show_snackbar(page, response[:80], bgcolor=ft.Colors.AMBER_800)
+                    show_snackbar(page, response[:80], bgcolor=theme.ACCENT_DARK)
                 page.pop_dialog()
             return handler
 
@@ -895,14 +884,14 @@ def _show_event_dialog(page, event):
                 padding=ft.padding.symmetric(horizontal=12, vertical=12),
                 border_radius=10,
                 bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
-                border=ft.border.all(1, ft.Colors.with_opacity(0.12, "#FFD54F")),
+                border=ft.border.all(1, ft.Colors.with_opacity(0.12, theme.GOLD)),
                 on_click=make_handler(),
                 ink=True,
             )
         )
 
     dlg = ft.AlertDialog(
-        title=ft.Text(event.title, size=16, weight=ft.FontWeight.BOLD, color="#FFD54F"),
+        title=ft.Text(event.title, size=16, weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
             content=ft.Column(spacing=8, controls=[
                 ft.Container(
@@ -962,7 +951,7 @@ def _build_mini_table(conn, user_club_id) -> list:
                                 color=ft.Colors.GREY_400, text_align=ft.TextAlign.CENTER),
                         ft.Text(str(s.points), size=11, width=26, weight=ft.FontWeight.BOLD,
                                 text_align=ft.TextAlign.CENTER,
-                                color=ft.Colors.AMBER_300 if is_user else ft.Colors.WHITE),
+                                color=theme.GOLD if is_user else ft.Colors.WHITE),
                     ],
                 ),
                 padding=ft.padding.symmetric(horizontal=6, vertical=4),
@@ -979,7 +968,7 @@ def _build_mini_table(conn, user_club_id) -> list:
                     content=ft.Row(spacing=0, controls=[
                         ft.Text("", width=22),
                         ft.Text(f"📊 {t('league_table_title')}", size=12, weight=ft.FontWeight.W_500,
-                                expand=True, color=ft.Colors.AMBER_300),
+                                expand=True, color=theme.GOLD),
                         ft.Text("P", size=9, width=20, color=ft.Colors.GREY_600,
                                 text_align=ft.TextAlign.CENTER),
                         ft.Text("GD", size=9, width=28, color=ft.Colors.GREY_600,
@@ -1000,7 +989,7 @@ def _build_mini_table(conn, user_club_id) -> list:
             padding=ft.padding.symmetric(vertical=6, horizontal=4),
             border_radius=10,
             bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
-            border=ft.border.all(1, ft.Colors.with_opacity(0.12, "#FFD54F")),
+            border=ft.border.all(1, ft.Colors.with_opacity(0.12, theme.GOLD)),
         ),
     ]
 
@@ -1055,14 +1044,14 @@ def _build_matchday_fixtures(conn, current_fixture, user_club_id) -> list:
         ft.Container(
             content=ft.Column(spacing=0, controls=[
                 ft.Text(f"📋 {t('all_matchday_fixtures')}",
-                         size=12, weight=ft.FontWeight.W_500, color=ft.Colors.AMBER_300),
+                         size=12, weight=ft.FontWeight.W_500, color=theme.GOLD),
                 ft.Container(height=4),
                 *fixture_rows,
             ]),
             padding=ft.padding.symmetric(vertical=6, horizontal=4),
             border_radius=10,
             bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.WHITE),
-            border=ft.border.all(1, ft.Colors.with_opacity(0.12, "#FFD54F")),
+            border=ft.border.all(1, ft.Colors.with_opacity(0.12, theme.GOLD)),
         ),
     ]
 
@@ -1079,7 +1068,7 @@ def _show_availability_dialog(page, squad):
         for p in injured:
             rows.append(ft.Container(
                 content=ft.Row(spacing=8, controls=[
-                    ft.Text(p.position.value, size=10, color=ft.Colors.AMBER_300, width=28),
+                    ft.Text(p.position.value, size=10, color=theme.GOLD, width=28),
                     ft.Text(p.name, size=12, expand=True),
                     ft.Column(spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END, controls=[
                         ft.Text(p.injury_type or t("injury"), size=10, color=ft.Colors.RED_300),
@@ -1097,7 +1086,7 @@ def _show_availability_dialog(page, squad):
         for p in suspended:
             rows.append(ft.Container(
                 content=ft.Row(spacing=8, controls=[
-                    ft.Text(p.position.value, size=10, color=ft.Colors.AMBER_300, width=28),
+                    ft.Text(p.position.value, size=10, color=theme.GOLD, width=28),
                     ft.Text(p.name, size=12, expand=True),
                     ft.Text(t_format("match_es", n=p.suspension_matches), size=10,
                             color=ft.Colors.ORANGE_300),
@@ -1110,7 +1099,7 @@ def _show_availability_dialog(page, squad):
 
     dlg = ft.AlertDialog(
         title=ft.Text(f"🏥 {t('squad_availability')}", size=16,
-                       weight=ft.FontWeight.BOLD, color="#FFD54F"),
+                       weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
             content=ft.Column(spacing=4, controls=rows, scroll=ft.ScrollMode.AUTO),
             width=290, height=300,

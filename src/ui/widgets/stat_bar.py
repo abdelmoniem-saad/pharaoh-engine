@@ -4,6 +4,7 @@ Stat bar widget — visual attribute/stat bar for Flet.
 from __future__ import annotations
 
 import flet as ft
+from src.ui import theme
 from src.utils.localization import t
 
 
