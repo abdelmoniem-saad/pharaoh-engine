@@ -2,8 +2,11 @@
 Settings screen -- match speed, difficulty, auto-save, language.
 """
 from __future__ import annotations
+import logging
 import flet as ft
 from src.ui import theme
+
+log = logging.getLogger(__name__)
 
 
 def build_settings_screen(page: ft.Page) -> ft.Column:
@@ -24,19 +27,19 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
     # sound_enabled = settings.get("sound_enabled", 1)  # [SOUND DISABLED]
 
     speed_dd = ft.Dropdown(
-        label="Match Speed", value=str(match_speed), expand=True,
-        options=[ft.dropdown.Option(str(i), text=f"{i} - {n}")
-                 for i, n in [(1, "Slow"), (2, "Normal"), (3, "Fast"), (4, "Very Fast"), (5, "Instant")]],
+        label=t("match_speed"), value=str(match_speed), expand=True,
+        options=[ft.dropdown.Option(str(i), text=f"{i} - {t(n)}")
+                 for i, n in [(1, "slow"), (2, "normal"), (3, "fast"), (4, "very_fast"), (5, "instant")]],
     )
     diff_dd = ft.Dropdown(
-        label="Difficulty", value=difficulty, expand=True,
-        options=[ft.dropdown.Option(k, text=k.title()) for k in ("easy", "normal", "hard")],
+        label=t("difficulty"), value=difficulty, expand=True,
+        options=[ft.dropdown.Option(k, text=t(k)) for k in ("easy", "normal", "hard")],
     )
-    auto_save_switch = ft.Switch(label="Auto-Save", value=bool(auto_save))
+    auto_save_switch = ft.Switch(label=t("auto_save"), value=bool(auto_save))
     # sound_switch = ft.Switch(label="Sound Effects", value=bool(sound_enabled))  # [SOUND DISABLED]
     interval_dd = ft.Dropdown(
-        label="Auto-Save Interval", value=str(auto_save_interval), expand=True,
-        options=[ft.dropdown.Option(str(d), text=f"Every {d} days") for d in (3, 7, 14, 30)],
+        label=t("auto_save_interval"), value=str(auto_save_interval), expand=True,
+        options=[ft.dropdown.Option(str(d), text=t("every_n_days").format(days=d)) for d in (3, 7, 14, 30)],
     )
 
     def save_click(e):
@@ -51,7 +54,7 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
         if conn:
             _save_settings(conn, s)
         # set_audio_enabled(bool(sound_switch.value))  # [SOUND DISABLED]
-        show_snackbar(page, "✅ Settings saved!")
+        show_snackbar(page, "✅ " + t("settings_saved"))
 
     def go_back(e):
         navigate(page, "/squad" if app_state.game_state else "/")
@@ -135,7 +138,6 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
 
     def on_lang_change(e):
         new_lang = e.control.value or "en"
-        print(f"DEBUG: Language toggle fired → '{new_lang}' (was '{get_language()}')")
         set_language(new_lang)
         set_pref("language", new_lang)
         # Persist to DB
@@ -148,9 +150,8 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
                     "UPDATE game_settings SET language=? WHERE id=1", (new_lang,)
                 )
                 conn.commit()
-                print(f"DEBUG: Language '{new_lang}' saved to DB ✅")
             except Exception as ex:
-                print(f"DEBUG: language save failed: {ex}")
+                log.warning("Language save failed: %a", ex)
         # Toggle RTL
         page.rtl = is_rtl()
         # Rebuild the screen with new language labels
@@ -175,8 +176,7 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
                 ft.Text("🌍 " + t("language"), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
                 lang_radio,
                 ft.Text(
-                    "Switch between English and Arabic (العربية). "
-                    "Arabic enables right-to-left layout.",
+                    t("language_help"),
                     size=11, color=theme.TEXT_MUTED, italic=True,
                 ),
             ]),
@@ -227,7 +227,7 @@ def _load_settings(conn) -> dict:
             )
             return d
     except Exception as ex:
-        print(f"DEBUG: _load_settings error: {ex}")
+        log.warning("Settings load failed: %a", ex)
     return {}
 
 
@@ -242,4 +242,4 @@ def _save_settings(conn, s: dict) -> None:
         """, (s["match_speed"], s["auto_save"], s["auto_save_interval"], s["difficulty"], lang))
         conn.commit()
     except Exception as ex:
-        print(f"DEBUG: _save_settings error: {ex}")
+        log.warning("Settings save failed: %a", ex)
