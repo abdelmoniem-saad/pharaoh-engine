@@ -17,4 +17,16 @@ The earlier theme pass retained too much of the original card layout. This revis
 
 No match simulation or career schema changes are part of this revision. No third-party logo, photography, or host likeness is included. Existing brand-source and unofficial-concept caveats still apply.
 
-This is a substantially revised interface candidate, not evidence of store readiness. Secondary dialogs retain parts of the older UI; a dedicated font system, full Arabic editorial pass, accessibility/text-scaling checks, device performance and player usability testing remain necessary before a commercial release. Desktop uses a bounded workspace rather than a separate desktop navigation architecture.
+This is a substantially revised interface candidate, not evidence of store readiness. Secondary dialogs retain parts of the older UI; a full Arabic editorial pass, accessibility/text-scaling checks, device performance and player usability testing remain necessary before a commercial release. Desktop uses a bounded workspace rather than a separate desktop navigation architecture.
+
+## Career screens — 23 October 2026
+
+This revision adds a projected-XI tactics board with actual player names, shirt numbers and clickable dossiers. Final team selection remains in the pre-match screen. Tactical sliders save on release instead of rebuilding the screen during a drag, and preset selection reflects all tactical settings.
+
+Player dossiers now separate overview, attributes and development. Existing captain, conversation, transfer-list, contract, training and development actions remain accessible under Development. Arabic overlays explicitly use RTL, and core profile labels have translations. Attribute bars adapt to available width.
+
+The club screen has a club identity panel, board/fan/position metrics and a compact next-fixture brief. The result screen now prioritizes the score and next action, with separate Report, Top Performers and Elsewhere sections. Penalty scorers are included in the report.
+
+Fonts are bundled with their OFL licenses: Barlow Condensed Bold for English display text and Noto Sans Arabic for Arabic text. These are original UI choices, not official Erza3 typography. Source links and licenses are in assets/fonts. Launch through python main.py so the configured assets directory is served; custom Flet launchers must also supply the repository assets directory.
+
+Validation: 142 tests pass with expanded coverage for dossier tabs, post-match penalty events and slider persistence. Browser previews verify the actual tactics, club and Arabic dossier screens at 390px. Existing limitations around multi-user hosting, mobile build verification and untranslated secondary dialogue content still apply.

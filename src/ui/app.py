@@ -655,6 +655,7 @@ def main(page: ft.Page):
     from src.utils.localization import set_language, is_rtl
     set_language(get_pref("language", "en"))
     page.rtl = is_rtl()
+    theme.apply_to_page(page)
 
     # Show main menu
     navigate(page, "/")
@@ -662,4 +663,5 @@ def main(page: ft.Page):
 
 def run_app():
     """Entry point to launch the Flet application."""
-    ft.run(main)
+    from pathlib import Path
+    ft.run(main, assets_dir=str(Path(__file__).resolve().parents[2] / "assets"))

@@ -215,7 +215,7 @@ def header_bar(
     # Screen title provides hierarchy; icons are reserved for actions.
     left.append(
         ft.Column(spacing=6, expand=True, controls=[
-            ft.Text(title, size=TITLE_SIZE, weight=ft.FontWeight.BOLD,
+            ft.Text(title, size=TITLE_SIZE + 4, font_family=display_font(), weight=ft.FontWeight.BOLD,
                     color=TEXT_PRIMARY),
             *([ ft.Text(subtitle, size=CAPTION_SIZE, color=TEXT_SECONDARY) ]
               if subtitle else []),
@@ -363,9 +363,18 @@ def configure(name: str) -> None:
     )
 
 
+def display_font() -> str:
+    from src.utils.localization import is_rtl
+    return "NotoArabic" if is_rtl() else "BarlowDisplay"
+
+
 def apply_to_page(page: ft.Page) -> None:
+    from src.utils.localization import is_rtl
     page.bgcolor = BG_DARK
-    page.theme = ft.Theme(color_scheme_seed=ACCENT, font_family="Roboto")
+    page.fonts = {"BarlowDisplay": "fonts/BarlowCondensed-Bold.ttf",
+                  "NotoArabic": "fonts/NotoSansArabic.ttf"}
+    page.theme = ft.Theme(color_scheme_seed=ACCENT,
+                          font_family="NotoArabic" if is_rtl() else "Roboto")
 
 
 def theme_label(arabic: bool = False) -> str:

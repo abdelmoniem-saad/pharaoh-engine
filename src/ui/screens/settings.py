@@ -160,6 +160,7 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
                 log.warning("Language save failed: %a", ex)
         # Toggle RTL
         page.rtl = is_rtl()
+        theme.apply_to_page(page)
         # Rebuild the screen with new language labels
         navigate(page, "/settings")
 

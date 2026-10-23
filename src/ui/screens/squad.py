@@ -267,37 +267,37 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
 
     # Technical stats
     tech_stats = [
-        stat_bar("Finishing", a.finishing),
-        stat_bar("Passing", a.passing),
-        stat_bar("Dribbling", a.dribbling),
-        stat_bar("First Touch", a.first_touch),
-        stat_bar("Crossing", a.crossing),
-        stat_bar("Heading", a.heading),
-        stat_bar("Long Shots", a.long_shots),
+        stat_bar(t("finishing"), a.finishing),
+        stat_bar(t("passing"), a.passing),
+        stat_bar(t("dribbling"), a.dribbling),
+        stat_bar(t("first_touch"), a.first_touch),
+        stat_bar(t("crossing"), a.crossing),
+        stat_bar(t("heading"), a.heading),
+        stat_bar(t("long_shots"), a.long_shots),
     ]
 
     # Physical stats
     phys_stats = [
-        stat_bar("Pace", a.pace),
-        stat_bar("Stamina", a.stamina),
-        stat_bar("Strength", a.strength),
-        stat_bar("Agility", a.agility),
-        stat_bar("Jumping", a.jumping),
+        stat_bar(t("pace"), a.pace),
+        stat_bar(t("stamina"), a.stamina),
+        stat_bar(t("strength"), a.strength),
+        stat_bar(t("agility"), a.agility),
+        stat_bar(t("jumping"), a.jumping),
     ]
 
     # Mental stats
     mental_stats = [
-        stat_bar("Composure", a.composure),
-        stat_bar("Vision", a.vision),
-        stat_bar("Work Rate", a.work_rate),
-        stat_bar("Positioning", a.positioning),
-        stat_bar("Decisions", a.decisions),
+        stat_bar(t("composure"), a.composure),
+        stat_bar(t("vision"), a.vision),
+        stat_bar(t("work_rate"), a.work_rate),
+        stat_bar(t("positioning"), a.positioning),
+        stat_bar(t("decisions"), a.decisions),
     ]
 
     # Defensive stats
     def_stats = [
-        stat_bar("Tackling", a.tackling),
-        stat_bar("Marking", a.marking),
+        stat_bar(t("tackling"), a.tackling),
+        stat_bar(t("marking"), a.marking),
     ]
 
     # GK stats (only for goalkeepers)
@@ -306,11 +306,11 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
         gk_section = [
             ft.Text("🧤 Goalkeeping", size=13, weight=ft.FontWeight.W_500,
                      color=theme.GOLD),
-            stat_bar("Reflexes", a.gk_reflexes),
-            stat_bar("Handling", a.gk_handling),
+            stat_bar(t("reflexes"), a.gk_reflexes),
+            stat_bar(t("handling"), a.gk_handling),
             stat_bar("GK Pos.", a.gk_positioning),
             stat_bar("1v1", a.gk_one_on_ones),
-            stat_bar("Kicking", a.gk_kicking),
+            stat_bar(t("kicking"), a.gk_kicking),
             ft.Divider(height=1),
         ]
 
@@ -350,25 +350,19 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
 
     attr_chart = player_stats_bar_chart(attr_categories, width=270, height=120)
 
-    season_info = ft.Row(
-        wrap=True, spacing=12,
-        controls=[
-            ft.Text(f"⚽ {s.goals}G", size=12),
-            ft.Text(f"🅰️ {s.assists}A", size=12),
-            ft.Text(f"📋 {s.appearances} Apps", size=12),
-            ft.Text(f"⭐ {avg_rating_str}", size=12),
-            ft.Text(f"🟡 {s.yellow_cards}", size=12),
-            ft.Text(f"🟥 {s.red_cards}", size=12),
-            ft.Text(f"🏅 {s.man_of_the_match} MOTM", size=12) if s.man_of_the_match > 0 else ft.Container(),
-        ],
-    )
+    season_info = ft.Column(spacing=10, controls=[
+        kv_row(t("appearances"), str(s.appearances)),
+        kv_row(t("yellow_cards"), str(s.yellow_cards), theme.TEXT_WARNING),
+        kv_row(t("red_cards"), str(s.red_cards), theme.TEXT_DANGER),
+        kv_row(t("man_of_the_match"), str(s.man_of_the_match)),
+    ])
 
     # Contract info
     expiry_str = player.contract.contract_expiry.strftime("%b %Y") if player.contract.contract_expiry else "N/A"
     wage_str = f"{player.contract.wage_weekly:,} EGP/wk"
 
     # Secondary positions
-    sec_pos_text = ", ".join(p.value for p in player.secondary_positions) if player.secondary_positions else "None"
+    sec_pos_text = ", ".join(p.value for p in player.secondary_positions) if player.secondary_positions else t("none")
 
     # Performance ratios
     mins_per_goal = "—"
@@ -381,13 +375,13 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
     # Form trend arrow
     if s.average_rating > 0 and player.form > 0:
         if player.form > s.average_rating + 0.3:
-            form_trend = "📈 Rising"
+            form_trend = t("rising")
             form_trend_color = ft.Colors.GREEN_400
         elif player.form < s.average_rating - 0.3:
-            form_trend = "📉 Declining"
+            form_trend = t("declining")
             form_trend_color = ft.Colors.RED_400
         else:
-            form_trend = "➡️ Steady"
+            form_trend = t("steady")
             form_trend_color = ft.Colors.GREY_400
     else:
         form_trend = "—"
@@ -397,7 +391,7 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
     from src.core.training import get_training_programs, get_recommended_focus
     training_programs = get_training_programs()
     recommended = get_recommended_focus(player)
-    training_options = [ft.dropdown.Option("", text="None")] + [
+    training_options = [ft.dropdown.Option("", text=t("none"))] + [
         ft.dropdown.Option(k, text=f"{'⭐ ' if k == recommended else ''}{k}")
         for k in training_programs
     ]
@@ -407,11 +401,11 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
         new_focus = e.control.value or ""
         player.training_focus = new_focus
         queries.update_player_stats(app_state.db_conn, player)
-        label = new_focus if new_focus else "None"
+        label = new_focus if new_focus else t("none")
         show_snackbar(page, f"Training focus set to {label} for {player.name}")
 
     training_dd = ft.Dropdown(
-        label="Training Focus",
+        label=t("training_focus"),
         value=player.training_focus or "",
         options=training_options,
         on_select=on_training_change,
@@ -437,9 +431,9 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
         show_snackbar(page, f"{player.name}: {label}")
 
     dev_dd = ft.Dropdown(
-        label="Development Plan",
+        label=t("development_plan"),
         value=getattr(player, "dev_plan", "") or "none",
-        options=[ft.dropdown.Option("none", text="None")] + [
+        options=[ft.dropdown.Option("none", text=t("none"))] + [
             ft.dropdown.Option(k, text=v["label"]) for k, v in PLANS.items()
         ],
         on_select=on_dev_change,
@@ -453,154 +447,78 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
         size=10, color=ft.Colors.GREY_500,
     )
 
+    from src.ui.widgets.dossier import section_tabs, metric, section_title
+    from src.utils.localization import is_rtl
+    overview = ft.Column(spacing=14, controls=[
+        ft.Row(spacing=8, controls=[metric(t("goals_label"), s.goals),
+                                  metric(t("assists"), s.assists),
+                                  metric(t("rating"), avg_rating_str)]),
+        ft.Row(wrap=True, spacing=12, controls=[
+            ft.Text(f"{t('age')}: {player.age}", size=12),
+            ft.Text(f"{t('position')}: {player.position.value}", size=12),
+            ft.Text(t(player.preferred_foot.value.lower()), size=12),
+        ]),
+        ft.Text(f"{t('egyptian_nationality') if player.nationality == 'Egyptian' else player.nationality} · {player.governorate}", size=12, color=theme.TEXT_MUTED),
+        ft.Text(f"{t('secondary_positions')}: {sec_pos_text}", size=12, color=theme.TEXT_MUTED),
+        *status_badges,
+        ft.Row(spacing=8, controls=[metric(t("fitness"), f"{player.fitness}%", fit_color),
+                                  metric(t("morale"), str(player.morale), morale_color)]),
+        section_title(t("season_stats")),
+        season_info,
+        ft.Text(f"{s.minutes_played} {t('minutes')} · {t('mins_per_goal')}: {mins_per_goal} · "
+                f"{t('mins_per_assist')}: {mins_per_assist}", size=12, color=theme.TEXT_SECONDARY),
+        section_title(t("form")), form_chart,
+        ft.Text(form_trend, size=12, color=form_trend_color),
+    ])
+    attributes = ft.Column(spacing=12, controls=[
+        attr_chart, *gk_section,
+        section_title(t("technical")), *tech_stats,
+        section_title(t("defensive")), *def_stats,
+        section_title(t("physical")), *phys_stats,
+        section_title(t("mental")), *mental_stats,
+    ])
+    management = ft.Column(spacing=16, controls=[
+        section_title(t("contract")),
+        ft.Text(wage_str, size=24, font_family=theme.display_font(), color=theme.ACCENT),
+        ft.Text(f"{t('contract_expiry')}: {expiry_str}", size=12, color=theme.TEXT_SECONDARY),
+        section_title(t("training")), training_dd,
+        section_title(t("development_plan")),
+        ft.Text(t("development_help"), size=12, color=theme.TEXT_SECONDARY),
+        dev_dd, dev_progress_bar, dev_progress_text,
+        section_title(t("player_actions")),
+        ft.Row(wrap=True, spacing=8, run_spacing=8, controls=[
+            ft.OutlinedButton(t("captain"), icon=ft.Icons.STAR_OUTLINE,
+                on_click=lambda e: _set_captain(page, player.id)),
+            ft.OutlinedButton(t("talk"), icon=ft.Icons.CHAT_BUBBLE_OUTLINE,
+                on_click=lambda e: _talk_to_player(page, player.id, player.name)),
+            ft.OutlinedButton(t("unlist") if player.transfer_listed else t("transfer_list"),
+                on_click=lambda e: _toggle_transfer(page, player.id, player.transfer_listed)),
+            ft.OutlinedButton(t("renew_contract"),
+                on_click=lambda e: _renew_contract(page, player.id)),
+        ]),
+    ])
+    tabs = section_tabs(page, [t("overview_tab"), t("attributes"), t("development")],
+                        [overview, attributes, management])
     dlg = ft.AlertDialog(
-        title=ft.Row(
-            controls=[
-                ft.Text(player.name, size=18, weight=ft.FontWeight.BOLD,
-                        color=theme.GOLD, expand=True),
-                ft.Container(
-                    content=ft.Text(str(ovr), size=18, weight=ft.FontWeight.BOLD,
-                                    color=ft.Colors.GREEN_300 if ovr >= 70 else ft.Colors.WHITE),
-                    bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.GREEN),
-                    padding=ft.padding.symmetric(horizontal=10, vertical=4),
-                    border_radius=10,
-                    border=ft.border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.GREEN)),
-                ),
-            ],
-        ),
-        content=ft.Container(
-            content=ft.Column(
-                scroll=ft.ScrollMode.AUTO,
-                spacing=6,
-                controls=[
-                    # Player info bar
-                    ft.Row(
-                        spacing=10, wrap=True,
-                        controls=[
-                            ft.Text(f"📍 {player.position.value}", size=12,
-                                    color=theme.GOLD, weight=ft.FontWeight.BOLD),
-                            ft.Text(f"Age {player.age}", size=12),
-                            ft.Text(f"🦶 {player.preferred_foot.value}", size=12),
-                            ft.Text(f"#{player.shirt_number or '–'}", size=12,
-                                    color=ft.Colors.GREY_400),
-                        ],
-                    ),
-                    ft.Row(
-                        spacing=10, wrap=True,
-                        controls=[
-                            ft.Text(f"🌍 {player.nationality}", size=11, color=ft.Colors.GREY_400),
-                            ft.Text(f"🏠 {player.governorate}", size=11, color=ft.Colors.GREY_400),
-                            ft.Text(f"🔄 Alt: {sec_pos_text}", size=11, color=ft.Colors.GREY_400),
-                        ],
-                    ),
-                    ft.Row(
-                        spacing=10,
-                        controls=[
-                            ft.Text(f"💪 {player.fitness}%", size=12, color=fit_color),
-                            ft.Text(f"📊 Form {player.form:.1f}", size=12),
-                            ft.Text(f"😊 {morale_desc}", size=11, color=morale_color,
-                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                            ft.Text(form_trend, size=11, color=form_trend_color),
-                        ],
-                    ),
-                    *(status_badges if status_badges else []),
-                    ft.Divider(height=1),
-                    # Season stats
-                    ft.Text("📈 Season Stats", size=13, weight=ft.FontWeight.W_500,
-                             color=theme.GOLD),
-                    season_info,
-                    ft.Row(
-                        spacing=12, wrap=True,
-                        controls=[
-                            ft.Text(f"⏱️ {s.minutes_played} mins", size=11, color=ft.Colors.GREY_400),
-                            ft.Text(f"Mins/Goal: {mins_per_goal}", size=11, color=ft.Colors.GREY_400),
-                            ft.Text(f"Mins/Assist: {mins_per_assist}", size=11, color=ft.Colors.GREY_400),
-                        ],
-                    ),
-                    ft.Divider(height=1),
-                    # Form chart
-                    ft.Text("📊 Form Trend", size=13, weight=ft.FontWeight.W_500,
-                             color=theme.GOLD),
-                    form_chart,
-                    ft.Divider(height=1),
-                    # Attribute overview chart
-                    ft.Text("📈 Attribute Overview", size=13, weight=ft.FontWeight.W_500,
-                             color=theme.GOLD),
-                    attr_chart,
-                    ft.Divider(height=1),
-                    # GK section (if applicable)
-                    *gk_section,
-                    # Technical
-                    ft.Text("⚽ Technical", size=13, weight=ft.FontWeight.W_500,
-                             color=theme.GOLD),
-                    *tech_stats,
-                    ft.Divider(height=1),
-                    # Defensive
-                    ft.Text("🛡️ Defensive", size=13, weight=ft.FontWeight.W_500,
-                             color=theme.GOLD),
-                    *def_stats,
-                    ft.Divider(height=1),
-                    # Physical
-                    ft.Text("🏃 Physical", size=13, weight=ft.FontWeight.W_500,
-                             color=theme.GOLD),
-                    *phys_stats,
-                    ft.Divider(height=1),
-                    # Mental
-                    ft.Text("🧠 Mental", size=13, weight=ft.FontWeight.W_500,
-                             color=theme.GOLD),
-                    *mental_stats,
-                    ft.Divider(height=1),
-                    # Contract
-                    ft.Text("📝 Contract", size=13, weight=ft.FontWeight.W_500,
-                             color=theme.GOLD),
-                    ft.Row(
-                        spacing=15,
-                        controls=[
-                            ft.Text(f"💰 {wage_str}", size=12),
-                            ft.Text(f"📅 Expires: {expiry_str}", size=12),
-                        ],
-                    ),
-                    ft.Divider(height=1),
-                    # Training
-                    ft.Text("🏋️ Training", size=13, weight=ft.FontWeight.W_500,
-                             color=theme.GOLD),
-                    training_dd,
-                    ft.Text("🎯 Development Plan", size=13, weight=ft.FontWeight.W_500,
-                             color=theme.GOLD),
-                    ft.Text(
-                        "Season-long arc: weekly attribute growth toward a target "
-                        "role. Retrain plans can change a player's position.",
-                        size=10, color=ft.Colors.GREY_500,
-                    ),
-                    dev_dd,
-                    dev_progress_bar,
-                    dev_progress_text,
-                ],
-            ),
-            width=290,
-            height=420,
-        ),
-        actions=[
-            ft.TextButton(
-                "© Captain" if not player.is_captain else "✓ Captain",
-                on_click=lambda e, pid=player.id: _set_captain(page, pid),
-                style=ft.ButtonStyle(color=theme.GOLD),
-            ),
-            ft.TextButton(
-                "🗣️ Talk",
-                on_click=lambda e, pid=player.id, pname=player.name: _talk_to_player(page, pid, pname),
-            ),
-            ft.TextButton(
-                "📤 List" if not player.transfer_listed else "🔴 Unlist",
-                on_click=lambda e, pid=player.id, listed=player.transfer_listed: _toggle_transfer(page, pid, listed),
-                style=ft.ButtonStyle(color=ft.Colors.RED_400) if player.transfer_listed else None,
-            ),
-            ft.TextButton(
-                "📝 Renew",
-                on_click=lambda e, pid=player.id: _renew_contract(page, pid),
-            ),
-            ft.TextButton("Close", on_click=lambda e: page.pop_dialog()),
-        ],
+        bgcolor=theme.BG_MID, inset_padding=12, rtl=is_rtl(),
+        title_padding=20, content_padding=16, actions_padding=12,
+        shape=ft.RoundedRectangleBorder(radius=20),
+        title=ft.Row(spacing=14, controls=[
+            ft.Container(width=54, height=64, border_radius=10, bgcolor=theme.ACCENT,
+                alignment=ft.Alignment(0, 0),
+                content=ft.Text(str(player.shirt_number or player.position.value),
+                    size=30, font_family=theme.display_font(), color=theme.BG_DARK)),
+            ft.Column(expand=True, spacing=3, controls=[
+                ft.Text(display_name(player), size=24, font_family=theme.display_font(),
+                        max_lines=2, color=theme.TEXT_PRIMARY),
+                ft.Text(f"{player.position.value} · {t('overall')} {ovr}", size=12, color=theme.ACCENT),
+            ]),
+        ]),
+        content=ft.Container(width=min((page.width or 390)-64, 480),
+            height=min((page.height or 844)-240, 520),
+            content=ft.Column(spacing=18, scroll=ft.ScrollMode.AUTO,
+                              controls=[tabs, overview, attributes, management])),
+        actions=[ft.TextButton(t("close"), on_click=lambda e: page.pop_dialog())],
     )
     page.show_dialog(dlg)
 

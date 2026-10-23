@@ -70,7 +70,7 @@ def build_main_menu(page: ft.Page) -> ft.Column:
                 ]),
                 ft.Column(spacing=14, controls=[
                     ft.Text("كل موسم\nحكاية جديدة." if is_rtl() else "Every season.\nA new story.",
-                            size=42, weight=ft.FontWeight.W_700, color=theme.TEXT_PRIMARY),
+                            size=42 if is_rtl() else 54, font_family=theme.display_font(), weight=ft.FontWeight.W_700, color=theme.TEXT_PRIMARY),
                     ft.Text(t("egyptian_football_manager"), size=15, color=theme.TEXT_SECONDARY),
                 ]),
                 pitch,

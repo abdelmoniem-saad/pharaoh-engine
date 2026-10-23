@@ -53,7 +53,7 @@ def section_card(
     if icon:
         header_controls.append(ft.Icon(icon, size=16, color=title_color))
     header_controls.append(
-        ft.Text(title.lstrip("📊📋🏟️💰📈⚽🏆💡 "), size=16, weight=ft.FontWeight.W_600, color=title_color, expand=True)
+        ft.Text(title.lstrip("📊📋🏟️💰📈⚽🏆💡🎯🎛️⚡🏥🚫 "), size=16, weight=ft.FontWeight.W_600, color=title_color, expand=True)
     )
     if extra_action:
         header_controls.append(extra_action)
@@ -99,7 +99,7 @@ def collapsible_section(
 
     return ft.Container(
         content=ft.ExpansionTile(
-            title=ft.Text(title.lstrip("📊📋🏟️💰📈⚽🏆💡 "), size=16, weight=ft.FontWeight.W_600,
+            title=ft.Text(title.lstrip("📊📋🏟️💰📈⚽🏆💡🎯🎛️⚡🏥🚫 "), size=16, weight=ft.FontWeight.W_600,
                           color=title_color),
             subtitle=ft.Text(subtitle, size=theme.TINY_SIZE, color=theme.TEXT_MUTED) if subtitle else None,
             leading=leading,
@@ -347,7 +347,7 @@ def match_score_card(
             ft.Row(spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER, controls=[
                 club(home_name, is_home),
                 ft.Text(f"{home_goals} : {away_goals}" if played else "VS",
-                        size=32 if played else 16, weight=ft.FontWeight.W_700,
+                        size=40 if played else 16, font_family=theme.display_font(), weight=ft.FontWeight.W_700,
                         color=theme.TEXT_PRIMARY if played else theme.TEXT_MUTED),
                 club(away_name, not is_home),
             ]),
@@ -405,7 +405,7 @@ def player_card_h(
                         size=12, color=theme.TEXT_MUTED),
             ]),
             ft.Column(width=36, spacing=5, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
-                ft.Text(str(ovr), size=20, weight=ft.FontWeight.W_600, color=theme.TEXT_PRIMARY),
+                ft.Text(str(ovr), font_family=theme.display_font(), size=24, weight=ft.FontWeight.W_600, color=theme.TEXT_PRIMARY),
                 ft.Text(t("overall"), size=9, color=theme.TEXT_MUTED, max_lines=1),
             ]),
             ft.Column(width=42, spacing=8, horizontal_alignment=ft.CrossAxisAlignment.END, controls=[

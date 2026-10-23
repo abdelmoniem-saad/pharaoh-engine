@@ -74,6 +74,36 @@ def test_career_screens_build(palette, language, monkeypatch):
         for option in dropdown.options:
             dropdown.value = option.key
             dropdown.on_select(SimpleNamespace(control=dropdown))
+        # Tactical adjustment commits once on release, without a rebuild per drag tick.
+        monkeypatch.setattr(app, 'navigate', lambda *args: None)
+        from src.ui.screens.tactics import build_tactics_screen
+        tactics = build_tactics_screen(page)
+        slider = next(c for c in walk(tactics) if isinstance(c, ft.Slider))
+        assert slider.on_change is None
+        slider.value = 7
+        slider.on_change_end(SimpleNamespace(control=slider))
+        assert queries.get_club(conn, club.id).pressing_intensity == 7
+        from src.ui.screens.squad import _show_player_detail
+        from src.core.player import calculate_overall_rating
+        from src.utils.localization import t
+        players = queries.get_players_by_club(conn, club.id)
+        _show_player_detail(page, players[0], calculate_overall_rating(players[0]))
+        assert page.dialog is not None
+        for label in (t("attributes"), t("development"), t("overview_tab")):
+            button = next(c for c in walk(page.dialog) if isinstance(c, ft.TextButton)
+                          and c.content == label)
+            button.on_click(SimpleNamespace(control=button))
+        from src.data.models import MatchResult, MatchdayOutcome, MatchEvent
+        from src.utils.config import MatchEventType
+        state._last_outcome = MatchdayOutcome(matchday=1, user_result=MatchResult(
+            home_club_id=club.id, away_club_id=999, home_club_name=club.name,
+            away_club_name="Opposition", home_goals=1,
+            events=[MatchEvent(minute=20, event_type=MatchEventType.PENALTY,
+                              club_id=club.id, player_id=players[0].id,
+                              player_name="Penalty scorer")]))
+        from src.ui.screens.post_match import build_post_match_screen
+        report = build_post_match_screen(page)
+        assert any(isinstance(c, ft.Text) and c.value == "Penalty scorer" for c in walk(report))
         app.show_tutorial_overlay(page)
         assert page.overlay
         from src.ui.screens.main_menu import _show_load_game_dialog

@@ -14,14 +14,14 @@ from src.core.club import get_squad_average_age, get_squad_average_ability, calc
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.widgets.cards import section_card, info_tile, kv_row, action_card
 from src.utils.config import expectation_display, expectation_description
-from src.utils.localization import t, t_format
+from src.utils.localization import t, t_format, display_name
 
 
 def build_club_overview_screen(page: ft.Page) -> ft.Column:
     """Build the club overview / hub screen."""
     from src.ui.app import app_state, navigate
 
-    page.navigation_bar = build_nav_bar(page, 3)  # table index since accessed from there
+    page.navigation_bar = build_nav_bar(page, 0)  # table index since accessed from there
 
     if not app_state.db_conn or not app_state.game_state:
         return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
@@ -109,7 +109,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
 
     # ── Finances tab ─────────────────────────────────────────────────
     finances_controls = [
-        section_card(f"💰 {t('monthly_finances')}", [
+        section_card(f"{t('monthly_finances')}", [
             kv_row(t("balance"), f"{club.finances.balance:,} EGP"),
             kv_row(t("monthly_income"), f"+{income:,} EGP", theme.TEXT_SUCCESS),
             kv_row(t("monthly_expenses"), f"-{expenses:,} EGP", theme.TEXT_DANGER),
@@ -143,7 +143,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
             for p in injured_players
         ]
         squad_health_controls.append(
-            section_card(f"🏥 {t('injured_players')}", injury_rows, title_color=theme.TEXT_DANGER))
+            section_card(f"{t('injured_players')}", injury_rows, title_color=theme.TEXT_DANGER))
     else:
         squad_health_controls.append(
             ft.Text(f"{t('no_injuries')} ✅", size=12, color=theme.TEXT_SUCCESS))
@@ -237,35 +237,47 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         return handler
 
     tab_buttons = [
-        ft.ElevatedButton(f"📋 {t('overview_tab')}", on_click=switch_tab(0), height=34,
+        ft.ElevatedButton(f"{t('overview_tab')}", on_click=switch_tab(0), height=44,
                            style=ft.ButtonStyle(
                                bgcolor=theme.ACCENT_DARK, color=ft.Colors.WHITE,
                                shape=ft.RoundedRectangleBorder(radius=10),
                            )),
-        ft.OutlinedButton(f"💰 {t('finances_tab_btn')}", on_click=switch_tab(1), height=34,
+        ft.OutlinedButton(f"{t('finances_tab_btn')}", on_click=switch_tab(1), height=44,
                            style=ft.ButtonStyle(
                                shape=ft.RoundedRectangleBorder(radius=10),
                                side=ft.BorderSide(1, theme.GOLD_BORDER),
                            )),
-        ft.OutlinedButton(f"🏥 {t('squad_tab')}", on_click=switch_tab(2), height=34,
+        ft.OutlinedButton(f"{t('squad_tab')}", on_click=switch_tab(2), height=44,
                            style=ft.ButtonStyle(
                                shape=ft.RoundedRectangleBorder(radius=10),
                                side=ft.BorderSide(1, theme.GOLD_BORDER),
                            )),
     ]
 
-    # ── Status strip (always visible) ────────────────────────────────
-    status_strip = ft.Row(
-        spacing=6, scroll=ft.ScrollMode.AUTO,
-        controls=[
-            info_tile(t("board"), f"{club.board_confidence}%", icon=ft.Icons.ACCOUNT_BALANCE,
-                      color=conf_color),
-            info_tile(t("fans"), f"{club.fan_happiness}%", icon=ft.Icons.PEOPLE,
-                      color=fan_color),
-            info_tile(t("balance"), f"{club.finances.balance // 1000:,}K",
-                      icon=ft.Icons.ACCOUNT_BALANCE_WALLET),
-        ],
-    )
+    from src.ui.widgets.dossier import metric
+    standings = queries.get_standings(conn)
+    place = next((i for i, row in enumerate(standings, 1) if row.club_id == club.id), 0)
+    status_strip = ft.Container(padding=22, border_radius=18,
+        bgcolor=theme.CARD_GLASS_STRONG,
+        border=ft.border.only(top=ft.BorderSide(3, theme.ACCENT)),
+        content=ft.Column(spacing=20, controls=[
+            ft.Row(spacing=16, controls=[
+                ft.Container(width=60, height=72, border_radius=12, bgcolor=theme.ACCENT_BG,
+                    alignment=ft.Alignment(0, 0),
+                    content=ft.Text(club.short_name, size=26, font_family=theme.display_font(), color=theme.ACCENT)),
+                ft.Column(expand=True, spacing=6, controls=[
+                    ft.Text(display_name(club), size=28, font_family=theme.display_font()),
+                    ft.Text(club.stadium_name, size=12, color=theme.TEXT_MUTED, max_lines=2),
+                ]),
+            ]),
+            ft.Row(spacing=8, controls=[metric(t("position"), str(place) if place else "—"),
+                metric(t("board"), f"{club.board_confidence}%", conf_color),
+                metric(t("fans"), f"{club.fan_happiness}%", fan_color)]),
+            ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
+                ft.Text(t("balance"), size=12, color=theme.TEXT_MUTED),
+                ft.Text(f"{club.finances.balance:,} EGP", size=15, weight=ft.FontWeight.W_600),
+            ]),
+        ]))
 
     return ft.Column(
         expand=True,
@@ -277,8 +289,8 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
                     spacing=theme.SECTION_SPACING,
                     controls=[
                         theme.header_bar(
-                            title=club.name,
-                            subtitle=f"👤 {gs.manager_name}  •  📅 {gs.current_date.strftime('%d %b %Y')}",
+                            title=t("my_club"),
+                            subtitle=gs.manager_name + " · " + gs.current_date.strftime("%d %b %Y"),
                             icon=ft.Icons.STADIUM,
                             page=page,
                             back_route="/squad",
@@ -288,7 +300,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
                         status_strip,
 
                         # Tab bar
-                        ft.Row(spacing=6, controls=tab_buttons),
+                        ft.Row(spacing=6, wrap=True, controls=tab_buttons),
 
                         # Tab contents (only one visible at a time)
                         overview_content,
@@ -296,7 +308,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
                         squad_health_content,
 
                         # History link (only link kept — not on any tab)
-                        action_card(f"📜 {t('history_records')}",
+                        action_card(f"{t('history_records')}",
                                      subtitle=t("past_seasons_stats"),
                                      icon=ft.Icons.HISTORY,
                                      on_click=lambda e: navigate(page, "/history")),
@@ -308,82 +320,35 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
 
 
 def _build_next_match_card(conn, gs, club) -> list:
-    """Build a dashboard card for the next match."""
+    """Compact fixture brief; the club identity is already shown above."""
+    from src.utils.localization import display_home_name, display_away_name
+    from src.ui.widgets.cards import form_chips
     fixture = queries.get_user_next_fixture(conn, gs.user_club_id)
     if not fixture:
-        return [ft.Text(t("no_upcoming_match"), size=13, color=ft.Colors.GREY_500)]
-
-    is_home = fixture.home_club_id == gs.user_club_id
-    opp_name = fixture.away_club_name if is_home else fixture.home_club_name
-    venue = f"🏟️ {t('home').upper()}" if is_home else f"✈️ {t('away').upper()}"
-    venue_color = ft.Colors.GREEN_400 if is_home else ft.Colors.ORANGE_400
-
-    days_until = (fixture.date - gs.current_date).days if fixture.date else 0
-    when = t("today_label") if days_until <= 0 else t_format("in_days", n=days_until)
-
-    # Recent form
+        return [ft.Text(t("no_upcoming_match"), size=13, color=theme.TEXT_MUTED)]
+    home = fixture.home_club_id == gs.user_club_id
+    opponent = display_away_name(fixture) if home else display_home_name(fixture)
+    days = (fixture.date - gs.current_date).days if fixture.date else 0
+    when = t("today_label") if days <= 0 else t_format("in_days", n=days)
     recent = queries.get_user_recent_fixtures(conn, gs.user_club_id, limit=5)
-    form_chips = []
-    for f in recent:
-        if not f.result:
-            continue
-        is_h = f.home_club_id == gs.user_club_id
-        ug = f.result.home_goals if is_h else f.result.away_goals
-        og = f.result.away_goals if is_h else f.result.home_goals
-        if ug > og:
-            form_chips.append(("W", ft.Colors.GREEN_400))
-        elif ug < og:
-            form_chips.append(("L", ft.Colors.RED_400))
-        else:
-            form_chips.append(("D", ft.Colors.YELLOW_400))
-
-    form_row = ft.Row(spacing=3, controls=[
-        ft.Container(
-            content=ft.Text(label, size=9, weight=ft.FontWeight.BOLD,
-                            color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER),
-            width=20, height=20, border_radius=10, bgcolor=color,
-            alignment=ft.Alignment(0, 0),
-        )
-        for label, color in form_chips
-    ]) if form_chips else ft.Text("—", size=10, color=ft.Colors.GREY_600)
-
-    return [
-        ft.Card(
-            content=ft.Container(
-                padding=15,
-                bgcolor=theme.CARD_GLASS_STRONG,
-                border_radius=14,
-                border=ft.border.all(1, theme.GOLD_BORDER),
-                content=ft.Column(
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=6,
-                    controls=[
-                        ft.Text(f"⚽ {t('next_match_card')}", size=14, weight=ft.FontWeight.W_500,
-                                color=theme.GOLD),
-                        ft.Row(
-                            alignment=ft.MainAxisAlignment.CENTER, spacing=15,
-                            controls=[
-                                ft.Text(gs.user_club_name, size=14, weight=ft.FontWeight.BOLD,
-                                        width=100, text_align=ft.TextAlign.RIGHT),
-                                ft.Text("VS", size=16, weight=ft.FontWeight.BOLD,
-                                        color=theme.ACCENT),
-                                ft.Text(opp_name, size=14, weight=ft.FontWeight.BOLD,
-                                        width=100, text_align=ft.TextAlign.LEFT),
-                            ],
-                        ),
-                        ft.Row(alignment=ft.MainAxisAlignment.CENTER, spacing=10, controls=[
-                            ft.Text(venue, size=11, color=venue_color, weight=ft.FontWeight.W_500),
-                            ft.Text(f"⏰ {when}", size=11, color=ft.Colors.GREY_400),
-                        ]),
-                        ft.Row(alignment=ft.MainAxisAlignment.CENTER, spacing=5, controls=[
-                            ft.Text(f"{t('form_label')}:", size=10, color=ft.Colors.GREY_500),
-                            form_row,
-                        ]),
-                    ],
-                ),
-            ),
-        ),
-    ]
+    form = []
+    for item in recent:
+        if item.result:
+            home_game = item.home_club_id == gs.user_club_id
+            us = item.result.home_goals if home_game else item.result.away_goals
+            them = item.result.away_goals if home_game else item.result.home_goals
+            form.append("W" if us > them else "L" if us < them else "D")
+    return [section_card(t("next_match_card"), [
+        ft.Row(spacing=12, controls=[
+            ft.Icon(ft.Icons.SPORTS_SOCCER, color=theme.ACCENT, size=26),
+            ft.Column(expand=True, spacing=5, controls=[
+                ft.Text(opponent, size=22, font_family=theme.display_font()),
+                ft.Text(f"{t('home') if home else t('away')} · {when}", size=12, color=theme.TEXT_MUTED),
+            ]),
+        ]),
+        ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
+            ft.Text(t("form_label"), size=12, color=theme.TEXT_MUTED), form_chips(form)]),
+    ])]
 
 
 def _build_mini_table(conn, gs) -> list:

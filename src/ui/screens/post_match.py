@@ -11,7 +11,7 @@ from src.data.models import MatchResult, MatchdayOutcome, InboxMessage
 from src.core.player import calculate_overall_rating
 from src.utils.config import MatchEventType
 from src.utils import rng
-from src.utils.localization import t
+from src.utils.localization import t, display_name, display_home_name, display_away_name
 
 
 def build_post_match_screen(page: ft.Page) -> ft.Column:
@@ -85,13 +85,13 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
     motm_rating = user_ratings.get(motm_id, 0.0) if motm_id else 0.0
 
     # ── Goals list ──────────────────────────────────────────────────
-    goals = [e for e in result.events if e.event_type == MatchEventType.GOAL]
+    goals = [e for e in result.events if e.event_type in (MatchEventType.GOAL, MatchEventType.PENALTY)]
     goal_widgets = []
     for g in goals:
         side_icon = "🏠" if g.club_id == result.home_club_id else "✈️"
         is_user_goal = g.club_id == gs.user_club_id
         goal_color = ft.Colors.GREEN_300 if is_user_goal else ft.Colors.RED_300
-        assist_text = f" ({t('assist')}: {g.second_player_name})" if g.second_player_name else ""
+        assist_text = f" ({t('assist')}: {g.second_player_name})" if g.second_player_name and g.event_type == MatchEventType.GOAL else ""
         goal_widgets.append(
             ft.Container(
                 content=ft.Row(spacing=6, controls=[
@@ -293,194 +293,61 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                     f"{ach['icon']} Achievement: {ach['title']}!",
                     bgcolor=theme.ACCENT_DARK)
 
+    from src.ui.widgets.cards import match_score_card, section_card
+    from src.ui.widgets.dossier import section_tabs
+    report = ft.Column(spacing=20, controls=[
+        section_card(t("goals_label"), goal_widgets),
+        section_card(t("match_stats"), [
+            ft.Row(controls=[
+                ft.Text(display_home_name(result), expand=True, size=12, color=theme.TEXT_MUTED),
+                ft.Text(display_away_name(result), expand=True, size=12, color=theme.TEXT_MUTED,
+                        text_align=ft.TextAlign.RIGHT),
+            ]), *stat_widgets]),
+        *([section_card(t("cards_injuries"), incident_widgets)] if incident_widgets else []),
+    ])
+    ratings = ft.Column(spacing=12, controls=rating_widgets)
+    elsewhere = ft.Column(spacing=12, controls=other_widgets or [ft.Text(t("no_data"))])
+    tabs = section_tabs(page, [t("match_report"), t("top_performers"), t("other_results")],
+                        [report, ratings, elsewhere])
     sections = [
-        # Header — glass card scoreboard
-        ft.Container(
-            content=ft.Column(
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                spacing=4,
-                controls=[
-                    ft.Icon(result_icon, size=50, color=result_color),
-                    ft.Text(result_text, size=28, weight=ft.FontWeight.BOLD,
-                            color=result_color),
-                    ft.Text(result.score_display, size=20, weight=ft.FontWeight.W_500,
-                            text_align=ft.TextAlign.CENTER),
-                    pos_widget,
-                    ft.Text(f"🏟️ {t('attendance')}: {outcome.attendance:,}" if outcome.attendance > 0 else "",
-                            size=11, color=ft.Colors.GREY_500),
-                ],
-            ),
-            padding=ft.padding.only(top=15, bottom=12),
-            border_radius=14,
-            bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.WHITE),
-            border=ft.border.all(1, ft.Colors.with_opacity(0.18, theme.GOLD)),
-        ),
-
-        # MOTM
-    ]
-
-    if motm_player:
-        sections.append(
-            ft.Container(
-                content=ft.Row(
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    spacing=10,
-                    controls=[
-                        ft.Icon(ft.Icons.STAR, size=28, color=theme.ACCENT),
-                        ft.Column(spacing=0, controls=[
-                            ft.Text(t("man_of_the_match"), size=10, color=theme.GOLD),
-                            ft.Text(motm_player.name, size=16, weight=ft.FontWeight.BOLD),
-                        ]),
-                        ft.Container(
-                            content=ft.Text(f"{motm_rating:.1f}", size=18,
-                                            weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_400),
-                            width=45, alignment=ft.Alignment(0, 0),
-                        ),
-                    ],
-                ),
-                padding=ft.padding.symmetric(horizontal=12, vertical=10),
-                bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.AMBER),
-                border_radius=10,
-                border=ft.border.all(1, ft.Colors.with_opacity(0.20, ft.Colors.AMBER)),
-                shadow=ft.BoxShadow(
-                    spread_radius=0, blur_radius=8,
-                    color=ft.Colors.with_opacity(0.10, ft.Colors.AMBER),
-                ),
-            )
-        )
-        sections.append(ft.Divider(height=1))
-
-    # Goals section
-    sections.extend([
-        ft.Text(f"⚽ {t('goals_label')}", size=15, weight=ft.FontWeight.W_500),
-        *goal_widgets,
-        ft.Divider(height=1),
-    ])
-
-    # Stats section
-    sections.extend([
-        ft.Text(f"📊 {t('match_stats')}", size=15, weight=ft.FontWeight.W_500),
         ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
-            ft.Text(result.home_club_name, size=11, weight=ft.FontWeight.BOLD,
-                    expand=True, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-            ft.Text("", size=11),
-            ft.Text(result.away_club_name, size=11, weight=ft.FontWeight.BOLD,
-                    expand=True, text_align=ft.TextAlign.RIGHT,
-                    max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+            ft.Text(result_text, size=38, font_family=theme.display_font(), color=result_color),
+            ft.Text(t("full_time"), size=12, color=theme.TEXT_MUTED),
         ]),
-        *stat_widgets,
-        ft.Divider(height=1),
-    ])
-
-    # Incidents
-    if incident_widgets:
-        sections.extend([
-            ft.Text(f"📋 {t('cards_injuries')}", size=15, weight=ft.FontWeight.W_500),
-            *incident_widgets,
-            ft.Divider(height=1),
-        ])
-
-    # Top 10 Ratings
-    sections.extend([
-        ft.Text(f"📊 {t('top_performers')}", size=15, weight=ft.FontWeight.W_500),
-        *rating_widgets,
-        ft.Divider(height=1),
-    ])
-
-    # Other results
-    if other_widgets:
-        sections.extend([
-            ft.Text(f"📋 Other Matchday {outcome.matchday} Results", size=15,
-                    weight=ft.FontWeight.W_500, color=theme.GOLD),
-            *other_widgets,
-            ft.Divider(height=1),
-        ])
-
-    # Unlocked achievements
+        match_score_card(display_home_name(result), display_away_name(result),
+            result.home_goals, result.away_goals, result.competition,
+            f"{t('matchday')} {outcome.matchday}", is_home),
+        pos_widget,
+        ft.Row(spacing=10, controls=[
+            ft.ElevatedButton(t("continue_btn"), expand=True, height=50,
+                             style=theme.PRIMARY_BTN_STYLE, on_click=go_match_day),
+            ft.OutlinedButton(t("view_final_table"), expand=True, height=50,
+                              style=theme.SECONDARY_BTN_STYLE, on_click=go_table),
+        ]),
+        ft.TextButton(t("press_conference"), icon=ft.Icons.MIC_NONE, on_click=_press_conference),
+    ]
+    if motm_player:
+        sections.append(ft.Container(padding=18, border_radius=14, bgcolor=theme.ACCENT_BG,
+            content=ft.Row(spacing=14, controls=[
+                ft.Icon(ft.Icons.STAR_OUTLINE, color=theme.ACCENT, size=28),
+                ft.Column(expand=True, spacing=5, controls=[
+                    ft.Text(t("man_of_the_match"), size=11, color=theme.ACCENT),
+                    ft.Text(display_name(motm_player), size=20, font_family=theme.display_font()),
+                ]),
+                ft.Text(f"{motm_rating:.1f}", size=36, font_family=theme.display_font(), color=theme.ACCENT),
+            ])))
+    if outcome.attendance:
+        sections.append(ft.Text(f"{t('attendance')}: {outcome.attendance:,}", size=12, color=theme.TEXT_MUTED))
     if outcome.newly_unlocked:
         from src.core.achievements import get_achievements
-        all_achs = {a["key"]: a for a in get_achievements(conn)}
-        ach_widgets = []
-        for key in outcome.newly_unlocked:
-            ach = all_achs.get(key)
-            if ach:
-                ach_widgets.append(
-                    ft.Container(
-                        content=ft.Row(spacing=10, controls=[
-                            ft.Text(ach["icon"], size=24),
-                            ft.Column(spacing=0, expand=True, controls=[
-                                ft.Text(ach["title"], size=13, weight=ft.FontWeight.BOLD,
-                                        color=theme.GOLD),
-                                ft.Text(ach["description"], size=10, color=ft.Colors.GREY_400),
-                            ]),
-                        ]),
-                        padding=ft.padding.symmetric(horizontal=12, vertical=8),
-                        border_radius=8,
-                        bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.AMBER),
-                    )
-                )
-        if ach_widgets:
-            sections.extend([
-                ft.Text(f"🏆 {t('achievements_unlocked')}", size=15, weight=ft.FontWeight.W_500,
-                         color=theme.ACCENT),
-                *ach_widgets,
-                ft.Divider(height=1),
-            ])
-
-    # Action buttons
-    sections.extend([
-        ft.Container(height=8),
-        ft.ElevatedButton(
-            f"🎤 {t('press_conference')}",
-            width=280, height=48,
-            style=ft.ButtonStyle(
-                bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.WHITE),
-                color=ft.Colors.WHITE,
-                text_style=ft.TextStyle(size=15),
-                shape=ft.RoundedRectangleBorder(radius=12),
-                side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, theme.GOLD)),
-            ),
-            on_click=_press_conference,
-        ),
-        ft.Container(height=6),
-        ft.ElevatedButton(
-            f"➡️ {t('continue_btn')}",
-            width=280, height=50,
-            style=ft.ButtonStyle(
-                bgcolor=theme.ACCENT_DARK, color=ft.Colors.WHITE,
-                text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
-                shape=ft.RoundedRectangleBorder(radius=12),
-                elevation=4,
-                shadow_color=ft.Colors.with_opacity(0.25, theme.GOLD),
-            ),
-            on_click=go_match_day,
-        ),
-        ft.Container(height=4),
-        ft.OutlinedButton(f"📊 {t('view_final_table')}", width=280, height=42,
-                          on_click=go_table,
-                          style=ft.ButtonStyle(
-                              shape=ft.RoundedRectangleBorder(radius=12),
-                              side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, theme.GOLD)),
-                              color=ft.Colors.GREY_400,
-                          )),
-        ft.Container(height=15),
-    ])
-
-    return ft.Column(
-        expand=True,
-        scroll=ft.ScrollMode.AUTO,
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        controls=[
-            ft.Container(
-                padding=ft.padding.symmetric(horizontal=16),
-                content=ft.Column(
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=6,
-                    controls=sections,
-                ),
-            ),
-        ],
-    )
+        unlocked = set(outcome.newly_unlocked)
+        sections.append(section_card(t("achievements_unlocked"), [
+            ft.Text(a["title"], size=14, color=theme.ACCENT)
+            for a in get_achievements(conn) if a["key"] in unlocked]))
+    sections.extend([tabs, report, ratings, elsewhere])
+    return ft.Column(expand=True, scroll=ft.ScrollMode.AUTO, controls=[
+        ft.Container(padding=theme.PAGE_PADDING,
+                     content=ft.Column(spacing=20, controls=sections))])
 
 
 # ── Press Conference ────────────────────────────────────────────────────────
