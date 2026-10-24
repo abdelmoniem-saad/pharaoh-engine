@@ -24,13 +24,13 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = build_nav_bar(page, 0)  # table index since accessed from there
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
+        return ft.Column(rtl=theme.rtl(), controls=[ft.Text(t("no_game_loaded"), rtl=theme.rtl())])
 
     conn = app_state.db_conn
     gs = app_state.game_state
     club = queries.get_club(conn, gs.user_club_id)
     if not club:
-        return ft.Column(controls=[ft.Text(t("club_not_found_msg"))])
+        return ft.Column(rtl=theme.rtl(), controls=[ft.Text(t("club_not_found_msg"), rtl=theme.rtl())])
 
     squad = queries.get_players_by_club(conn, club.id)
 
@@ -90,11 +90,11 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         section_card(f"🎯 {t('season_expectation_title')}", [
             ft.Text(
                 expectation_display(club.season_expectation),
-                size=15, weight=ft.FontWeight.BOLD, color=theme.ACCENT,
+                rtl=theme.rtl(), size=15, weight=ft.FontWeight.BOLD, color=theme.ACCENT,
             ),
             ft.Text(
                 expectation_description(club.season_expectation),
-                size=12, color=theme.TEXT_SECONDARY, italic=True,
+                rtl=theme.rtl(), size=12, color=theme.TEXT_SECONDARY, italic=True,
             ),
         ], title_color=ft.Colors.ORANGE_400),
 
@@ -105,7 +105,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         *_build_form_trend(conn, gs),
     ]
 
-    overview_content = ft.Column(spacing=theme.SECTION_SPACING, controls=overview_controls)
+    overview_content = ft.Column(rtl=theme.rtl(), spacing=theme.SECTION_SPACING, controls=overview_controls)
 
     # ── Finances tab ─────────────────────────────────────────────────
     finances_controls = [
@@ -129,7 +129,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         ], title_color=ft.Colors.BLUE_400),
     ]
 
-    finances_content = ft.Column(spacing=theme.SECTION_SPACING, controls=finances_controls,
+    finances_content = ft.Column(rtl=theme.rtl(), spacing=theme.SECTION_SPACING, controls=finances_controls,
                                   visible=False)
 
     # ── Squad Health tab ─────────────────────────────────────────────
@@ -146,7 +146,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
             section_card(f"{t('injured_players')}", injury_rows, title_color=theme.TEXT_DANGER))
     else:
         squad_health_controls.append(
-            ft.Text(f"{t('no_injuries')} ✅", size=12, color=theme.TEXT_SUCCESS))
+            ft.Text(f"{t('no_injuries')} ✅", rtl=theme.rtl(), size=12, color=theme.TEXT_SUCCESS))
 
     # Suspended players
     suspended_players = [p for p in squad if p.suspension_matches > 0]
@@ -164,16 +164,16 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         for p in squad_scorers:
             scorer_rows.append(
                 ft.Container(
-                    content=ft.Row(
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    rtl=theme.rtl(), content=ft.Row(
+                        rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         controls=[
-                            ft.Text(p.name, size=12, expand=True, max_lines=1,
+                            ft.Text(p.name, rtl=theme.rtl(), size=12, expand=True, max_lines=1,
                                     overflow=ft.TextOverflow.ELLIPSIS),
-                            ft.Row(spacing=8, tight=True, controls=[
-                                ft.Text(f"⚽{p.season_stats.goals}", size=12,
+                            ft.Row(rtl=theme.rtl(), spacing=8, tight=True, controls=[
+                                ft.Text(f"⚽{p.season_stats.goals}", rtl=theme.rtl(), size=12,
                                         weight=ft.FontWeight.BOLD, color=theme.ACCENT),
-                                ft.Text(f"🅰️{p.season_stats.assists}", size=12),
-                                ft.Text(p.position.value, size=10, color=theme.TEXT_SECONDARY),
+                                ft.Text(f"🅰️{p.season_stats.assists}", rtl=theme.rtl(), size=12),
+                                ft.Text(p.position.value, rtl=theme.rtl(), size=10, color=theme.TEXT_SECONDARY),
                             ]),
                         ],
                     ),
@@ -190,17 +190,17 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
             is_user_player = scorer.get("club_short") == club.short_name
             league_rows.append(
                 ft.Container(
-                    content=ft.Row(
-                        spacing=4,
+                    rtl=theme.rtl(), content=ft.Row(
+                        rtl=theme.rtl(), spacing=4,
                         controls=[
-                            ft.Text(f"{i}.", size=theme.CAPTION_SIZE, width=18, color=theme.TEXT_MUTED),
-                            ft.Text(scorer["name"], size=12, expand=True,
+                            ft.Text(f"{i}.", rtl=theme.rtl(), size=theme.CAPTION_SIZE, width=18, color=theme.TEXT_MUTED),
+                            ft.Text(scorer["name"], rtl=theme.rtl(), size=12, expand=True,
                                     weight=ft.FontWeight.BOLD if is_user_player else ft.FontWeight.NORMAL,
                                     color=theme.TEXT_SUCCESS if is_user_player else None,
                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                            ft.Text(f"⚽{scorer['goals']}", size=12,
+                            ft.Text(f"⚽{scorer['goals']}", rtl=theme.rtl(), size=12,
                                     weight=ft.FontWeight.BOLD, color=theme.ACCENT),
-                            ft.Text(scorer.get("club_short", ""), size=10, color=theme.TEXT_MUTED,
+                            ft.Text(scorer.get("club_short", ""), rtl=theme.rtl(), size=10, color=theme.TEXT_MUTED,
                                     width=40),
                         ],
                     ),
@@ -210,7 +210,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         squad_health_controls.append(
             section_card(f"🏆 {t('league_top_scorers')}", league_rows))
 
-    squad_health_content = ft.Column(spacing=theme.SECTION_SPACING,
+    squad_health_content = ft.Column(rtl=theme.rtl(), spacing=theme.SECTION_SPACING,
                                       controls=squad_health_controls, visible=False)
 
     # ── Tab switching ────────────────────────────────────────────────
@@ -237,17 +237,17 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
         return handler
 
     tab_buttons = [
-        ft.ElevatedButton(f"{t('overview_tab')}", on_click=switch_tab(0), height=44,
+        ft.ElevatedButton(f"{t('overview_tab')}", rtl=theme.rtl(), on_click=switch_tab(0), height=44,
                            style=ft.ButtonStyle(
                                bgcolor=theme.ACCENT_DARK, color=ft.Colors.WHITE,
                                shape=ft.RoundedRectangleBorder(radius=10),
                            )),
-        ft.OutlinedButton(f"{t('finances_tab_btn')}", on_click=switch_tab(1), height=44,
+        ft.OutlinedButton(f"{t('finances_tab_btn')}", rtl=theme.rtl(), on_click=switch_tab(1), height=44,
                            style=ft.ButtonStyle(
                                shape=ft.RoundedRectangleBorder(radius=10),
                                side=ft.BorderSide(1, theme.GOLD_BORDER),
                            )),
-        ft.OutlinedButton(f"{t('squad_tab')}", on_click=switch_tab(2), height=44,
+        ft.OutlinedButton(f"{t('squad_tab')}", rtl=theme.rtl(), on_click=switch_tab(2), height=44,
                            style=ft.ButtonStyle(
                                shape=ft.RoundedRectangleBorder(radius=10),
                                side=ft.BorderSide(1, theme.GOLD_BORDER),
@@ -257,36 +257,36 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
     from src.ui.widgets.dossier import metric
     standings = queries.get_standings(conn)
     place = next((i for i, row in enumerate(standings, 1) if row.club_id == club.id), 0)
-    status_strip = ft.Container(padding=22, border_radius=18,
+    status_strip = ft.Container(rtl=theme.rtl(), padding=22, border_radius=18,
         bgcolor=theme.CARD_GLASS_STRONG,
         border=ft.border.only(top=ft.BorderSide(3, theme.ACCENT)),
-        content=ft.Column(spacing=20, controls=[
-            ft.Row(spacing=16, controls=[
-                ft.Container(width=60, height=72, border_radius=12, bgcolor=theme.ACCENT_BG,
+        content=ft.Column(rtl=theme.rtl(), spacing=20, controls=[
+            ft.Row(rtl=theme.rtl(), spacing=16, controls=[
+                ft.Container(rtl=theme.rtl(), width=60, height=72, border_radius=12, bgcolor=theme.ACCENT_BG,
                     alignment=ft.Alignment(0, 0),
-                    content=ft.Text(club.short_name, size=26, font_family=theme.display_font(), color=theme.ACCENT)),
-                ft.Column(expand=True, spacing=6, controls=[
-                    ft.Text(display_name(club), size=28, font_family=theme.display_font()),
-                    ft.Text(club.stadium_name, size=12, color=theme.TEXT_MUTED, max_lines=2),
+                    content=ft.Text(club.short_name, rtl=theme.rtl(), size=26, font_family=theme.display_font(), color=theme.ACCENT)),
+                ft.Column(rtl=theme.rtl(), expand=True, spacing=6, controls=[
+                    ft.Text(display_name(club), rtl=theme.rtl(), size=28, font_family=theme.display_font()),
+                    ft.Text(club.stadium_name, rtl=theme.rtl(), size=12, color=theme.TEXT_MUTED, max_lines=2),
                 ]),
             ]),
-            ft.Row(spacing=8, controls=[metric(t("position"), str(place) if place else "—"),
+            ft.Row(rtl=theme.rtl(), spacing=8, controls=[metric(t("position"), str(place) if place else "—"),
                 metric(t("board"), f"{club.board_confidence}%", conf_color),
                 metric(t("fans"), f"{club.fan_happiness}%", fan_color)]),
-            ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
-                ft.Text(t("balance"), size=12, color=theme.TEXT_MUTED),
-                ft.Text(f"{club.finances.balance:,} EGP", size=15, weight=ft.FontWeight.W_600),
+            ft.Row(rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
+                ft.Text(t("balance"), rtl=theme.rtl(), size=12, color=theme.TEXT_MUTED),
+                ft.Text(f"{club.finances.balance:,} EGP", rtl=theme.rtl(), size=15, weight=ft.FontWeight.W_600),
             ]),
         ]))
 
     return ft.Column(
-        expand=True,
+        rtl=theme.rtl(), expand=True,
         scroll=ft.ScrollMode.AUTO,
         controls=[
             ft.Container(
-                padding=ft.padding.all(theme.PAGE_PADDING),
+                rtl=theme.rtl(), padding=ft.padding.all(theme.PAGE_PADDING),
                 content=ft.Column(
-                    spacing=theme.SECTION_SPACING,
+                    rtl=theme.rtl(), spacing=theme.SECTION_SPACING,
                     controls=[
                         theme.header_bar(
                             title=t("my_club"),
@@ -300,7 +300,7 @@ def build_club_overview_screen(page: ft.Page) -> ft.Column:
                         status_strip,
 
                         # Tab bar
-                        ft.Row(spacing=6, wrap=True, controls=tab_buttons),
+                        ft.Row(rtl=theme.rtl(), spacing=6, wrap=True, controls=tab_buttons),
 
                         # Tab contents (only one visible at a time)
                         overview_content,
@@ -325,7 +325,7 @@ def _build_next_match_card(conn, gs, club) -> list:
     from src.ui.widgets.cards import form_chips
     fixture = queries.get_user_next_fixture(conn, gs.user_club_id)
     if not fixture:
-        return [ft.Text(t("no_upcoming_match"), size=13, color=theme.TEXT_MUTED)]
+        return [ft.Text(t("no_upcoming_match"), rtl=theme.rtl(), size=13, color=theme.TEXT_MUTED)]
     home = fixture.home_club_id == gs.user_club_id
     opponent = display_away_name(fixture) if home else display_home_name(fixture)
     days = (fixture.date - gs.current_date).days if fixture.date else 0
@@ -339,15 +339,15 @@ def _build_next_match_card(conn, gs, club) -> list:
             them = item.result.away_goals if home_game else item.result.home_goals
             form.append("W" if us > them else "L" if us < them else "D")
     return [section_card(t("next_match_card"), [
-        ft.Row(spacing=12, controls=[
-            ft.Icon(ft.Icons.SPORTS_SOCCER, color=theme.ACCENT, size=26),
-            ft.Column(expand=True, spacing=5, controls=[
-                ft.Text(opponent, size=22, font_family=theme.display_font()),
-                ft.Text(f"{t('home') if home else t('away')} · {when}", size=12, color=theme.TEXT_MUTED),
+        ft.Row(rtl=theme.rtl(), spacing=12, controls=[
+            ft.Icon(ft.Icons.SPORTS_SOCCER, rtl=theme.rtl(), color=theme.ACCENT, size=26),
+            ft.Column(rtl=theme.rtl(), expand=True, spacing=5, controls=[
+                ft.Text(opponent, rtl=theme.rtl(), size=22, font_family=theme.display_font()),
+                ft.Text(f"{t('home') if home else t('away')} · {when}", rtl=theme.rtl(), size=12, color=theme.TEXT_MUTED),
             ]),
         ]),
-        ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
-            ft.Text(t("form_label"), size=12, color=theme.TEXT_MUTED), form_chips(form)]),
+        ft.Row(rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
+            ft.Text(t("form_label"), rtl=theme.rtl(), size=12, color=theme.TEXT_MUTED), form_chips(form)]),
     ])]
 
 
@@ -377,22 +377,22 @@ def _build_mini_table(conn, gs) -> list:
         bg = ft.Colors.with_opacity(0.15, ft.Colors.GREEN) if is_user else None
         rows.append(
             ft.Container(
-                content=ft.Row(
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                rtl=theme.rtl(), content=ft.Row(
+                    rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     controls=[
-                        ft.Text(f"{i}.", size=11, width=22,
+                        ft.Text(f"{i}.", rtl=theme.rtl(), size=11, width=22,
                                 weight=ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL),
-                        ft.Text(s.club_name[:14], size=11, expand=True,
+                        ft.Text(s.club_name[:14], rtl=theme.rtl(), size=11, expand=True,
                                 weight=ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL,
                                 color=ft.Colors.GREEN_300 if is_user else None),
-                        ft.Text(f"{s.played}", size=10, width=20, color=ft.Colors.GREY_500,
+                        ft.Text(f"{s.played}", rtl=theme.rtl(), size=10, width=20, color=ft.Colors.GREY_500,
                                 text_align=ft.TextAlign.CENTER),
-                        ft.Text(f"{s.goal_difference:+d}", size=10, width=25,
+                        ft.Text(f"{s.goal_difference:+d}", rtl=theme.rtl(), size=10, width=25,
                                 color=ft.Colors.GREEN_400 if s.goal_difference > 0
                                 else ft.Colors.RED_400 if s.goal_difference < 0
                                 else ft.Colors.GREY_500,
                                 text_align=ft.TextAlign.CENTER),
-                        ft.Text(f"{s.points}", size=11, width=25,
+                        ft.Text(f"{s.points}", rtl=theme.rtl(), size=11, width=25,
                                 weight=ft.FontWeight.BOLD,
                                 color=theme.GOLD if is_user else None,
                                 text_align=ft.TextAlign.CENTER),
@@ -405,17 +405,17 @@ def _build_mini_table(conn, gs) -> list:
         )
 
     return [
-        ft.Text(f"📊 {t('league_position')}", size=14, weight=ft.FontWeight.W_500),
+        ft.Text(f"📊 {t('league_position')}", rtl=theme.rtl(), size=14, weight=ft.FontWeight.W_500),
         ft.Container(
-            content=ft.Column(spacing=1, controls=[
-                ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
-                    ft.Text("#", size=9, width=22, color=ft.Colors.GREY_600),
-                    ft.Text(t("team"), size=9, color=ft.Colors.GREY_600, expand=True),
-                    ft.Text("P", size=9, width=20, color=ft.Colors.GREY_600,
+            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=1, controls=[
+                ft.Row(rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
+                    ft.Text("#", rtl=theme.rtl(), size=9, width=22, color=ft.Colors.GREY_600),
+                    ft.Text(t("team"), rtl=theme.rtl(), size=9, color=ft.Colors.GREY_600, expand=True),
+                    ft.Text("P", rtl=theme.rtl(), size=9, width=20, color=ft.Colors.GREY_600,
                             text_align=ft.TextAlign.CENTER),
-                    ft.Text("GD", size=9, width=25, color=ft.Colors.GREY_600,
+                    ft.Text("GD", rtl=theme.rtl(), size=9, width=25, color=ft.Colors.GREY_600,
                             text_align=ft.TextAlign.CENTER),
-                    ft.Text("Pts", size=9, width=25, color=ft.Colors.GREY_600,
+                    ft.Text("Pts", rtl=theme.rtl(), size=9, width=25, color=ft.Colors.GREY_600,
                             text_align=ft.TextAlign.CENTER),
                 ]),
                 *rows,

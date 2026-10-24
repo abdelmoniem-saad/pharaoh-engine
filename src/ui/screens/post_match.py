@@ -21,7 +21,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = None  # Full-screen experience
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
+        return ft.Column(rtl=theme.rtl(), controls=[ft.Text(t("no_game_loaded"), rtl=theme.rtl())])
 
     conn = app_state.db_conn
     gs = app_state.game_state
@@ -33,12 +33,12 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
     outcome: MatchdayOutcome | None = getattr(app_state, '_last_outcome', None)
     if not outcome:
         return ft.Column(
-            alignment=ft.MainAxisAlignment.CENTER,
+            rtl=theme.rtl(), alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             expand=True,
             controls=[
-                ft.Text(t("no_data"), size=16, color=ft.Colors.GREY_400),
-                ft.ElevatedButton(t("back"), on_click=lambda e: navigate(page, "/match_day")),
+                ft.Text(t("no_data"), rtl=theme.rtl(), size=16, color=ft.Colors.GREY_400),
+                ft.ElevatedButton(t("back"), rtl=theme.rtl(), on_click=lambda e: navigate(page, "/match_day")),
             ],
         )
 
@@ -94,18 +94,18 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
         assist_text = f" ({t('assist')}: {g.second_player_name})" if g.second_player_name and g.event_type == MatchEventType.GOAL else ""
         goal_widgets.append(
             ft.Container(
-                content=ft.Row(spacing=6, controls=[
-                    ft.Text(f"{g.minute}'", size=12, weight=ft.FontWeight.BOLD,
+                rtl=theme.rtl(), content=ft.Row(rtl=theme.rtl(), spacing=6, controls=[
+                    ft.Text(f"{g.minute}'", rtl=theme.rtl(), size=12, weight=ft.FontWeight.BOLD,
                             color=theme.GOLD, width=35),
-                    ft.Text("⚽", size=14),
-                    ft.Text(f"{g.player_name}{assist_text}", size=12, color=goal_color,
+                    ft.Text("⚽", rtl=theme.rtl(), size=14),
+                    ft.Text(f"{g.player_name}{assist_text}", rtl=theme.rtl(), size=12, color=goal_color,
                             expand=True),
                 ]),
                 padding=ft.padding.symmetric(vertical=2),
             )
         )
     if not goal_widgets:
-        goal_widgets.append(ft.Text(t("no_goals_scored"), size=12, color=ft.Colors.GREY_500))
+        goal_widgets.append(ft.Text(t("no_goals_scored"), rtl=theme.rtl(), size=12, color=ft.Colors.GREY_500))
 
     # ── Cards & injuries ────────────────────────────────────────────
     cards = [e for e in result.events
@@ -114,10 +114,10 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
     incident_widgets = []
     for c in cards:
         icon = "🟡" if c.event_type == MatchEventType.YELLOW_CARD else "🟥"
-        incident_widgets.append(ft.Text(f"{c.minute}' {icon} {c.player_name}", size=11))
+        incident_widgets.append(ft.Text(f"{c.minute}' {icon} {c.player_name}", rtl=theme.rtl(), size=11))
     for inj in injuries:
         incident_widgets.append(
-            ft.Text(f"{inj.minute}' 🏥 {inj.description}", size=11, color=ft.Colors.RED_400))
+            ft.Text(f"{inj.minute}' 🏥 {inj.description}", rtl=theme.rtl(), size=11, color=ft.Colors.RED_400))
 
     # ── Stats comparison ────────────────────────────────────────────
     stats_data = [
@@ -141,20 +141,20 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
         home_flex = max(1, int(hv / total * 100))
         away_flex = max(1, int((1 - hv / total) * 100))
         return ft.Container(
-            content=ft.Column(spacing=2, controls=[
-                ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
-                    ft.Text(home_val_str, size=12, weight=ft.FontWeight.BOLD),
-                    ft.Text(label, size=10, color=ft.Colors.GREY_400),
-                    ft.Text(away_val_str, size=12, weight=ft.FontWeight.BOLD),
+            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=2, controls=[
+                ft.Row(rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
+                    ft.Text(home_val_str, rtl=theme.rtl(), size=12, weight=ft.FontWeight.BOLD),
+                    ft.Text(label, rtl=theme.rtl(), size=10, color=ft.Colors.GREY_400),
+                    ft.Text(away_val_str, rtl=theme.rtl(), size=12, weight=ft.FontWeight.BOLD),
                 ]),
-                ft.Row(spacing=2, controls=[
+                ft.Row(rtl=theme.rtl(), spacing=2, controls=[
                     ft.Container(
-                        expand=home_flex, height=4,
+                        rtl=theme.rtl(), expand=home_flex, height=4,
                         bgcolor=ft.Colors.GREEN_400 if is_home else ft.Colors.BLUE_400,
                         border_radius=2,
                     ),
                     ft.Container(
-                        expand=away_flex, height=4,
+                        rtl=theme.rtl(), expand=away_flex, height=4,
                         bgcolor=ft.Colors.BLUE_400 if is_home else ft.Colors.GREEN_400,
                         border_radius=2,
                     ),
@@ -182,23 +182,23 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
                    else ft.Colors.RED_400)
         rating_widgets.append(
             ft.Container(
-                content=ft.Row(
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                rtl=theme.rtl(), content=ft.Row(
+                    rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     controls=[
-                        ft.Row(spacing=6, tight=True, controls=[
+                        ft.Row(rtl=theme.rtl(), spacing=6, tight=True, controls=[
                             ft.Container(
-                                content=ft.Text(p.position.value, size=9,
+                                rtl=theme.rtl(), content=ft.Text(p.position.value, rtl=theme.rtl(), size=9,
                                                 color=ft.Colors.WHITE),
                                 width=28, height=18, border_radius=4,
                                 bgcolor=theme.ACCENT_DARK if is_mine else ft.Colors.GREY_700,
                                 alignment=ft.Alignment(0, 0),
                             ),
-                            ft.Text(p.name, size=12,
+                            ft.Text(p.name, rtl=theme.rtl(), size=12,
                                     weight=ft.FontWeight.BOLD if is_mine else ft.FontWeight.NORMAL,
                                     color=ft.Colors.GREEN_200 if is_mine else None),
                         ]),
                         ft.Container(
-                            content=ft.Text(f"{rating:.1f}", size=13,
+                            rtl=theme.rtl(), content=ft.Text(f"{rating:.1f}", rtl=theme.rtl(), size=13,
                                             weight=ft.FontWeight.BOLD, color=r_color),
                             width=40, alignment=ft.Alignment(1, 0),
                         ),
@@ -220,21 +220,21 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
         for r in outcome.other_results:
             other_widgets.append(
                 ft.Container(
-                    content=ft.Row(
-                        alignment=ft.MainAxisAlignment.CENTER, spacing=8,
+                    rtl=theme.rtl(), content=ft.Row(
+                        rtl=theme.rtl(), alignment=ft.MainAxisAlignment.CENTER, spacing=8,
                         controls=[
-                            ft.Text(r.home_club_name, size=11,
-                                    text_align=ft.TextAlign.RIGHT, expand=True,
+                            ft.Text(r.home_club_name, rtl=theme.rtl(), size=11,
+                                    text_align=ft.TextAlign.LEFT if theme.rtl() else ft.TextAlign.RIGHT, expand=True,
                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                             ft.Container(
-                                content=ft.Text(f"{r.home_goals}-{r.away_goals}",
-                                                size=12, weight=ft.FontWeight.BOLD),
+                                rtl=theme.rtl(), content=ft.Text(theme.scoreline(r.home_goals, r.away_goals),
+                                                rtl=False, size=12, weight=ft.FontWeight.BOLD),
                                 bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.WHITE),
                                 padding=ft.padding.symmetric(horizontal=8, vertical=2),
                                 border_radius=4,
                             ),
-                            ft.Text(r.away_club_name, size=11,
-                                    text_align=ft.TextAlign.LEFT, expand=True,
+                            ft.Text(r.away_club_name, rtl=theme.rtl(), size=11,
+                                    text_align=ft.TextAlign.RIGHT if theme.rtl() else ft.TextAlign.LEFT, expand=True,
                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                         ],
                     ),
@@ -243,7 +243,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
             )
 
     # ── Position change ─────────────────────────────────────────────
-    pos_widget = ft.Container()
+    pos_widget = ft.Container(rtl=theme.rtl())
     if outcome.position_before > 0 and outcome.position_after > 0:
         delta = outcome.position_before - outcome.position_after
         if delta > 0:
@@ -255,7 +255,7 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
         else:
             pos_text = f"— {outcome.position_after}th (unchanged)"
             pos_color = ft.Colors.GREY_400
-        pos_widget = ft.Text(pos_text, size=13, color=pos_color,
+        pos_widget = ft.Text(pos_text, rtl=theme.rtl(), size=13, color=pos_color,
                              weight=ft.FontWeight.W_500, text_align=ft.TextAlign.CENTER)
 
     # ── Press conference state ──────────────────────────────────────
@@ -295,59 +295,59 @@ def build_post_match_screen(page: ft.Page) -> ft.Column:
 
     from src.ui.widgets.cards import match_score_card, section_card
     from src.ui.widgets.dossier import section_tabs
-    report = ft.Column(spacing=20, controls=[
+    report = ft.Column(rtl=theme.rtl(), spacing=20, controls=[
         section_card(t("goals_label"), goal_widgets),
         section_card(t("match_stats"), [
-            ft.Row(controls=[
-                ft.Text(display_home_name(result), expand=True, size=12, color=theme.TEXT_MUTED),
-                ft.Text(display_away_name(result), expand=True, size=12, color=theme.TEXT_MUTED,
-                        text_align=ft.TextAlign.RIGHT),
+            ft.Row(rtl=theme.rtl(), controls=[
+                ft.Text(display_home_name(result), rtl=theme.rtl(), expand=True, size=12, color=theme.TEXT_MUTED),
+                ft.Text(display_away_name(result), rtl=theme.rtl(), expand=True, size=12, color=theme.TEXT_MUTED,
+                        text_align=ft.TextAlign.LEFT if theme.rtl() else ft.TextAlign.RIGHT),
             ]), *stat_widgets]),
         *([section_card(t("cards_injuries"), incident_widgets)] if incident_widgets else []),
     ])
-    ratings = ft.Column(spacing=12, controls=rating_widgets)
-    elsewhere = ft.Column(spacing=12, controls=other_widgets or [ft.Text(t("no_data"))])
+    ratings = ft.Column(rtl=theme.rtl(), spacing=12, controls=rating_widgets)
+    elsewhere = ft.Column(rtl=theme.rtl(), spacing=12, controls=other_widgets or [ft.Text(t("no_data"), rtl=theme.rtl())])
     tabs = section_tabs(page, [t("match_report"), t("top_performers"), t("other_results")],
                         [report, ratings, elsewhere])
     sections = [
-        ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
-            ft.Text(result_text, size=38, font_family=theme.display_font(), color=result_color),
-            ft.Text(t("full_time"), size=12, color=theme.TEXT_MUTED),
+        ft.Row(rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
+            ft.Text(result_text, rtl=theme.rtl(), size=38, font_family=theme.display_font(), color=result_color),
+            ft.Text(t("full_time"), rtl=theme.rtl(), size=12, color=theme.TEXT_MUTED),
         ]),
         match_score_card(display_home_name(result), display_away_name(result),
             result.home_goals, result.away_goals, result.competition,
             f"{t('matchday')} {outcome.matchday}", is_home),
         pos_widget,
-        ft.Row(spacing=10, controls=[
-            ft.ElevatedButton(t("continue_btn"), expand=True, height=50,
+        ft.Row(rtl=theme.rtl(), spacing=10, controls=[
+            ft.ElevatedButton(t("continue_btn"), rtl=theme.rtl(), expand=True, height=50,
                              style=theme.PRIMARY_BTN_STYLE, on_click=go_match_day),
-            ft.OutlinedButton(t("view_final_table"), expand=True, height=50,
+            ft.OutlinedButton(t("view_final_table"), rtl=theme.rtl(), expand=True, height=50,
                               style=theme.SECONDARY_BTN_STYLE, on_click=go_table),
         ]),
-        ft.TextButton(t("press_conference"), icon=ft.Icons.MIC_NONE, on_click=_press_conference),
+        ft.TextButton(t("press_conference"), rtl=theme.rtl(), icon=ft.Icons.MIC_NONE, on_click=_press_conference),
     ]
     if motm_player:
-        sections.append(ft.Container(padding=18, border_radius=14, bgcolor=theme.ACCENT_BG,
-            content=ft.Row(spacing=14, controls=[
-                ft.Icon(ft.Icons.STAR_OUTLINE, color=theme.ACCENT, size=28),
-                ft.Column(expand=True, spacing=5, controls=[
-                    ft.Text(t("man_of_the_match"), size=11, color=theme.ACCENT),
-                    ft.Text(display_name(motm_player), size=20, font_family=theme.display_font()),
+        sections.append(ft.Container(rtl=theme.rtl(), padding=18, border_radius=14, bgcolor=theme.ACCENT_BG,
+            content=ft.Row(rtl=theme.rtl(), spacing=14, controls=[
+                ft.Icon(ft.Icons.STAR_OUTLINE, rtl=theme.rtl(), color=theme.ACCENT, size=28),
+                ft.Column(rtl=theme.rtl(), expand=True, spacing=5, controls=[
+                    ft.Text(t("man_of_the_match"), rtl=theme.rtl(), size=11, color=theme.ACCENT),
+                    ft.Text(display_name(motm_player), rtl=theme.rtl(), size=20, font_family=theme.display_font()),
                 ]),
-                ft.Text(f"{motm_rating:.1f}", size=36, font_family=theme.display_font(), color=theme.ACCENT),
+                ft.Text(f"{motm_rating:.1f}", rtl=theme.rtl(), size=36, font_family=theme.display_font(), color=theme.ACCENT),
             ])))
     if outcome.attendance:
-        sections.append(ft.Text(f"{t('attendance')}: {outcome.attendance:,}", size=12, color=theme.TEXT_MUTED))
+        sections.append(ft.Text(f"{t('attendance')}: {outcome.attendance:,}", rtl=theme.rtl(), size=12, color=theme.TEXT_MUTED))
     if outcome.newly_unlocked:
         from src.core.achievements import get_achievements
         unlocked = set(outcome.newly_unlocked)
         sections.append(section_card(t("achievements_unlocked"), [
-            ft.Text(a["title"], size=14, color=theme.ACCENT)
+            ft.Text(a["title"], rtl=theme.rtl(), size=14, color=theme.ACCENT)
             for a in get_achievements(conn) if a["key"] in unlocked]))
     sections.extend([tabs, report, ratings, elsewhere])
-    return ft.Column(expand=True, scroll=ft.ScrollMode.AUTO, controls=[
-        ft.Container(padding=theme.PAGE_PADDING,
-                     content=ft.Column(spacing=20, controls=sections))])
+    return ft.Column(rtl=theme.rtl(), expand=True, scroll=ft.ScrollMode.AUTO, controls=[
+        ft.Container(rtl=theme.rtl(), padding=theme.PAGE_PADDING,
+                     content=ft.Column(rtl=theme.rtl(), spacing=20, controls=sections))])
 
 
 # ── Press Conference ────────────────────────────────────────────────────────
@@ -439,9 +439,9 @@ def _show_press_conference(page, conn, gs, result, is_home):
     for answer_text, tone, board_change, fan_change in answers:
         answer_buttons.append(
             ft.Container(
-                content=ft.ListTile(
-                    title=ft.Text(f'"{answer_text}"', size=13),
-                    subtitle=ft.Text(f"({tone})", size=10, color=ft.Colors.GREY_500),
+                rtl=theme.rtl(), content=ft.ListTile(
+                    rtl=theme.rtl(), title=ft.Text(f'"{answer_text}"', rtl=theme.rtl(), size=13),
+                    subtitle=ft.Text(f"({tone})", rtl=theme.rtl(), size=10, color=ft.Colors.GREY_500),
                     on_click=make_answer_handler(answer_text, tone, board_change, fan_change),
                 ),
                 bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
@@ -451,30 +451,30 @@ def _show_press_conference(page, conn, gs, result, is_home):
         )
 
     dlg = ft.AlertDialog(
-        title=ft.Column(spacing=4, controls=[
-            ft.Text(f"🎤 {t('press_conference')}", size=16,
+        rtl=theme.rtl(), title=ft.Column(rtl=theme.rtl(), spacing=4, controls=[
+            ft.Text(f"🎤 {t('press_conference')}", rtl=theme.rtl(), size=16,
                      weight=ft.FontWeight.BOLD, color=theme.GOLD),
-            ft.Text(t("journalist_asks"), size=11, color=ft.Colors.GREY_400),
+            ft.Text(t("journalist_asks"), rtl=theme.rtl(), size=11, color=ft.Colors.GREY_400),
         ]),
         content=ft.Container(
-            content=ft.Column(
-                spacing=8,
+            rtl=theme.rtl(), content=ft.Column(
+                rtl=theme.rtl(), spacing=8,
                 controls=[
                     ft.Container(
-                        content=ft.Text(f'"{question_text}"', size=14, italic=True),
+                        rtl=theme.rtl(), content=ft.Text(f'"{question_text}"', rtl=theme.rtl(), size=14, italic=True),
                         padding=10,
                         bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.BLUE),
                         border_radius=8,
                         border=ft.border.all(1, ft.Colors.with_opacity(0.15, ft.Colors.BLUE_300)),
                     ),
-                    ft.Text(t("choose_your_response"), size=12, color=ft.Colors.GREY_400),
+                    ft.Text(t("choose_your_response"), rtl=theme.rtl(), size=12, color=ft.Colors.GREY_400),
                     *answer_buttons,
                 ],
             ),
             width=290, height=320,
         ),
         actions=[
-            ft.TextButton(t("skip_to_end"), on_click=lambda e: page.pop_dialog()),
+            ft.TextButton(t("skip_to_end"), rtl=theme.rtl(), on_click=lambda e: page.pop_dialog()),
         ],
     )
     page.show_dialog(dlg)

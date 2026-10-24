@@ -7,7 +7,7 @@ import flet as ft
 from src.ui import theme
 
 from src.data.models import MatchResult
-from src.utils.localization import t
+from src.utils.localization import t, display_home_name, display_away_name
 
 
 def match_result_row(result: MatchResult, user_club_id: int = 0) -> ft.Container:
@@ -34,20 +34,20 @@ def match_result_row(result: MatchResult, user_club_id: int = 0) -> ft.Container
     )
 
     return ft.Container(
-        content=ft.Row(
-            alignment=ft.MainAxisAlignment.CENTER,
+        rtl=theme.rtl(), content=ft.Row(
+            rtl=theme.rtl(), alignment=ft.MainAxisAlignment.CENTER,
             spacing=10,
             controls=[
                 ft.Text(
-                    result.home_club_name,
-                    size=13, text_align=ft.TextAlign.RIGHT,
-                    width=120,
+                    display_home_name(result),
+                    rtl=theme.rtl(), size=13, text_align=ft.TextAlign.LEFT if theme.rtl() else ft.TextAlign.RIGHT,
+                    expand=True, max_lines=2,
                     weight=ft.FontWeight.BOLD if result.home_club_id == user_club_id else ft.FontWeight.NORMAL,
                 ),
                 ft.Container(
-                    content=ft.Text(
-                        f"{result.home_goals} - {result.away_goals}",
-                        size=15, weight=ft.FontWeight.BOLD,
+                    rtl=theme.rtl(), content=ft.Text(
+                        theme.scoreline(result.home_goals, result.away_goals),
+                        rtl=False, size=15, weight=ft.FontWeight.BOLD,
                         color=score_color,
                     ),
                     bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.WHITE),
@@ -56,9 +56,9 @@ def match_result_row(result: MatchResult, user_club_id: int = 0) -> ft.Container
                     border=ft.border.all(1, ft.Colors.with_opacity(0.15, theme.GOLD)),
                 ),
                 ft.Text(
-                    result.away_club_name,
-                    size=13, text_align=ft.TextAlign.LEFT,
-                    width=120,
+                    display_away_name(result),
+                    rtl=theme.rtl(), size=13, text_align=ft.TextAlign.RIGHT if theme.rtl() else ft.TextAlign.LEFT,
+                    expand=True, max_lines=2,
                     weight=ft.FontWeight.BOLD if result.away_club_id == user_club_id else ft.FontWeight.NORMAL,
                 ),
             ],

@@ -18,7 +18,7 @@ def build_history_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = build_nav_bar(page, 3)  # same slot as table
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
+        return ft.Column(rtl=theme.rtl(), controls=[ft.Text(t("no_game_loaded"), rtl=theme.rtl())])
 
     conn = app_state.db_conn
     gs = app_state.game_state
@@ -28,7 +28,7 @@ def build_history_screen(page: ft.Page) -> ft.Column:
     records_tab = _build_records_tab(conn)
     club_tab = _build_club_history_tab(conn, gs)
 
-    content_area = ft.Container(content=seasons_tab, expand=True)
+    content_area = ft.Container(rtl=theme.rtl(), content=seasons_tab, expand=True)
 
     def switch_tab(idx):
         views = [seasons_tab, records_tab, club_tab]
@@ -48,21 +48,21 @@ def build_history_screen(page: ft.Page) -> ft.Column:
         page.update()
 
     tab_buttons = [
-        ft.TextButton("Seasons", on_click=lambda e: switch_tab(0),
+        ft.TextButton(t("seasons"), rtl=theme.rtl(), height=44, expand=True, on_click=lambda e: switch_tab(0),
                        style=ft.ButtonStyle(
                            bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.AMBER),
                            color=theme.GOLD)),
-        ft.TextButton("Records", on_click=lambda e: switch_tab(1),
+        ft.TextButton(t("records"), rtl=theme.rtl(), height=44, expand=True, on_click=lambda e: switch_tab(1),
                        style=ft.ButtonStyle(bgcolor=ft.Colors.TRANSPARENT,
                                             color=theme.TEXT_MUTED)),
-        ft.TextButton("My Club", on_click=lambda e: switch_tab(2),
+        ft.TextButton(t("my_club"), rtl=theme.rtl(), height=44, expand=True, on_click=lambda e: switch_tab(2),
                        style=ft.ButtonStyle(bgcolor=ft.Colors.TRANSPARENT,
                                             color=theme.TEXT_MUTED)),
     ]
 
     tab_bar = ft.Container(
-        content=ft.Row(
-            alignment=ft.MainAxisAlignment.CENTER,
+        rtl=theme.rtl(), content=ft.Row(
+            rtl=theme.rtl(), alignment=ft.MainAxisAlignment.CENTER,
             spacing=4,
             controls=tab_buttons,
         ),
@@ -70,23 +70,23 @@ def build_history_screen(page: ft.Page) -> ft.Column:
     )
 
     return ft.Column(
-        expand=True,
+        rtl=theme.rtl(), expand=True,
         spacing=0,
         controls=[
             theme.screen_container(
                 ft.Column(
-                    expand=True,
+                    rtl=theme.rtl(), expand=True,
                     spacing=0,
                     controls=[
                         theme.header_bar(
-                            title=f"📜 {t('history')}",
+                            title=t("history"),
                             subtitle=t("past_seasons_stats"),
                             back_route="/club",
                             page=page,
                         ),
                         tab_bar,
                         ft.Container(
-                            content=content_area,
+                            rtl=theme.rtl(), content=content_area,
                             expand=True,
                             padding=ft.padding.only(left=theme.PAGE_PADDING, right=theme.PAGE_PADDING,
                                                      top=4, bottom=10),
@@ -107,17 +107,17 @@ def _build_seasons_tab(conn, gs) -> ft.Container:
 
     if not seasons:
         return ft.Container(
-            content=ft.Column(
-                alignment=ft.MainAxisAlignment.CENTER,
+            rtl=theme.rtl(), content=ft.Column(
+                rtl=theme.rtl(), alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 expand=True,
                 controls=[
-                    ft.Icon(ft.Icons.HISTORY, size=48, color=theme.TEXT_MUTED),
-                    ft.Container(height=12),
-                    ft.Text("No completed seasons yet", size=theme.BODY_SIZE,
+                    ft.Icon(ft.Icons.HISTORY, rtl=theme.rtl(), size=48, color=theme.TEXT_MUTED),
+                    ft.Container(rtl=theme.rtl(), height=12),
+                    ft.Text(t("no_seasons"), rtl=theme.rtl(), size=theme.BODY_SIZE,
                             color=theme.TEXT_MUTED, text_align=ft.TextAlign.CENTER),
-                    ft.Text("Finish a full season to see history here.",
-                            size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED,
+                    ft.Text(t("history_hint"),
+                            rtl=theme.rtl(), size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED,
                             text_align=ft.TextAlign.CENTER),
                 ],
             ),
@@ -132,17 +132,17 @@ def _build_seasons_tab(conn, gs) -> ft.Container:
                      else theme.TEXT_DANGER)
 
         rows.append(ft.Container(
-            content=ft.Column(spacing=4, controls=[
+            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=4, controls=[
                 # Season header
                 ft.Row(
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     controls=[
-                        ft.Text(f"🏟️ {s.season_display}", size=theme.BODY_SIZE,
+                        ft.Text(f"🏟️ {s.season_display}", rtl=theme.rtl(), size=theme.BODY_SIZE,
                                 weight=ft.FontWeight.BOLD, color=theme.TEXT_PRIMARY),
                         ft.Container(
-                            content=ft.Text(
+                            rtl=theme.rtl(), content=ft.Text(
                                 f"{'🏆 ' if is_champ else ''}#{s.user_position}",
-                                size=theme.CAPTION_SIZE, weight=ft.FontWeight.BOLD,
+                                rtl=theme.rtl(), size=theme.CAPTION_SIZE, weight=ft.FontWeight.BOLD,
                                 color=pos_color,
                             ),
                             padding=ft.padding.symmetric(horizontal=8, vertical=2),
@@ -152,22 +152,22 @@ def _build_seasons_tab(conn, gs) -> ft.Container:
                     ],
                 ),
                 # Champion & stats
-                ft.Row(spacing=4, controls=[
-                    ft.Text("🏆", size=theme.TINY_SIZE),
-                    ft.Text(s.champion_club_name or "—", size=theme.CAPTION_SIZE,
+                ft.Row(rtl=theme.rtl(), spacing=4, controls=[
+                    ft.Text("🏆", rtl=theme.rtl(), size=theme.TINY_SIZE),
+                    ft.Text(s.champion_club_name or "—", rtl=theme.rtl(), size=theme.CAPTION_SIZE,
                             color=theme.GOLD, weight=ft.FontWeight.W_500),
-                    ft.Container(expand=True),
-                    ft.Text(f"⚽ {s.total_goals}", size=theme.TINY_SIZE, color=theme.TEXT_MUTED),
-                    ft.Text(f"📋 {s.total_matches}", size=theme.TINY_SIZE, color=theme.TEXT_MUTED),
+                    ft.Container(rtl=theme.rtl(), expand=True),
+                    ft.Text(f"⚽ {s.total_goals}", rtl=theme.rtl(), size=theme.TINY_SIZE, color=theme.TEXT_MUTED),
+                    ft.Text(f"📋 {s.total_matches}", rtl=theme.rtl(), size=theme.TINY_SIZE, color=theme.TEXT_MUTED),
                 ]),
                 # Awards row
-                ft.Row(spacing=0, wrap=True, controls=[
+                ft.Row(rtl=theme.rtl(), spacing=0, wrap=True, controls=[
                     _award_chip("👟", s.golden_boot_player, f"{s.golden_boot_goals}g")
-                    if s.golden_boot_player else ft.Container(),
+                    if s.golden_boot_player else ft.Container(rtl=theme.rtl()),
                     _award_chip("🧤", s.golden_glove_player, f"{s.golden_glove_clean_sheets}cs")
-                    if s.golden_glove_player else ft.Container(),
+                    if s.golden_glove_player else ft.Container(rtl=theme.rtl()),
                     _award_chip("🅰️", s.most_assists_player, f"{s.most_assists_count}a")
-                    if s.most_assists_player else ft.Container(),
+                    if s.most_assists_player else ft.Container(rtl=theme.rtl()),
                 ]),
             ]),
             padding=ft.padding.symmetric(horizontal=10, vertical=8),
@@ -178,8 +178,8 @@ def _build_seasons_tab(conn, gs) -> ft.Container:
         ))
 
     return ft.Container(
-        content=ft.ListView(
-            spacing=0,
+        rtl=theme.rtl(), content=ft.ListView(
+            rtl=theme.rtl(), spacing=0,
             controls=rows,
             expand=True,
         ),
@@ -191,10 +191,10 @@ def _build_seasons_tab(conn, gs) -> ft.Container:
 def _award_chip(emoji: str, name: str, stat: str) -> ft.Container:
     """Small chip showing an award winner."""
     return ft.Container(
-        content=ft.Row(spacing=3, controls=[
-            ft.Text(emoji, size=10),
-            ft.Text(name, size=9, color=theme.TEXT_SECONDARY),
-            ft.Text(stat, size=9, color=theme.GOLD,
+        rtl=theme.rtl(), content=ft.Row(rtl=theme.rtl(), spacing=3, controls=[
+            ft.Text(emoji, rtl=theme.rtl(), size=10),
+            ft.Text(name, rtl=theme.rtl(), size=11, color=theme.TEXT_SECONDARY),
+            ft.Text(stat, rtl=theme.rtl(), size=11, color=theme.GOLD,
                     weight=ft.FontWeight.BOLD),
         ]),
         padding=ft.padding.symmetric(horizontal=6, vertical=2),
@@ -214,17 +214,17 @@ def _build_records_tab(conn) -> ft.Container:
 
     if not top_scorers and not top_assists and not top_rated:
         return ft.Container(
-            content=ft.Column(
-                alignment=ft.MainAxisAlignment.CENTER,
+            rtl=theme.rtl(), content=ft.Column(
+                rtl=theme.rtl(), alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 expand=True,
                 controls=[
-                    ft.Icon(ft.Icons.STAR_BORDER, size=48, color=theme.TEXT_MUTED),
-                    ft.Container(height=12),
-                    ft.Text("No records yet", size=theme.BODY_SIZE,
+                    ft.Icon(ft.Icons.STAR_BORDER, rtl=theme.rtl(), size=48, color=theme.TEXT_MUTED),
+                    ft.Container(rtl=theme.rtl(), height=12),
+                    ft.Text(t("no_records"), rtl=theme.rtl(), size=theme.BODY_SIZE,
                             color=theme.TEXT_MUTED, text_align=ft.TextAlign.CENTER),
-                    ft.Text("Complete a season to start tracking all-time records.",
-                            size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED,
+                    ft.Text(t("records_hint"),
+                            rtl=theme.rtl(), size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED,
                             text_align=ft.TextAlign.CENTER),
                 ],
             ),
@@ -235,23 +235,23 @@ def _build_records_tab(conn) -> ft.Container:
 
     # Top Scorers
     if top_scorers:
-        sections.append(_record_section("⚽ All-Time Top Scorers", top_scorers,
-                                         stat_key="total_goals", stat_label="Goals"))
+        sections.append(_record_section(t("all_time_scorers"), top_scorers,
+                                         stat_key="total_goals", stat_label=t("goals")))
 
     # Top Assists
     if top_assists:
-        sections.append(_record_section("🅰️ All-Time Top Assists", top_assists,
-                                         stat_key="total_assists", stat_label="Assists"))
+        sections.append(_record_section(t("all_time_assists"), top_assists,
+                                         stat_key="total_assists", stat_label=t("assists")))
 
     # Top Rated
     if top_rated:
-        sections.append(_record_section("⭐ All-Time Best Rated", top_rated,
-                                         stat_key="avg_rating", stat_label="Rating",
+        sections.append(_record_section(t("all_time_rated"), top_rated,
+                                         stat_key="avg_rating", stat_label=t("rating"),
                                          is_float=True))
 
     return ft.Container(
-        content=ft.ListView(
-            spacing=theme.SECTION_SPACING,
+        rtl=theme.rtl(), content=ft.ListView(
+            rtl=theme.rtl(), spacing=theme.SECTION_SPACING,
             controls=sections,
             expand=True,
         ),
@@ -273,24 +273,24 @@ def _record_section(title: str, records: list[dict], stat_key: str,
         stat_display = f"{stat_val:.1f}" if is_float else str(stat_val)
 
         rows.append(ft.Container(
-            content=ft.Row(
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            rtl=theme.rtl(), content=ft.Row(
+                rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
-                    ft.Row(spacing=8, controls=[
-                        ft.Text(f"{i}.", size=theme.CAPTION_SIZE, color=rank_color,
+                    ft.Row(rtl=theme.rtl(), spacing=8, controls=[
+                        ft.Text(f"{i}.", rtl=theme.rtl(), size=theme.CAPTION_SIZE, color=rank_color,
                                 weight=ft.FontWeight.BOLD, width=22),
-                        ft.Column(spacing=0, expand=True, controls=[
-                            ft.Text(r["player_name"], size=theme.CAPTION_SIZE,
+                        ft.Column(rtl=theme.rtl(), spacing=0, expand=True, controls=[
+                            ft.Text(r["player_name"], rtl=theme.rtl(), size=theme.CAPTION_SIZE,
                                     weight=ft.FontWeight.W_500, color=theme.TEXT_PRIMARY),
                             ft.Text(
                                 f"{r.get('last_club', '')} · {r.get('seasons_played', 0)} seasons · "
                                 f"{r.get('total_appearances', 0)} apps",
-                                size=theme.TINY_SIZE, color=theme.TEXT_MUTED,
+                                rtl=theme.rtl(), size=theme.TINY_SIZE, color=theme.TEXT_MUTED,
                             ),
                         ]),
                     ], expand=True),
                     ft.Container(
-                        content=ft.Text(stat_display, size=theme.BODY_SIZE,
+                        rtl=theme.rtl(), content=ft.Text(stat_display, rtl=theme.rtl(), size=theme.BODY_SIZE,
                                         weight=ft.FontWeight.BOLD,
                                         color=theme.GOLD),
                         padding=ft.padding.symmetric(horizontal=8, vertical=2),
@@ -299,14 +299,14 @@ def _record_section(title: str, records: list[dict], stat_key: str,
                     ),
                 ],
             ),
-            padding=ft.padding.symmetric(horizontal=8, vertical=5),
+            padding=ft.padding.symmetric(horizontal=8, vertical=12),
         ))
 
     return ft.Container(
-        content=ft.Column(spacing=2, controls=[
-            ft.Text(title, size=theme.BODY_SIZE, weight=ft.FontWeight.BOLD,
+        rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=2, controls=[
+            ft.Text(title, rtl=theme.rtl(), size=theme.BODY_SIZE, weight=ft.FontWeight.BOLD,
                     color=theme.GOLD),
-            ft.Container(height=2),
+            ft.Container(rtl=theme.rtl(), height=2),
             *rows,
         ]),
         padding=ft.padding.symmetric(horizontal=8, vertical=8),
@@ -324,17 +324,17 @@ def _build_club_history_tab(conn, gs) -> ft.Container:
 
     if not club_history:
         return ft.Container(
-            content=ft.Column(
-                alignment=ft.MainAxisAlignment.CENTER,
+            rtl=theme.rtl(), content=ft.Column(
+                rtl=theme.rtl(), alignment=ft.MainAxisAlignment.CENTER,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 expand=True,
                 controls=[
-                    ft.Icon(ft.Icons.SHIELD_OUTLINED, size=48, color=theme.TEXT_MUTED),
-                    ft.Container(height=12),
-                    ft.Text(f"No history for {gs.user_club_name}", size=theme.BODY_SIZE,
+                    ft.Icon(ft.Icons.SHIELD_OUTLINED, rtl=theme.rtl(), size=48, color=theme.TEXT_MUTED),
+                    ft.Container(rtl=theme.rtl(), height=12),
+                    ft.Text(t("no_seasons"), rtl=theme.rtl(), size=theme.BODY_SIZE,
                             color=theme.TEXT_MUTED, text_align=ft.TextAlign.CENTER),
-                    ft.Text("Complete a season to see your club's historical record.",
-                            size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED,
+                    ft.Text(t("history_hint"),
+                            rtl=theme.rtl(), size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED,
                             text_align=ft.TextAlign.CENTER),
                 ],
             ),
@@ -350,15 +350,15 @@ def _build_club_history_tab(conn, gs) -> ft.Container:
     best_finish = min(c.position_finish for c in club_history) if club_history else 0
 
     summary = ft.Container(
-        content=ft.Column(spacing=4, controls=[
-            ft.Text(f"📊 {gs.user_club_name} — Career Summary", size=theme.BODY_SIZE,
+        rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=4, controls=[
+            ft.Text(f"{gs.user_club_name} · {t('career_summary')}", rtl=theme.rtl(), size=theme.BODY_SIZE,
                     weight=ft.FontWeight.BOLD, color=theme.GOLD),
-            ft.Row(wrap=True, spacing=0, controls=[
-                _stat_chip("🏆", "Titles", str(titles_won)),
+            ft.Row(rtl=theme.rtl(), wrap=True, spacing=0, controls=[
+                _stat_chip("🏆", t("titles"), str(titles_won)),
                 _stat_chip("🥇", "Top 4", str(top_4_finishes)),
-                _stat_chip("📋", "Seasons", str(total_seasons)),
-                _stat_chip("✅", "Wins", str(total_wins)),
-                _stat_chip("⚽", "Goals", str(total_goals)),
+                _stat_chip("📋", t("seasons"), str(total_seasons)),
+                _stat_chip("✅", t("wins"), str(total_wins)),
+                _stat_chip("⚽", t("goals"), str(total_goals)),
                 _stat_chip("🔝", "Best", f"#{best_finish}"),
             ]),
         ]),
@@ -378,27 +378,27 @@ def _build_club_history_tab(conn, gs) -> ft.Container:
                      else theme.TEXT_DANGER)
 
         season_rows.append(ft.Container(
-            content=ft.Row(
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            rtl=theme.rtl(), content=ft.Row(
+                rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
-                    ft.Column(spacing=0, controls=[
+                    ft.Column(rtl=theme.rtl(), spacing=0, controls=[
                         ft.Text(
                             f"{'🏆 ' if is_champ else ''}{c.season_year}/{c.season_year + 1}",
-                            size=theme.CAPTION_SIZE, weight=ft.FontWeight.BOLD,
+                            rtl=theme.rtl(), size=theme.CAPTION_SIZE, weight=ft.FontWeight.BOLD,
                             color=theme.GOLD if is_champ else theme.TEXT_PRIMARY,
                         ),
                         ft.Text(
                             f"W{c.won} D{c.drawn} L{c.lost} · "
                             f"GF {c.goals_for} GA {c.goals_against} "
                             f"({c.goal_difference:+d})",
-                            size=theme.TINY_SIZE, color=theme.TEXT_MUTED,
+                            rtl=theme.rtl(), size=theme.TINY_SIZE, color=theme.TEXT_MUTED,
                         ),
                     ]),
-                    ft.Row(spacing=6, controls=[
-                        ft.Text(f"{c.points}pts", size=theme.CAPTION_SIZE,
+                    ft.Row(rtl=theme.rtl(), spacing=6, controls=[
+                        ft.Text(f"{c.points}pts", rtl=theme.rtl(), size=theme.CAPTION_SIZE,
                                 color=theme.TEXT_SECONDARY),
                         ft.Container(
-                            content=ft.Text(f"#{c.position_finish}", size=theme.CAPTION_SIZE,
+                            rtl=theme.rtl(), content=ft.Text(f"#{c.position_finish}", rtl=theme.rtl(), size=theme.CAPTION_SIZE,
                                             weight=ft.FontWeight.BOLD, color=pos_color),
                             padding=ft.padding.symmetric(horizontal=6, vertical=2),
                             border_radius=6,
@@ -407,7 +407,7 @@ def _build_club_history_tab(conn, gs) -> ft.Container:
                     ]),
                 ],
             ),
-            padding=ft.padding.symmetric(horizontal=10, vertical=6),
+            padding=ft.padding.symmetric(horizontal=10, vertical=12),
             border_radius=8,
             bgcolor=theme.CARD_GLASS_STRONG if is_champ else theme.CARD_GLASS,
             border=ft.border.all(1, theme.GOLD_BORDER_STRONG if is_champ else theme.GOLD_BORDER),
@@ -415,8 +415,8 @@ def _build_club_history_tab(conn, gs) -> ft.Container:
         ))
 
     return ft.Container(
-        content=ft.ListView(
-            spacing=0,
+        rtl=theme.rtl(), content=ft.ListView(
+            rtl=theme.rtl(), spacing=0,
             controls=[summary, *season_rows],
             expand=True,
         ),
@@ -428,11 +428,11 @@ def _build_club_history_tab(conn, gs) -> ft.Container:
 def _stat_chip(emoji: str, label: str, value: str) -> ft.Container:
     """Small stat chip for the summary section."""
     return ft.Container(
-        content=ft.Column(spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                           controls=[
-            ft.Text(f"{emoji} {value}", size=theme.CAPTION_SIZE,
+            ft.Text(f"{emoji} {value}", rtl=theme.rtl(), size=theme.CAPTION_SIZE,
                     weight=ft.FontWeight.BOLD, color=theme.TEXT_PRIMARY),
-            ft.Text(label, size=theme.TINY_SIZE, color=theme.TEXT_MUTED),
+            ft.Text(label, rtl=theme.rtl(), size=theme.TINY_SIZE, color=theme.TEXT_MUTED),
         ]),
         padding=ft.padding.symmetric(horizontal=8, vertical=4),
         margin=ft.margin.only(right=4, bottom=2),

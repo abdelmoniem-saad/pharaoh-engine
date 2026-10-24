@@ -82,12 +82,12 @@ def show_notification(page: ft.Page, message: str,
     accent = _NOTIFY_COLORS.get(category, ft.Colors.GREY_400)
 
     card = ft.Container(
-        content=ft.Row(
-            spacing=10, tight=True,
+        rtl=theme.rtl(), content=ft.Row(
+            rtl=theme.rtl(), spacing=10, tight=True,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Icon(icon, size=18, color=accent),
-                ft.Text(message, size=12, color="#EAEAEA",
+                ft.Icon(icon, rtl=theme.rtl(), size=18, color=accent),
+                ft.Text(message, rtl=theme.rtl(), size=12, color="#EAEAEA",
                         max_lines=2, overflow=ft.TextOverflow.ELLIPSIS,
                         expand=True),
             ],
@@ -95,10 +95,7 @@ def show_notification(page: ft.Page, message: str,
         padding=ft.padding.symmetric(horizontal=14, vertical=10),
         border_radius=10,
         bgcolor=theme.BG_SURFACE,
-        border=ft.border.only(left=ft.BorderSide(3, accent),
-                              top=ft.BorderSide(1, ft.Colors.with_opacity(0.15, theme.GOLD)),
-                              right=ft.BorderSide(1, ft.Colors.with_opacity(0.15, theme.GOLD)),
-                              bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.15, theme.GOLD))),
+        border=theme.leading_border(accent, outline=True),
         shadow=ft.BoxShadow(spread_radius=0, blur_radius=12,
                             color=ft.Colors.with_opacity(0.3, ft.Colors.BLACK)),
         width=330,
@@ -144,12 +141,12 @@ def show_breaking_news(page: ft.Page, headline: str,
     accent = _NOTIFY_COLORS.get(category, theme.ACCENT)
 
     banner = ft.Container(
-        content=ft.Column(
-            spacing=2,
+        rtl=theme.rtl(), content=ft.Column(
+            rtl=theme.rtl(), spacing=2,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 ft.Container(
-                    content=ft.Text("⚡ BREAKING NEWS", size=9,
+                    rtl=theme.rtl(), content=ft.Text("⚡ BREAKING NEWS", rtl=theme.rtl(), size=9,
                                     weight=ft.FontWeight.BOLD,
                                     color=ft.Colors.BLACK,
                                     text_align=ft.TextAlign.CENTER),
@@ -157,10 +154,10 @@ def show_breaking_news(page: ft.Page, headline: str,
                     padding=ft.padding.symmetric(horizontal=10, vertical=2),
                     border_radius=4,
                 ),
-                ft.Text(headline, size=13, weight=ft.FontWeight.BOLD,
+                ft.Text(headline, rtl=theme.rtl(), size=13, weight=ft.FontWeight.BOLD,
                         color="#EAEAEA", text_align=ft.TextAlign.CENTER,
                         max_lines=2),
-                *([ ft.Text(body, size=11, color="#9E9E9E",
+                *([ ft.Text(body, rtl=theme.rtl(), size=11, color="#9E9E9E",
                             text_align=ft.TextAlign.CENTER, max_lines=2) ]
                   if body else []),
             ],
@@ -215,7 +212,7 @@ def show_snackbar(page: ft.Page, message: str,
     page.overlay[:] = [ctrl for ctrl in page.overlay if not isinstance(ctrl, ft.SnackBar)]
 
     sb = ft.SnackBar(
-        content=ft.Text(message, color=color, size=14),
+        rtl=theme.rtl(), content=ft.Text(message, rtl=theme.rtl(), color=color, size=14),
         bgcolor=bgcolor,
         duration=2500,
     )
@@ -291,10 +288,10 @@ def show_tutorial_overlay(page: ft.Page) -> None:
 
     current_step = [0]
 
-    title_text = ft.Text(steps[0]["title"], size=22, weight=ft.FontWeight.BOLD, color=theme.GOLD, text_align=ft.TextAlign.CENTER)
-    desc_text = ft.Text(steps[0]["desc"], size=16, color="#EAEAEA", text_align=ft.TextAlign.CENTER)
-    icon_ctrl = ft.Icon(steps[0]["icon"], size=64, color=theme.GOLD)
-    step_indicator = ft.Text(f"Step 1 of {len(steps)}", size=12, color="#9E9E9E")
+    title_text = ft.Text(steps[0]["title"], rtl=theme.rtl(), size=22, weight=ft.FontWeight.BOLD, color=theme.GOLD, text_align=ft.TextAlign.CENTER)
+    desc_text = ft.Text(steps[0]["desc"], rtl=theme.rtl(), size=16, color="#EAEAEA", text_align=ft.TextAlign.CENTER)
+    icon_ctrl = ft.Icon(steps[0]["icon"], rtl=theme.rtl(), size=64, color=theme.GOLD)
+    step_indicator = ft.Text(f"Step 1 of {len(steps)}", rtl=theme.rtl(), size=12, color="#9E9E9E")
 
     def _next_step(e):
         current_step[0] += 1
@@ -316,14 +313,14 @@ def show_tutorial_overlay(page: ft.Page) -> None:
             page.overlay.remove(overlay_container)
             page.update()
 
-    btn = ft.ElevatedButton("Next", on_click=_next_step, style=ft.ButtonStyle(
+    btn = ft.ElevatedButton("Next", rtl=theme.rtl(), on_click=_next_step, style=ft.ButtonStyle(
         bgcolor={"": theme.GOLD}, color={"": theme.BG_DARK}, padding=16
     ), width=200)
 
     card = ft.Container(
-        content=ft.Column(
-            [icon_ctrl, title_text, desc_text, ft.Container(height=10), btn, step_indicator],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        rtl=theme.rtl(), content=ft.Column(
+            [icon_ctrl, title_text, desc_text, ft.Container(rtl=theme.rtl(), height=10), btn, step_indicator],
+            rtl=theme.rtl(), horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             alignment=ft.MainAxisAlignment.CENTER,
             spacing=15,
         ),
@@ -337,7 +334,7 @@ def show_tutorial_overlay(page: ft.Page) -> None:
     )
 
     overlay_container = ft.Container(
-        content=card,
+        rtl=theme.rtl(), content=card,
         expand=True,
         bgcolor=ft.Colors.with_opacity(0.8, "#000000"),
         alignment=ft.Alignment(0, 0),
@@ -364,25 +361,25 @@ def build_error_screen(page: ft.Page, route: str = "?") -> ft.Column:
         navigate(page, "/" if app_state.game_state is None else "/match_day")
 
     return ft.Column(
-        expand=True,
+        rtl=theme.rtl(), expand=True,
         alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
-            ft.Icon(ft.Icons.ERROR_OUTLINE, size=64, color="#EF5350"),
-            ft.Container(height=12),
-            ft.Text("Something went wrong", size=20,
+            ft.Icon(ft.Icons.ERROR_OUTLINE, rtl=theme.rtl(), size=64, color="#EF5350"),
+            ft.Container(rtl=theme.rtl(), height=12),
+            ft.Text("Something went wrong", rtl=theme.rtl(), size=20,
                     weight=ft.FontWeight.BOLD, color="#EAEAEA"),
-            ft.Container(height=6),
+            ft.Container(rtl=theme.rtl(), height=6),
             ft.Text(
                 "This section hit an unexpected error.\n"
                 "Your save is safe — you can retry or continue playing.",
-                size=13, color="#9E9E9E", text_align=ft.TextAlign.CENTER,
+                rtl=theme.rtl(), size=13, color="#9E9E9E", text_align=ft.TextAlign.CENTER,
             ),
-            ft.Container(height=18),
-            ft.ElevatedButton("🔄 Try Again", width=220, height=44,
+            ft.Container(rtl=theme.rtl(), height=18),
+            ft.ElevatedButton("🔄 Try Again", rtl=theme.rtl(), width=220, height=44,
                               style=theme.PRIMARY_BTN_STYLE, on_click=retry),
-            ft.Container(height=8),
-            ft.OutlinedButton("🏠 Back", width=220, height=40, on_click=go_home),
+            ft.Container(rtl=theme.rtl(), height=8),
+            ft.OutlinedButton("🏠 Back", rtl=theme.rtl(), width=220, height=40, on_click=go_home),
         ],
     )
 
@@ -396,13 +393,13 @@ def show_busy_overlay(page: ft.Page, text: str = "Simulating…"):
     Returns a zero-arg *hide()* function that removes the overlay.
     """
     overlay = ft.Container(
-        content=ft.Column(
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        rtl=theme.rtl(), content=ft.Column(
+            rtl=theme.rtl(), horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             alignment=ft.MainAxisAlignment.CENTER,
             controls=[
-                ft.ProgressRing(width=46, height=46, color=theme.GOLD),
-                ft.Container(height=14),
-                ft.Text(text, size=14, color="#EAEAEA",
+                ft.ProgressRing(rtl=theme.rtl(), width=46, height=46, color=theme.GOLD),
+                ft.Container(rtl=theme.rtl(), height=14),
+                ft.Text(text, rtl=theme.rtl(), size=14, color="#EAEAEA",
                         text_align=ft.TextAlign.CENTER),
             ],
         ),
@@ -543,9 +540,9 @@ def navigate(page: ft.Page, route: str):
         # The animate_opacity on the container still provides a smooth feel
         # on initial load, but we avoid the "glimpse then disappear" flicker
         # caused by the background-thread timer fighting Flet's animation.
-        frame = ft.Container(width=min(page.width or 390, 800), content=new_content)
+        frame = ft.Container(rtl=theme.rtl(), width=min(page.width or 390, 800), content=new_content)
         app_state._workspace_frame = frame
-        tc.content = ft.Row(expand=True, alignment=ft.MainAxisAlignment.CENTER,
+        tc.content = ft.Row(rtl=theme.rtl(), expand=True, alignment=ft.MainAxisAlignment.CENTER,
                             vertical_alignment=ft.CrossAxisAlignment.STRETCH, controls=[frame])
         tc.opacity = 1
         page.update()
@@ -601,7 +598,7 @@ def main(page: ft.Page):
 
     # ── Transition container — wraps every screen for smooth fades ───────
     transition_container = ft.Container(
-        expand=True,
+        rtl=theme.rtl(), expand=True,
         opacity=1,
         animate_opacity=ft.Animation(200, ft.AnimationCurve.EASE_IN_OUT),
     )
@@ -620,13 +617,13 @@ def main(page: ft.Page):
     # underneath.  We disable hit-testing on the overlay container itself
     # so clicks pass through to buttons, lists, etc. in the game screens.
     notification_col = ft.Column(
-        spacing=6,
+        rtl=theme.rtl(), spacing=6,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
     )
     app_state._notification_column = notification_col
 
     notification_overlay = ft.Container(
-        content=notification_col,
+        rtl=theme.rtl(), content=notification_col,
         alignment=ft.Alignment(0, -1),
     )
 
@@ -635,10 +632,10 @@ def main(page: ft.Page):
     # that ignores pointer events, letting clicks fall through to the
     # transition_container below.
     root = ft.Stack(
-        controls=[
+        rtl=theme.rtl(), controls=[
             transition_container,
             ft.TransparentPointer(
-                content=notification_overlay,
+                rtl=theme.rtl(), content=notification_overlay,
                 top=10,
                 left=0,
                 right=0,
@@ -648,7 +645,7 @@ def main(page: ft.Page):
     )
 
     # Wrap root in SafeArea to handle mobile intrusions (notches, home indicators)
-    page.controls.append(ft.SafeArea(content=root, expand=True))
+    page.controls.append(ft.SafeArea(rtl=theme.rtl(), content=root, expand=True))
     page.update()
 
     # App preferences work before a career exists and never create a save.

@@ -40,21 +40,21 @@ def player_card(player: Player) -> ft.ListTile:
         subtitle_parts.append(f"🅰️{player.season_stats.assists}")
 
     return ft.ListTile(
-        leading=ft.Text(player.position.value, size=12, color=theme.GOLD),
+        rtl=theme.rtl(), leading=ft.Text(player.position.value, rtl=theme.rtl(), size=12, color=theme.GOLD),
         title=ft.Text(
             f"{player.name} {badge_text}".strip(),
-            size=13, weight=ft.FontWeight.W_500,
+            rtl=theme.rtl(), size=13, weight=ft.FontWeight.W_500,
         ),
         subtitle=ft.Text(
             " | ".join(subtitle_parts),
-            size=11, color=ft.Colors.GREY_400,
+            rtl=theme.rtl(), size=11, color=ft.Colors.GREY_400,
         ),
         trailing=ft.Row(
-            spacing=12,
+            rtl=theme.rtl(), spacing=12,
             tight=True,
             controls=[
-                ft.Text(str(ovr), size=14, weight=ft.FontWeight.BOLD, color=ovr_color),
-                ft.Text(f"{player.fitness}%", size=12, color=fit_color),
+                ft.Text(str(ovr), rtl=theme.rtl(), size=14, weight=ft.FontWeight.BOLD, color=ovr_color),
+                ft.Text(f"{player.fitness}%", rtl=theme.rtl(), size=12, color=fit_color),
             ],
         ),
     )

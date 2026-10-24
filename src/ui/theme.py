@@ -7,6 +7,7 @@ Portrait-mode optimized for 360px–430px phone widths.
 from __future__ import annotations
 
 import flet as ft
+from src.utils.localization import is_rtl as rtl, t
 
 # ── Brand Palette ───────────────────────────────────────────────────────────
 # Deep navy → teal gradient background inspired by Egyptian night sky
@@ -166,7 +167,7 @@ def gradient_bg(
 def screen_container(content: ft.Control, page: ft.Page | None = None) -> ft.Container:
     """Full-screen container with the signature dark gradient background."""
     return ft.Container(
-        content=content,
+        rtl=rtl(), content=content,
         gradient=gradient_bg(),
         expand=True,
         padding=0,
@@ -186,7 +187,7 @@ def glass_card(
     border_radius = CARD_RADIUS if border_radius is None else border_radius
     shadow = None
     return ft.Container(
-        content=content,
+        rtl=rtl(), content=content,
         padding=padding,
         border_radius=border_radius,
         bgcolor=CARD_GLASS_STRONG,
@@ -214,10 +215,10 @@ def header_bar(
     left = []
     # Screen title provides hierarchy; icons are reserved for actions.
     left.append(
-        ft.Column(spacing=6, expand=True, controls=[
-            ft.Text(title, size=TITLE_SIZE + 4, font_family=display_font(), weight=ft.FontWeight.BOLD,
+        ft.Column(rtl=rtl(), spacing=6, expand=True, controls=[
+            ft.Text(title, rtl=rtl(), size=TITLE_SIZE + 4, font_family=display_font(), weight=ft.FontWeight.BOLD,
                     color=TEXT_PRIMARY),
-            *([ ft.Text(subtitle, size=CAPTION_SIZE, color=TEXT_SECONDARY) ]
+            *([ ft.Text(subtitle, rtl=rtl(), size=CAPTION_SIZE, color=TEXT_SECONDARY) ]
               if subtitle else []),
         ])
     )
@@ -233,16 +234,16 @@ def header_bar(
             if app_state.db_conn:
                 unread = get_unread_count(app_state.db_conn)
             bell_icon = ft.Stack(
-                controls=[
+                rtl=rtl(), controls=[
                     ft.IconButton(
-                        icon=ft.Icons.NOTIFICATIONS_OUTLINED,
+                        rtl=rtl(), icon=ft.Icons.NOTIFICATIONS_OUTLINED,
                         icon_size=20, icon_color=GOLD,
-                        tooltip="Inbox",
+                        tooltip=t("inbox"),
                         on_click=lambda e: navigate(page, "/inbox"),
                     ),
                     *(
                         [ft.Container(
-                            content=ft.Text(str(min(unread, 99)), size=8,
+                            rtl=rtl(), content=ft.Text(str(min(unread, 99)), rtl=rtl(), size=8,
                                             color=ft.Colors.WHITE,
                                             weight=ft.FontWeight.BOLD,
                                             text_align=ft.TextAlign.CENTER),
@@ -265,18 +266,18 @@ def header_bar(
         def go_back(e):
             navigate(page, back_route)
         right.append(ft.IconButton(
-            icon=ft.Icons.ARROW_BACK, icon_size=20,
-            icon_color=TEXT_SECONDARY, tooltip="Back",
+            rtl=rtl(), icon=ft.Icons.ARROW_BACK, icon_size=20,
+            icon_color=TEXT_SECONDARY, tooltip=t("back"),
             on_click=go_back,
         ))
 
     return ft.Container(
-        content=ft.Row(
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        rtl=rtl(), content=ft.Row(
+            rtl=rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Row(spacing=10, expand=True, controls=left),
-                ft.Row(spacing=0, controls=right) if right else ft.Container(),
+                ft.Row(rtl=rtl(), spacing=10, expand=True, controls=left),
+                ft.Row(rtl=rtl(), spacing=0, controls=right) if right else ft.Container(rtl=rtl()),
             ],
         ),
         padding=ft.padding.only(left=0, right=0, top=12, bottom=16),
@@ -287,7 +288,7 @@ def header_bar(
 def golden_divider() -> ft.Container:
     """A subtle golden horizontal rule."""
     return ft.Container(
-        height=1,
+        rtl=rtl(), height=1,
         bgcolor=GOLD_BORDER,
         margin=ft.margin.symmetric(vertical=4),
     )
@@ -374,8 +375,41 @@ def apply_to_page(page: ft.Page) -> None:
     page.fonts = {"BarlowDisplay": "fonts/BarlowCondensed-Bold.ttf",
                   "NotoArabic": "fonts/NotoSansArabic.ttf"}
     page.theme = ft.Theme(color_scheme_seed=ACCENT,
-                          font_family="NotoArabic" if is_rtl() else "Roboto")
+                          font_family="NotoArabic" if is_rtl() else "Roboto",
+        color_scheme=ft.ColorScheme(primary=ACCENT, on_primary=BG_DARK,
+            surface=BG_MID, on_surface=TEXT_PRIMARY, on_surface_variant=TEXT_SECONDARY,
+            outline=GOLD_BORDER_STRONG, outline_variant=GOLD_BORDER),
+        dialog_theme=ft.DialogTheme(bgcolor=CARD_GLASS_STRONG, elevation=0,
+            shape=ft.RoundedRectangleBorder(radius=18),
+            title_text_style=ft.TextStyle(size=24, font_family=display_font(), color=TEXT_PRIMARY),
+            content_text_style=ft.TextStyle(size=14, color=TEXT_SECONDARY)),
+        outlined_button_theme=ft.OutlinedButtonTheme(style=ft.ButtonStyle(
+            color=TEXT_PRIMARY, side=ft.BorderSide(1, GOLD_BORDER_STRONG),
+            shape=ft.RoundedRectangleBorder(radius=10))),
+    )
 
 
 def theme_label(arabic: bool = False) -> str:
     return THEME_NAMES[_active][1 if arabic else 0]
+
+
+def tab_style(selected: bool) -> ft.ButtonStyle:
+    """One selection treatment for navigation within a screen."""
+    return ft.ButtonStyle(color=TEXT_PRIMARY if selected else TEXT_MUTED,
+        bgcolor=BG_SURFACE if selected else ft.Colors.TRANSPARENT,
+        shape=ft.RoundedRectangleBorder(radius=8),
+        padding=ft.padding.symmetric(horizontal=14, vertical=12))
+
+
+def scoreline(home, away) -> str:
+    """Keep each score adjacent to its club when the fixture row is mirrored."""
+    values = f"{away} : {home}" if rtl() else f"{home} : {away}"
+    # Isolate the numeric pair from surrounding RTL text, including Flutter inheritance.
+    return "\u2066" + values + "\u2069"
+
+
+def leading_border(color, outline=False):
+    edge = ft.BorderSide(3, color)
+    neutral = ft.BorderSide(1, GOLD_BORDER) if outline else ft.BorderSide(0, ft.Colors.TRANSPARENT)
+    return ft.border.only(left=neutral if rtl() else edge, right=edge if rtl() else neutral,
+                          top=neutral, bottom=neutral)

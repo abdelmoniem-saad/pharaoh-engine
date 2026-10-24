@@ -50,20 +50,20 @@ def build_nav_bar(page: ft.Page, selected_index: int = 0) -> ft.NavigationBar:
     # Inbox destination — add badge if unread messages
     if unread_count > 0:
         inbox_dest = ft.NavigationBarDestination(
-            icon=ft.Icons.MAIL_OUTLINED,
+            rtl=theme.rtl(), icon=ft.Icons.MAIL_OUTLINED,
             selected_icon=ft.Icons.MAIL,
             label=t("inbox"),
             badge=ft.Badge(label=str(unread_count)),
         )
     else:
         inbox_dest = ft.NavigationBarDestination(
-            icon=ft.Icons.MAIL_OUTLINED,
+            rtl=theme.rtl(), icon=ft.Icons.MAIL_OUTLINED,
             selected_icon=ft.Icons.MAIL,
             label=t("inbox"),
         )
 
     return ft.NavigationBar(
-        selected_index=selected_index,
+        rtl=theme.rtl(), selected_index=selected_index,
         on_change=on_nav,
         bgcolor=theme.BG_DARK,
         height=76,
@@ -71,16 +71,16 @@ def build_nav_bar(page: ft.Page, selected_index: int = 0) -> ft.NavigationBar:
         shadow_color=ft.Colors.with_opacity(0.3, ft.Colors.BLACK),
         elevation=0,
         destinations=[
-            ft.NavigationBarDestination(icon=ft.Icons.PEOPLE_OUTLINED,
+            ft.NavigationBarDestination(rtl=theme.rtl(), icon=ft.Icons.PEOPLE_OUTLINED,
                                         selected_icon=ft.Icons.PEOPLE,
                                         label=t("squad")),
-            ft.NavigationBarDestination(icon=ft.Icons.TUNE_OUTLINED,
+            ft.NavigationBarDestination(rtl=theme.rtl(), icon=ft.Icons.TUNE_OUTLINED,
                                         selected_icon=ft.Icons.TUNE,
                                         label=t("tactics")),
-            ft.NavigationBarDestination(icon=ft.Icons.SPORTS_SOCCER_OUTLINED,
+            ft.NavigationBarDestination(rtl=theme.rtl(), icon=ft.Icons.SPORTS_SOCCER_OUTLINED,
                                         selected_icon=ft.Icons.SPORTS_SOCCER,
                                         label=t("match")),
-            ft.NavigationBarDestination(icon=ft.Icons.LEADERBOARD_OUTLINED,
+            ft.NavigationBarDestination(rtl=theme.rtl(), icon=ft.Icons.LEADERBOARD_OUTLINED,
                                         selected_icon=ft.Icons.LEADERBOARD,
                                         label=t("competition")),
             inbox_dest,

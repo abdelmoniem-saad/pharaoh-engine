@@ -46,44 +46,44 @@ def build_main_menu(page: ft.Page) -> ft.Column:
     has_career = any(peek_save_info(slot) for slot in SAVE_SLOTS)
     pitch_inner_width = min(page.width or 390, 400) - 84
     # Original pitch illustration: no third-party identity assets.
-    pitch = ft.Container(height=158, padding=18, border_radius=16,
+    pitch = ft.Container(rtl=theme.rtl(), height=158, padding=18, border_radius=16,
         bgcolor=theme.BG_SURFACE,
-        content=ft.Stack(controls=[
-            ft.Container(left=0, right=0, top=0, bottom=0,
+        content=ft.Stack(rtl=theme.rtl(), controls=[
+            ft.Container(rtl=theme.rtl(), left=0, right=0, top=0, bottom=0,
                          border=ft.border.all(1, theme.GOLD_BORDER_STRONG), border_radius=6),
-            ft.Container(left=0, right=0, top=60, height=1, bgcolor=theme.GOLD_BORDER_STRONG),
-            ft.Container(width=54, height=54, left=(pitch_inner_width - 54) / 2, top=34, border_radius=27,
+            ft.Container(rtl=theme.rtl(), left=0, right=0, top=60, height=1, bgcolor=theme.GOLD_BORDER_STRONG),
+            ft.Container(rtl=theme.rtl(), width=54, height=54, left=(pitch_inner_width - 54) / 2, top=34, border_radius=27,
                          border=ft.border.all(1, theme.GOLD_BORDER_STRONG)),
-            *[ft.Container(left=pitch_inner_width * x - 5, top=y, width=10, height=10, border_radius=5, bgcolor=accent)
+            *[ft.Container(rtl=theme.rtl(), left=pitch_inner_width * x - 5, top=y, width=10, height=10, border_radius=5, bgcolor=accent)
               for x, y in [(.25, 83), (.5, 100), (.75, 83), (.37, 52), (.63, 52), (.5, 20)]],
         ]))
-    return ft.Column(expand=True, scroll=ft.ScrollMode.AUTO,
+    return ft.Column(rtl=theme.rtl(), expand=True, scroll=ft.ScrollMode.AUTO,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
-            ft.Container(width=min(page.width or 390, 800), alignment=ft.Alignment(0, 0),
-                content=ft.Container(width=400, padding=24, content=ft.Column(spacing=28, controls=[
-                ft.Container(height=28),
-                ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
-                    ft.Text("PHARAOH / FOOTBALL", size=11, weight=ft.FontWeight.W_700,
+            ft.Container(rtl=theme.rtl(), width=min(page.width or 390, 800), alignment=ft.Alignment(0, 0),
+                content=ft.Container(rtl=theme.rtl(), width=400, padding=24, content=ft.Column(rtl=theme.rtl(), spacing=28, controls=[
+                ft.Container(rtl=theme.rtl(), height=28),
+                ft.Row(rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
+                    ft.Text("PHARAOH / FOOTBALL", rtl=theme.rtl(), size=11, weight=ft.FontWeight.W_700,
                             color=accent),
-                    ft.IconButton(icon=ft.Icons.SETTINGS_OUTLINED, tooltip=t("settings"),
+                    ft.IconButton(rtl=theme.rtl(), icon=ft.Icons.SETTINGS_OUTLINED, tooltip=t("settings"),
                                   icon_color=theme.TEXT_SECONDARY, on_click=settings_click),
                 ]),
-                ft.Column(spacing=14, controls=[
+                ft.Column(rtl=theme.rtl(), spacing=14, controls=[
                     ft.Text("كل موسم\nحكاية جديدة." if is_rtl() else "Every season.\nA new story.",
-                            size=42 if is_rtl() else 54, font_family=theme.display_font(), weight=ft.FontWeight.W_700, color=theme.TEXT_PRIMARY),
-                    ft.Text(t("egyptian_football_manager"), size=15, color=theme.TEXT_SECONDARY),
+                            rtl=theme.rtl(), size=42 if is_rtl() else 54, font_family=theme.display_font(), weight=ft.FontWeight.W_700, color=theme.TEXT_PRIMARY),
+                    ft.Text(t("egyptian_football_manager"), rtl=theme.rtl(), size=15, color=theme.TEXT_SECONDARY),
                 ]),
                 pitch,
-                ft.Column(spacing=12, horizontal_alignment=ft.CrossAxisAlignment.STRETCH, controls=[
-                    ft.ElevatedButton(t("continue_game") if has_career else t("new_game"), height=54,
+                ft.Column(rtl=theme.rtl(), spacing=12, horizontal_alignment=ft.CrossAxisAlignment.STRETCH, controls=[
+                    ft.ElevatedButton(t("continue_game") if has_career else t("new_game"), rtl=theme.rtl(), height=54,
                         icon=ft.Icons.PLAY_ARROW_ROUNDED, style=theme.PRIMARY_BTN_STYLE,
                         on_click=continue_click if has_career else new_game_click),
-                    ft.OutlinedButton(t("new_game"), height=54, visible=has_career,
+                    ft.OutlinedButton(t("new_game"), rtl=theme.rtl(), height=54, visible=has_career,
                         icon=ft.Icons.ADD, style=theme.SECONDARY_BTN_STYLE, on_click=new_game_click),
                 ]),
-                ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
-                    ft.Text(t("app_title"), size=12, color=theme.TEXT_MUTED),
-                    ft.Text(f"v{APP_VERSION}", size=11, color=theme.TEXT_MUTED),
+                ft.Row(rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
+                    ft.Text(t("app_title"), rtl=theme.rtl(), size=12, color=theme.TEXT_MUTED),
+                    ft.Text(f"v{APP_VERSION}", rtl=theme.rtl(), size=11, color=theme.TEXT_MUTED),
                 ]),
             ]))),
         ])
@@ -94,7 +94,7 @@ def build_main_menu(page: ft.Page) -> ft.Column:
 def _slot_badge(i: int) -> ft.Container:
     """Small golden circular badge showing the slot number."""
     return ft.Container(
-        content=ft.Text(str(i), size=11, weight=ft.FontWeight.BOLD,
+        rtl=theme.rtl(), content=ft.Text(str(i), rtl=theme.rtl(), size=11, weight=ft.FontWeight.BOLD,
                         color=theme.BG_DARK, text_align=ft.TextAlign.CENTER),
         width=24, height=24, border_radius=12, bgcolor=theme.GOLD,
         alignment=ft.Alignment(0, 0),
@@ -111,12 +111,12 @@ def _confirm_overwrite_then(page: ft.Page, slot: str, info: dict, on_yes):
         on_yes()
 
     page.show_dialog(ft.AlertDialog(
-        title=ft.Text("⚠️ " + t("overwrite_confirm_title")),
+        rtl=theme.rtl(), title=ft.Text("⚠️ " + t("overwrite_confirm_title"), rtl=theme.rtl()),
         content=ft.Text(t_format("overwrite_confirm_msg",
-                                manager=manager, club=club)),
+                                manager=manager, club=club), rtl=theme.rtl()),
         actions=[
-            ft.TextButton(t("cancel"), on_click=lambda e: page.pop_dialog()),
-            ft.ElevatedButton(t("confirm"), on_click=_yes),
+            ft.TextButton(t("cancel"), rtl=theme.rtl(), on_click=lambda e: page.pop_dialog()),
+            ft.ElevatedButton(t("confirm"), rtl=theme.rtl(), on_click=_yes),
         ],
     ))
 
@@ -130,7 +130,7 @@ def _show_new_game_slot_dialog(page: ft.Page):
 
         if info is None:
             title_line = t_format("slot_label", n=i)
-            sub_rows = [ft.Text(t("empty_slot"), size=11,
+            sub_rows = [ft.Text(t("empty_slot"), rtl=theme.rtl(), size=11,
                                 color=theme.TEXT_SECONDARY)]
 
             def on_pick(e, s=slot):
@@ -142,17 +142,17 @@ def _show_new_game_slot_dialog(page: ft.Page):
             mgr = info.get("manager_name") or "Manager"
             title_line = club_nm
             sub_rows = [
-                ft.Row(spacing=4, tight=True, controls=[
-                    ft.Text("👤", size=10),
+                ft.Row(rtl=theme.rtl(), spacing=4, tight=True, controls=[
+                    ft.Text("👤", rtl=theme.rtl(), size=10),
                     ft.Text(f"{t('manager_label')}: {mgr}",
-                            size=11, color=theme.TEXT_SECONDARY, expand=True,
+                            rtl=theme.rtl(), size=11, color=theme.TEXT_SECONDARY, expand=True,
                             max_lines=1,
                             overflow=ft.TextOverflow.ELLIPSIS),
                 ]),
-                ft.Row(spacing=4, tight=True, controls=[
-                    ft.Text("📅", size=10),
+                ft.Row(rtl=theme.rtl(), spacing=4, tight=True, controls=[
+                    ft.Text("📅", rtl=theme.rtl(), size=10),
                     ft.Text(f"{t('season_short')} {year}/{year + 1}",
-                            size=11, color=theme.TEXT_SECONDARY),
+                            rtl=theme.rtl(), size=11, color=theme.TEXT_SECONDARY),
                 ]),
             ]
 
@@ -163,25 +163,25 @@ def _show_new_game_slot_dialog(page: ft.Page):
                     lambda s=s: _show_manager_name_dialog(page, s))
 
         tiles.append(ft.ListTile(
-            leading=_slot_badge(i),
+            rtl=theme.rtl(), leading=_slot_badge(i),
             title=ft.Text(title_line,
-                          weight=ft.FontWeight.W_600, color=theme.GOLD,
+                          rtl=theme.rtl(), weight=ft.FontWeight.W_600, color=theme.GOLD,
                           max_lines=1,
                           overflow=ft.TextOverflow.ELLIPSIS),
-            subtitle=ft.Column(spacing=1, controls=sub_rows),
+            subtitle=ft.Column(rtl=theme.rtl(), spacing=1, controls=sub_rows),
             on_click=on_pick,
         ))
 
     page.show_dialog(ft.AlertDialog(
-        bgcolor=theme.BG_MID,
-        title=ft.Text("🆕 " + t("save_slots"), color=theme.GOLD,
+        rtl=theme.rtl(), bgcolor=theme.BG_MID,
+        title=ft.Text("🆕 " + t("save_slots"), rtl=theme.rtl(), color=theme.GOLD,
                       weight=ft.FontWeight.BOLD),
         content=ft.Container(
-            content=ft.Column(controls=tiles, spacing=4, tight=True),
+            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), controls=tiles, spacing=4, tight=True),
             width=340,
         ),
         actions=[ft.TextButton(t("cancel"),
-                               on_click=lambda e: page.pop_dialog())],
+                               rtl=theme.rtl(), on_click=lambda e: page.pop_dialog())],
     ))
 
 
@@ -210,30 +210,30 @@ def _show_load_game_dialog(page: ft.Page):
                 _confirm_delete_slot(page, s)
 
             tiles.append(ft.ListTile(
-                leading=_slot_badge(i),
-                title=ft.Text(club_nm, size=14,
+                rtl=theme.rtl(), leading=_slot_badge(i),
+                title=ft.Text(club_nm, rtl=theme.rtl(), size=14,
                               weight=ft.FontWeight.W_600,
                               max_lines=1,
                               overflow=ft.TextOverflow.ELLIPSIS),
                 subtitle=ft.Column(
-                    spacing=1,
+                    rtl=theme.rtl(), spacing=1,
                     controls=[
-                        ft.Row(spacing=4, tight=True, controls=[
-                            ft.Text("👤", size=10),
+                        ft.Row(rtl=theme.rtl(), spacing=4, tight=True, controls=[
+                            ft.Text("👤", rtl=theme.rtl(), size=10),
                             ft.Text(f"{t('manager_label')}: {mgr}",
-                                    size=11, color=theme.TEXT_MUTED, expand=True,
+                                    rtl=theme.rtl(), size=11, color=theme.TEXT_MUTED, expand=True,
                                     max_lines=1,
                                     overflow=ft.TextOverflow.ELLIPSIS),
                         ]),
-                        ft.Row(spacing=4, tight=True, controls=[
-                            ft.Text("📅", size=10),
+                        ft.Row(rtl=theme.rtl(), spacing=4, tight=True, controls=[
+                            ft.Text("📅", rtl=theme.rtl(), size=10),
                             ft.Text(f"{t('season_short')} {year}/{year + 1}",
-                                    size=11, color=theme.TEXT_MUTED),
+                                    rtl=theme.rtl(), size=11, color=theme.TEXT_MUTED),
                         ]),
                     ],
                 ),
                 trailing=ft.IconButton(ft.Icons.DELETE_OUTLINE,
-                                       icon_size=16,
+                                       rtl=theme.rtl(), icon_size=16,
                                        icon_color="#EF5350",
                                        tooltip=t("delete_save"),
                                        on_click=_ask_delete),
@@ -241,30 +241,30 @@ def _show_load_game_dialog(page: ft.Page):
             ))
         else:
             tiles.append(ft.ListTile(
-                disabled=True,
+                rtl=theme.rtl(), disabled=True,
                 leading=_slot_badge(i),
-                title=ft.Text(t_format("slot_label", n=i), color=theme.TEXT_MUTED),
-                subtitle=ft.Text(t("empty_slot"), size=12, color=theme.TEXT_MUTED),
+                title=ft.Text(t_format("slot_label", n=i), rtl=theme.rtl(), color=theme.TEXT_MUTED),
+                subtitle=ft.Text(t("empty_slot"), rtl=theme.rtl(), size=12, color=theme.TEXT_MUTED),
             ))
 
     if not any_save:
         tiles.insert(0, ft.Container(
-            content=ft.Text(t("no_saves_yet"), size=13,
+            rtl=theme.rtl(), content=ft.Text(t("no_saves_yet"), rtl=theme.rtl(), size=13,
                             color=theme.TEXT_MUTED, text_align=ft.TextAlign.CENTER),
             padding=10,
         ))
 
     page.show_dialog(ft.AlertDialog(
-        bgcolor=theme.BG_MID,
-        title=ft.Text("📂 " + t("load_game"), color=theme.GOLD,
+        rtl=theme.rtl(), bgcolor=theme.BG_MID,
+        title=ft.Text("📂 " + t("load_game"), rtl=theme.rtl(), color=theme.GOLD,
                       weight=ft.FontWeight.BOLD),
         content=ft.Container(
-            content=ft.Column(controls=tiles, spacing=4,
+            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), controls=tiles, spacing=4,
                               scroll=ft.ScrollMode.AUTO),
             width=350,
         ),
         actions=[ft.TextButton(t("cancel"),
-                               on_click=lambda e: page.pop_dialog())],
+                               rtl=theme.rtl(), on_click=lambda e: page.pop_dialog())],
     ))
 
 
@@ -278,12 +278,12 @@ def _confirm_delete_slot(page: ft.Page, slot: str) -> None:
         _show_load_game_dialog(page)  # refresh list
 
     page.show_dialog(ft.AlertDialog(
-        title=ft.Text("🗑️ " + t("delete_save") + "?"),
-        content=ft.Text(t("delete_save_confirm")),
+        rtl=theme.rtl(), title=ft.Text("🗑️ " + t("delete_save") + "?", rtl=theme.rtl()),
+        content=ft.Text(t("delete_save_confirm"), rtl=theme.rtl()),
         actions=[
             ft.TextButton(t("cancel"),
-                          on_click=lambda e: page.pop_dialog()),
-            ft.ElevatedButton(t("delete"), on_click=do_delete),
+                          rtl=theme.rtl(), on_click=lambda e: page.pop_dialog()),
+            ft.ElevatedButton(t("delete"), rtl=theme.rtl(), on_click=do_delete),
         ],
     ))
 
@@ -292,7 +292,7 @@ def _show_manager_name_dialog(page: ft.Page, save_name: str = "slot1"):
     """Show a dialog to enter the manager name before club selection."""
 
     name_field = ft.TextField(
-        label=t("manager_name"),
+        border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label=t("manager_name"),
         value="",
         hint_text=t("enter_your_name"),
         width=280,
@@ -308,13 +308,13 @@ def _show_manager_name_dialog(page: ft.Page, save_name: str = "slot1"):
         _show_club_selection(page, manager_name, save_name)
 
     dlg = ft.AlertDialog(
-        title=ft.Text("👤 " + t("your_identity"), color=theme.GOLD),
+        rtl=theme.rtl(), title=ft.Text("👤 " + t("your_identity"), rtl=theme.rtl(), color=theme.GOLD),
         content=ft.Container(
-            content=ft.Column(
-                controls=[
+            rtl=theme.rtl(), content=ft.Column(
+                rtl=theme.rtl(), controls=[
                     ft.Text(t("what_should_board_call_you"),
-                            size=13, color=theme.TEXT_SECONDARY),
-                    ft.Container(height=10),
+                            rtl=theme.rtl(), size=13, color=theme.TEXT_SECONDARY),
+                    ft.Container(rtl=theme.rtl(), height=10),
                     name_field,
                 ],
                 spacing=5,
@@ -324,8 +324,8 @@ def _show_manager_name_dialog(page: ft.Page, save_name: str = "slot1"):
             height=120,
         ),
         actions=[
-            ft.TextButton(t("cancel"), on_click=lambda e: page.pop_dialog()),
-            ft.ElevatedButton(t("confirm") + " ➡️", on_click=on_confirm,
+            ft.TextButton(t("cancel"), rtl=theme.rtl(), on_click=lambda e: page.pop_dialog()),
+            ft.ElevatedButton(t("confirm") + " ➡️", rtl=theme.rtl(), on_click=on_confirm,
                               style=ft.ButtonStyle(bgcolor=theme.ACCENT_DARK,
                                                     color=ft.Colors.WHITE,
                                                     shape=ft.RoundedRectangleBorder(radius=10))),
@@ -361,13 +361,13 @@ def _show_club_selection(page: ft.Page, manager_name: str,
     def done(error):
         if error is not None or "conn" not in holder:
             page.show_dialog(ft.AlertDialog(
-                title=ft.Text("⚠️ Could not create a new game"),
+                rtl=theme.rtl(), title=ft.Text("⚠️ Could not create a new game", rtl=theme.rtl()),
                 content=ft.Text(
                     "Something went wrong while setting up your career.\n"
                     "Your previous save (if any) was backed up automatically."
-                ),
+                , rtl=theme.rtl()),
                 actions=[ft.TextButton("OK",
-                                       on_click=lambda e: page.pop_dialog())],
+                                       rtl=theme.rtl(), on_click=lambda e: page.pop_dialog())],
             ))
             return
         _open_club_picker(page, holder["conn"], holder["game_state"])
@@ -394,34 +394,34 @@ def _open_club_picker(page: ft.Page, conn, game_state):
         # Color indicator dot
         club_buttons.append(
             ft.ListTile(
-                leading=ft.Container(
-                    width=32, height=32,
+                rtl=theme.rtl(), leading=ft.Container(
+                    rtl=theme.rtl(), width=32, height=32,
                     bgcolor=club.primary_color,
                     border_radius=16,
-                    content=ft.Icon(ft.Icons.SPORTS_SOCCER, size=16, color=ft.Colors.WHITE),
+                    content=ft.Icon(ft.Icons.SPORTS_SOCCER, rtl=theme.rtl(), size=16, color=ft.Colors.WHITE),
                 ),
-                title=ft.Text(display_name(club), weight=ft.FontWeight.W_500),
+                title=ft.Text(display_name(club), rtl=theme.rtl(), weight=ft.FontWeight.W_500),
                 subtitle=ft.Text(
                     f"{club.city} — ⭐ {club.reputation} — 🎯 {expectation_display(club.season_expectation)}",
-                    size=12, color=ft.Colors.GREY_400,
+                    rtl=theme.rtl(), size=12, color=ft.Colors.GREY_400,
                 ),
                 on_click=make_handler(),
             )
         )
 
     dlg = ft.AlertDialog(
-        title=ft.Text("🏟️ " + t("choose_your_club"),
-                       color=theme.GOLD, weight=ft.FontWeight.BOLD),
+        rtl=theme.rtl(), title=ft.Text("🏟️ " + t("choose_your_club"),
+                       rtl=theme.rtl(), color=theme.GOLD, weight=ft.FontWeight.BOLD),
         content=ft.Container(
-            content=ft.ListView(
-                controls=club_buttons,
+            rtl=theme.rtl(), content=ft.ListView(
+                rtl=theme.rtl(), controls=club_buttons,
                 spacing=2,
             ),
             width=300,
             height=450,
         ),
         actions=[
-            ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),
+            ft.TextButton("Cancel", rtl=theme.rtl(), on_click=lambda e: page.pop_dialog()),
         ],
     )
     page.show_dialog(dlg)
@@ -518,22 +518,22 @@ def _load_slot(page: ft.Page, save_name: str):
         else:
             page.show_dialog(
                 ft.AlertDialog(
-                    title=ft.Text(t("no_save_found")),
-                    content=ft.Text(t("no_save_found_msg")),
-                    actions=[ft.TextButton("OK", on_click=lambda e: page.pop_dialog())],
+                    rtl=theme.rtl(), title=ft.Text(t("no_save_found"), rtl=theme.rtl()),
+                    content=ft.Text(t("no_save_found_msg"), rtl=theme.rtl()),
+                    actions=[ft.TextButton("OK", rtl=theme.rtl(), on_click=lambda e: page.pop_dialog())],
                 )
             )
     except Exception as e:
         log.exception("Failed to load save '%s'", save_name)
         page.show_dialog(
             ft.AlertDialog(
-                title=ft.Text("⚠️ Couldn't load your save"),
+                rtl=theme.rtl(), title=ft.Text("⚠️ Couldn't load your save", rtl=theme.rtl()),
                 content=ft.Text(
                     f"The save file couldn't be loaded ({e}).\n\n"
                     "It may be corrupted — automatic backup copies are kept "
                     "in the saves/backups folder and can be restored manually."
-                ),
-                actions=[ft.TextButton("OK", on_click=lambda e: page.pop_dialog())],
+                , rtl=theme.rtl()),
+                actions=[ft.TextButton("OK", rtl=theme.rtl(), on_click=lambda e: page.pop_dialog())],
             )
         )
 

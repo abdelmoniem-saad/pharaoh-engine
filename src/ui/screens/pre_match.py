@@ -40,21 +40,22 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = build_nav_bar(page, 2)
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
+        return ft.Column(rtl=theme.rtl(), controls=[ft.Text(t("no_game_loaded"), rtl=theme.rtl())])
 
     conn = app_state.db_conn
     gs = app_state.game_state
     club = queries.get_club(conn, gs.user_club_id)
     if not club:
-        return ft.Column(controls=[ft.Text(t("club_not_found_msg"))])
+        return ft.Column(rtl=theme.rtl(), controls=[ft.Text(t("club_not_found_msg"), rtl=theme.rtl())])
 
     squad = queries.get_players_by_club(conn, club.id)
     fixture = queries.get_user_next_fixture(conn, gs.user_club_id)
     if not fixture:
-        return ft.Column(controls=[ft.Text(t("no_upcoming_match"))])
+        return ft.Column(rtl=theme.rtl(), controls=[ft.Text(t("no_upcoming_match"), rtl=theme.rtl())])
 
     is_home = fixture.home_club_id == gs.user_club_id
     opp_name = display_away_name(fixture) if is_home else display_home_name(fixture)
+    formation_label = "\u2066" + club.formation + "\u2069"
 
     # Count unavailable players
     injured_players = [p for p in squad if p.injury_days_remaining > 0]
@@ -130,19 +131,29 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
         # Pitch background
         pitch_stack.controls.append(
             ft.Container(
-                width=_pw, height=_ph,
+                rtl=theme.rtl(), width=_pw, height=_ph,
                 border_radius=10,
                 gradient=ft.LinearGradient(
-                    colors=["#1B5E20", "#2E7D32", "#1B5E20", "#2E7D32", "#1B5E20"],
+                    colors=["#142E2A", "#183A32"],
                     begin=ft.Alignment(0, -1), end=ft.Alignment(0, 1),
                 ),
-                border=ft.border.all(2, ft.Colors.with_opacity(0.35, ft.Colors.WHITE)),
+                border=ft.border.all(1, "#31564B"),
                 shadow=ft.BoxShadow(
                     spread_radius=0, blur_radius=10,
                     color=ft.Colors.with_opacity(0.12, ft.Colors.GREEN),
                 ),
             )
         )
+
+        # Pitch markings preserve spatial meaning in both interface directions.
+        line = "#31564B"
+        pitch_stack.controls.extend([
+            ft.Container(rtl=False, left=8, top=8, width=_pw-16, height=_ph-16, border=ft.border.all(1,line)),
+            ft.Container(rtl=False, left=8, top=_ph/2, width=_pw-16, height=1, bgcolor=line),
+            ft.Container(rtl=False, left=_pw*.39, top=_ph/2-_pw*.11, width=_pw*.22, height=_pw*.22, border=ft.border.all(1,line), border_radius=100),
+            ft.Container(rtl=False, left=_pw*.3, top=8, width=_pw*.4, height=_ph*.14, border=ft.border.all(1,line)),
+            ft.Container(rtl=False, left=_pw*.3, bottom=8, width=_pw*.4, height=_ph*.14, border=ft.border.all(1,line)),
+        ])
 
         # Place player markers
         positions = get_formation_positions(club.formation)
@@ -197,19 +208,19 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                 return handler
 
             marker = ft.Container(
-                content=ft.Column(
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                rtl=theme.rtl(), content=ft.Column(
+                    rtl=theme.rtl(), horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=0,
                     controls=[
                         ft.Container(
-                            content=ft.Text(str(ovr), size=10, weight=ft.FontWeight.BOLD,
-                                             color=ft.Colors.WHITE),
-                            width=28, height=28, border_radius=14,
-                            bgcolor=ft.Colors.GREEN_700 if fit_ok else ft.Colors.RED_700,
+                            rtl=theme.rtl(), content=ft.Text(str(ovr), rtl=theme.rtl(), size=10, weight=ft.FontWeight.BOLD,
+                                             color="#142E2A"),
+                            width=28, height=30, border_radius=6,
+                            bgcolor="#E3EDE5" if fit_ok else "#E58A80",
                             alignment=ft.Alignment(0, 0),
                             border=border,
                         ),
-                        ft.Text(display_name(p).split()[-1][:12], size=8,
+                        ft.Text(display_name(p).split()[-1][:12], rtl=theme.rtl(), size=10,
                                  color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER),
                     ],
                 ),
@@ -253,20 +264,20 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
 
             bench_col.controls.append(
                 ft.Container(
-                    content=ft.Row(
-                        spacing=6,
+                    rtl=theme.rtl(), content=ft.Row(
+                        rtl=theme.rtl(), spacing=6,
                         controls=[
                             ft.Container(
-                                content=ft.Text(str(ovr), size=10,
+                                rtl=theme.rtl(), content=ft.Text(str(ovr), rtl=theme.rtl(), size=10,
                                                  weight=ft.FontWeight.BOLD,
                                                  color=ft.Colors.WHITE),
                                 width=26, height=26, border_radius=13,
                                 bgcolor=ft.Colors.GREY_700,
                                 alignment=ft.Alignment(0, 0),
                             ),
-                            ft.Text(bench_display, size=11, expand=True),
-                            ft.Text(p.position.value, size=10, color=theme.GOLD),
-                            ft.Text(f"{p.fitness}%", size=10,
+                            ft.Text(bench_display, rtl=theme.rtl(), size=11, expand=True),
+                            ft.Text(p.position.value, rtl=theme.rtl(), size=10, color=theme.GOLD),
+                            ft.Text(f"{p.fitness}%", rtl=theme.rtl(), size=10,
                                      color=ft.Colors.GREEN_400 if p.fitness >= 70 else ft.Colors.RED_400),
                         ],
                     ),
@@ -280,8 +291,8 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
             )
 
     # Mutable containers
-    pitch_stack = ft.Stack(width=_pw, height=_ph)
-    bench_col = ft.Column(spacing=2)
+    pitch_stack = ft.Stack(rtl=theme.rtl(), width=_pw, height=_ph)
+    bench_col = ft.Column(rtl=theme.rtl(), spacing=2)
 
     _rebuild_ui()
 
@@ -320,7 +331,7 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                     app_state._transition_container.content = live_content
                 else:
                     page.controls.clear()
-                    page.controls.append(ft.SafeArea(content=live_content, expand=True))
+                    page.controls.append(ft.SafeArea(rtl=theme.rtl(), content=live_content, expand=True))
                 page.update()
             else:
                 show_snackbar(page, "Could not simulate match!", bgcolor=ft.Colors.RED_800)
@@ -342,19 +353,19 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
     venue = "🏟️ HOME" if is_home else "✈️ AWAY"
 
     return ft.Column(
-        expand=True,
+        rtl=theme.rtl(), expand=True,
         scroll=ft.ScrollMode.AUTO,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
             ft.Container(
-                padding=ft.padding.only(left=12, right=12, top=10, bottom=10),
+                rtl=theme.rtl(), padding=theme.PAGE_PADDING,
                 content=ft.Column(
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=8,
+                    rtl=theme.rtl(), horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    spacing=20,
                     controls=[
                         theme.header_bar(
-                            title="Starting XI",
-                            subtitle=f"vs {opp_name} {venue}  •  {club.formation}",
+                            title=t("starting_xi"),
+                            subtitle=f"{opp_name} · {t('home') if is_home else t('away')} · {formation_label}",
                             icon=ft.Icons.FORMAT_LIST_NUMBERED,
                             page=page,
                             back_route="/match_day",
@@ -362,21 +373,21 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                         # Unavailable warning
                         *(
                             [ft.Container(
-                                content=ft.Column(spacing=2, controls=[
+                                rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=2, controls=[
                                     *(
                                         [ft.Text(
-                                            f"🏥 {len(injured_players)} injured: " +
+                                            f"{t('injured_label')}: {len(injured_players)} · " +
                                             ", ".join(display_name(p) for p in injured_players[:3]) +
                                             ("..." if len(injured_players) > 3 else ""),
-                                            size=10, color=ft.Colors.RED_400,
+                                            rtl=theme.rtl(), size=10, color=ft.Colors.RED_400,
                                         )] if injured_players else []
                                     ),
                                     *(
                                         [ft.Text(
-                                            f"🚫 {len(suspended_players)} suspended: " +
+                                            f"{t('suspended_label')}: {len(suspended_players)} · " +
                                             ", ".join(display_name(p) for p in suspended_players[:3]) +
                                             ("..." if len(suspended_players) > 3 else ""),
-                                            size=10, color=ft.Colors.ORANGE_400,
+                                            rtl=theme.rtl(), size=10, color=ft.Colors.ORANGE_400,
                                         )] if suspended_players else []
                                     ),
                                 ]),
@@ -386,22 +397,22 @@ def build_pre_match_screen(page: ft.Page) -> ft.Column:
                             )] if (injured_players or suspended_players) else []
                         ),
                         ft.Text(t("tap_to_swap"),
-                                 size=10, color=ft.Colors.GREY_600, italic=True),
-                        ft.Divider(height=1),
+                                 rtl=theme.rtl(), size=10, color=ft.Colors.GREY_600, italic=True),
+                        ft.Divider(rtl=theme.rtl(), height=1),
                         # Pitch
                         pitch_stack,
-                        ft.Divider(height=1),
+                        ft.Divider(rtl=theme.rtl(), height=1),
                         # Bench
-                        ft.Text(f"🪑 {t('bench')}", size=14, weight=ft.FontWeight.W_500),
+                        ft.Text(f"🪑 {t('bench')}", rtl=theme.rtl(), size=14, weight=ft.FontWeight.W_500),
                         bench_col,
-                        ft.Container(height=10),
+                        ft.Container(rtl=theme.rtl(), height=10),
                         ft.ElevatedButton(
-                            "⚽ Confirm & Play",
-                            width=280, height=56,
+                            t("confirm_play"),
+                            rtl=theme.rtl(), width=280, height=56,
                             style=theme.PRIMARY_BTN_STYLE,
                             on_click=play_match,
                         ),
-                        ft.Container(height=60), # Extra space for mobile bottom safe area/nav bar
+                        ft.Container(rtl=theme.rtl(), height=60), # Extra space for mobile bottom safe area/nav bar
                     ],
                 ),
             ),

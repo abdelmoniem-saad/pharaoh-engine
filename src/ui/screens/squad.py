@@ -24,13 +24,13 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = build_nav_bar(page, 0)
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
+        return ft.Column(rtl=theme.rtl(), controls=[ft.Text(t("no_game_loaded"), rtl=theme.rtl())])
 
     conn = app_state.db_conn
     gs = app_state.game_state
     club = queries.get_club(conn, gs.user_club_id)
     if not club:
-        return ft.Column(controls=[ft.Text(t("club_not_found"))])
+        return ft.Column(rtl=theme.rtl(), controls=[ft.Text(t("club_not_found"), rtl=theme.rtl())])
 
     players = queries.get_players_by_club(conn, club.id)
 
@@ -106,7 +106,7 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
     player_cards = _build_player_list(players)
 
     # The player list container (will be rebuilt on sort)
-    player_list_col = ft.Column(spacing=0, controls=player_cards)
+    player_list_col = ft.Column(rtl=theme.rtl(), spacing=0, controls=player_cards)
 
     def on_sort_change(e):
         key = e.control.value
@@ -137,13 +137,13 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
             break
 
     return ft.Column(
-        expand=True,
+        rtl=theme.rtl(), expand=True,
         scroll=ft.ScrollMode.AUTO,
         controls=[
             ft.Container(
-                padding=ft.padding.all(theme.PAGE_PADDING),
+                rtl=theme.rtl(), padding=ft.padding.all(theme.PAGE_PADDING),
                 content=ft.Column(
-                    spacing=theme.SECTION_SPACING,
+                    rtl=theme.rtl(), spacing=theme.SECTION_SPACING,
                     controls=[
                         # ── Header (minimal) ────────────────────────────
                         theme.header_bar(
@@ -152,7 +152,7 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                             icon=ft.Icons.SHIELD,
                             page=page,
                             extra_controls=[
-                                ft.IconButton(icon=ft.Icons.SAVE_OUTLINED, icon_size=18,
+                                ft.IconButton(rtl=theme.rtl(), icon=ft.Icons.SAVE_OUTLINED, icon_size=18,
                                               icon_color=theme.TEXT_SECONDARY,
                                               tooltip=t("save"),
                                               on_click=lambda e: _save_game(page, conn, gs)),
@@ -160,15 +160,15 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                         ),
 
                         # Quick nav
-                        ft.Row(spacing=6, controls=[
-                            ft.OutlinedButton(t("my_club"), height=44,
+                        ft.Row(rtl=theme.rtl(), spacing=6, controls=[
+                            ft.OutlinedButton(t("my_club"), rtl=theme.rtl(), height=44,
                                               on_click=lambda e: navigate(page, "/club"),
                                               style=ft.ButtonStyle(
                                                   padding=ft.padding.symmetric(horizontal=12),
                                                   shape=ft.RoundedRectangleBorder(radius=10),
                                                   side=ft.BorderSide(1, theme.GOLD_BORDER),
                                               )),
-                            ft.OutlinedButton(t("transfers"), height=44,
+                            ft.OutlinedButton(t("transfers"), rtl=theme.rtl(), height=44,
                                               on_click=lambda e: navigate(page, "/transfers"),
                                               style=ft.ButtonStyle(
                                                   padding=ft.padding.symmetric(horizontal=12),
@@ -177,7 +177,7 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
                                               )),
                         ]),
 
-                        ft.Row(spacing=12, controls=[
+                        ft.Row(rtl=theme.rtl(), spacing=12, controls=[
                             _squad_metric(t("squad_label"), str(len(players))),
                             _squad_metric(t("avg_ovr"), f"{avg_ovr:.0f}"),
                             _squad_metric(t("position"), str(user_pos)),
@@ -185,18 +185,18 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
 
                         # ── Sort + Compare + Player List ────────────────
                         ft.Row(
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                            rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
                                 ft.Text(t("players"),
-                                        size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY, weight=ft.FontWeight.W_600),
-                                ft.Row(spacing=4, tight=True, controls=[
+                                        rtl=theme.rtl(), size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY, weight=ft.FontWeight.W_600),
+                                ft.Row(rtl=theme.rtl(), spacing=4, tight=True, controls=[
                                     ft.IconButton(
-                                        icon=ft.Icons.COMPARE_ARROWS, icon_size=18,
+                                        rtl=theme.rtl(), icon=ft.Icons.COMPARE_ARROWS, icon_size=18,
                                         icon_color=theme.TEXT_SECONDARY, tooltip=t("compare_players"),
                                         on_click=lambda e: _start_compare(page, players),
                                     ),
                                     ft.Dropdown(
-                                        label=t("sort_by"),
+                                        border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label=t("sort_by"),
                                         value=default_sort,
                                         options=[ft.dropdown.Option(k) for k in sort_options],
                                         on_select=on_sort_change,
@@ -216,11 +216,11 @@ def build_squad_screen(page: ft.Page) -> ft.Column:
 
 
 def _squad_metric(label, value):
-    return ft.Container(expand=True, padding=16, border_radius=12,
+    return ft.Container(rtl=theme.rtl(), expand=True, padding=16, border_radius=12,
         bgcolor=theme.CARD_GLASS_STRONG,
-        content=ft.Column(spacing=8, controls=[
-            ft.Text(label, size=11, color=theme.TEXT_MUTED),
-            ft.Text(value, size=26, weight=ft.FontWeight.W_600, color=theme.TEXT_PRIMARY),
+        content=ft.Column(rtl=theme.rtl(), spacing=8, controls=[
+            ft.Text(label, rtl=theme.rtl(), size=11, color=theme.TEXT_MUTED),
+            ft.Text(value, rtl=theme.rtl(), size=26, weight=ft.FontWeight.W_600, color=theme.TEXT_PRIMARY),
         ]))
 
 
@@ -247,8 +247,8 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
     if player.injury_days_remaining > 0:
         status_badges.append(
             ft.Container(
-                content=ft.Text(f"🏥 Injured: {player.injury_type} ({player.injury_days_remaining}d)",
-                                size=11, color=ft.Colors.WHITE),
+                rtl=theme.rtl(), content=ft.Text(f"🏥 Injured: {player.injury_type} ({player.injury_days_remaining}d)",
+                                rtl=theme.rtl(), size=11, color=ft.Colors.WHITE),
                 bgcolor=ft.Colors.RED_800,
                 padding=ft.padding.symmetric(horizontal=8, vertical=3),
                 border_radius=6,
@@ -257,8 +257,8 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
     if player.suspension_matches > 0:
         status_badges.append(
             ft.Container(
-                content=ft.Text(f"🚫 Suspended: {player.suspension_matches} match(es)",
-                                size=11, color=ft.Colors.WHITE),
+                rtl=theme.rtl(), content=ft.Text(f"🚫 Suspended: {player.suspension_matches} match(es)",
+                                rtl=theme.rtl(), size=11, color=ft.Colors.WHITE),
                 bgcolor=ft.Colors.ORANGE_800,
                 padding=ft.padding.symmetric(horizontal=8, vertical=3),
                 border_radius=6,
@@ -304,14 +304,14 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
     gk_section = []
     if player.position.value == "GK":
         gk_section = [
-            ft.Text("🧤 Goalkeeping", size=13, weight=ft.FontWeight.W_500,
+            ft.Text("🧤 Goalkeeping", rtl=theme.rtl(), size=13, weight=ft.FontWeight.W_500,
                      color=theme.GOLD),
             stat_bar(t("reflexes"), a.gk_reflexes),
             stat_bar(t("handling"), a.gk_handling),
             stat_bar("GK Pos.", a.gk_positioning),
             stat_bar("1v1", a.gk_one_on_ones),
             stat_bar(t("kicking"), a.gk_kicking),
-            ft.Divider(height=1),
+            ft.Divider(rtl=theme.rtl(), height=1),
         ]
 
     # Season stats row
@@ -338,10 +338,10 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
     mental_avg = (a.composure + a.vision + a.work_rate + a.positioning + a.decisions) / 5
     def_avg = (a.tackling + a.marking) / 2
     attr_categories = {
-        "Tech": round(tech_avg, 1),
-        "Phys": round(phys_avg, 1),
-        "Mental": round(mental_avg, 1),
-        "Def": round(def_avg, 1),
+        t("technical"):  round(tech_avg, 1),
+        t("physical"):  round(phys_avg, 1),
+        t("mental"):  round(mental_avg, 1),
+        t("defensive"):  round(def_avg, 1),
     }
     if player.position.value == "GK":
         gk_avg = (a.gk_reflexes + a.gk_handling + a.gk_positioning +
@@ -350,7 +350,7 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
 
     attr_chart = player_stats_bar_chart(attr_categories, width=270, height=120)
 
-    season_info = ft.Column(spacing=10, controls=[
+    season_info = ft.Column(rtl=theme.rtl(), spacing=10, controls=[
         kv_row(t("appearances"), str(s.appearances)),
         kv_row(t("yellow_cards"), str(s.yellow_cards), theme.TEXT_WARNING),
         kv_row(t("red_cards"), str(s.red_cards), theme.TEXT_DANGER),
@@ -405,7 +405,7 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
         show_snackbar(page, f"Training focus set to {label} for {player.name}")
 
     training_dd = ft.Dropdown(
-        label=t("training_focus"),
+        border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label=t("training_focus"),
         value=player.training_focus or "",
         options=training_options,
         on_select=on_training_change,
@@ -431,7 +431,7 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
         show_snackbar(page, f"{player.name}: {label}")
 
     dev_dd = ft.Dropdown(
-        label=t("development_plan"),
+        border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label=t("development_plan"),
         value=getattr(player, "dev_plan", "") or "none",
         options=[ft.dropdown.Option("none", text=t("none"))] + [
             ft.dropdown.Option(k, text=v["label"]) for k, v in PLANS.items()
@@ -441,60 +441,60 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
     )
 
     _dp = min(100, int(getattr(player, "dev_progress", 0)))
-    dev_progress_bar = ft.ProgressBar(value=_dp / 100.0, width=200)
+    dev_progress_bar = ft.ProgressBar(rtl=theme.rtl(), value=_dp / 100.0, width=200)
     dev_progress_text = ft.Text(
         f"{_dp}% complete" if getattr(player, "dev_plan", "") else "No active plan.",
-        size=10, color=ft.Colors.GREY_500,
+        rtl=theme.rtl(), size=10, color=ft.Colors.GREY_500,
     )
 
     from src.ui.widgets.dossier import section_tabs, metric, section_title
     from src.utils.localization import is_rtl
-    overview = ft.Column(spacing=14, controls=[
-        ft.Row(spacing=8, controls=[metric(t("goals_label"), s.goals),
+    overview = ft.Column(rtl=theme.rtl(), spacing=14, controls=[
+        ft.Row(rtl=theme.rtl(), spacing=8, controls=[metric(t("goals_label"), s.goals),
                                   metric(t("assists"), s.assists),
                                   metric(t("rating"), avg_rating_str)]),
-        ft.Row(wrap=True, spacing=12, controls=[
-            ft.Text(f"{t('age')}: {player.age}", size=12),
-            ft.Text(f"{t('position')}: {player.position.value}", size=12),
-            ft.Text(t(player.preferred_foot.value.lower()), size=12),
+        ft.Row(rtl=theme.rtl(), wrap=True, spacing=12, controls=[
+            ft.Text(f"{t('age')}: {player.age}", rtl=theme.rtl(), size=12),
+            ft.Text(f"{t('position')}: {player.position.value}", rtl=theme.rtl(), size=12),
+            ft.Text(t(player.preferred_foot.value.lower()), rtl=theme.rtl(), size=12),
         ]),
-        ft.Text(f"{t('egyptian_nationality') if player.nationality == 'Egyptian' else player.nationality} · {player.governorate}", size=12, color=theme.TEXT_MUTED),
-        ft.Text(f"{t('secondary_positions')}: {sec_pos_text}", size=12, color=theme.TEXT_MUTED),
+        ft.Text(f"{t('egyptian_nationality') if player.nationality == 'Egyptian' else player.nationality} · {player.governorate}", rtl=theme.rtl(), size=12, color=theme.TEXT_MUTED),
+        ft.Text(f"{t('secondary_positions')}: {sec_pos_text}", rtl=theme.rtl(), size=12, color=theme.TEXT_MUTED),
         *status_badges,
-        ft.Row(spacing=8, controls=[metric(t("fitness"), f"{player.fitness}%", fit_color),
+        ft.Row(rtl=theme.rtl(), spacing=8, controls=[metric(t("fitness"), f"{player.fitness}%", fit_color),
                                   metric(t("morale"), str(player.morale), morale_color)]),
         section_title(t("season_stats")),
         season_info,
         ft.Text(f"{s.minutes_played} {t('minutes')} · {t('mins_per_goal')}: {mins_per_goal} · "
-                f"{t('mins_per_assist')}: {mins_per_assist}", size=12, color=theme.TEXT_SECONDARY),
+                f"{t('mins_per_assist')}: {mins_per_assist}", rtl=theme.rtl(), size=12, color=theme.TEXT_SECONDARY),
         section_title(t("form")), form_chart,
-        ft.Text(form_trend, size=12, color=form_trend_color),
+        ft.Text(form_trend, rtl=theme.rtl(), size=12, color=form_trend_color),
     ])
-    attributes = ft.Column(spacing=12, controls=[
+    attributes = ft.Column(rtl=theme.rtl(), spacing=12, controls=[
         attr_chart, *gk_section,
         section_title(t("technical")), *tech_stats,
         section_title(t("defensive")), *def_stats,
         section_title(t("physical")), *phys_stats,
         section_title(t("mental")), *mental_stats,
     ])
-    management = ft.Column(spacing=16, controls=[
+    management = ft.Column(rtl=theme.rtl(), spacing=16, controls=[
         section_title(t("contract")),
-        ft.Text(wage_str, size=24, font_family=theme.display_font(), color=theme.ACCENT),
-        ft.Text(f"{t('contract_expiry')}: {expiry_str}", size=12, color=theme.TEXT_SECONDARY),
+        ft.Text(wage_str, rtl=theme.rtl(), size=24, font_family=theme.display_font(), color=theme.ACCENT),
+        ft.Text(f"{t('contract_expiry')}: {expiry_str}", rtl=theme.rtl(), size=12, color=theme.TEXT_SECONDARY),
         section_title(t("training")), training_dd,
         section_title(t("development_plan")),
-        ft.Text(t("development_help"), size=12, color=theme.TEXT_SECONDARY),
+        ft.Text(t("development_help"), rtl=theme.rtl(), size=12, color=theme.TEXT_SECONDARY),
         dev_dd, dev_progress_bar, dev_progress_text,
         section_title(t("player_actions")),
-        ft.Row(wrap=True, spacing=8, run_spacing=8, controls=[
-            ft.OutlinedButton(t("captain"), icon=ft.Icons.STAR_OUTLINE,
+        ft.Row(rtl=theme.rtl(), wrap=True, spacing=8, run_spacing=8, controls=[
+            ft.OutlinedButton(t("captain"), rtl=theme.rtl(), icon=ft.Icons.STAR_OUTLINE,
                 on_click=lambda e: _set_captain(page, player.id)),
-            ft.OutlinedButton(t("talk"), icon=ft.Icons.CHAT_BUBBLE_OUTLINE,
+            ft.OutlinedButton(t("talk"), rtl=theme.rtl(), icon=ft.Icons.CHAT_BUBBLE_OUTLINE,
                 on_click=lambda e: _talk_to_player(page, player.id, player.name)),
             ft.OutlinedButton(t("unlist") if player.transfer_listed else t("transfer_list"),
-                on_click=lambda e: _toggle_transfer(page, player.id, player.transfer_listed)),
+                rtl=theme.rtl(), on_click=lambda e: _toggle_transfer(page, player.id, player.transfer_listed)),
             ft.OutlinedButton(t("renew_contract"),
-                on_click=lambda e: _renew_contract(page, player.id)),
+                rtl=theme.rtl(), on_click=lambda e: _renew_contract(page, player.id)),
         ]),
     ])
     tabs = section_tabs(page, [t("overview_tab"), t("attributes"), t("development")],
@@ -503,22 +503,22 @@ def _show_player_detail(page: ft.Page, player, ovr: int):
         bgcolor=theme.BG_MID, inset_padding=12, rtl=is_rtl(),
         title_padding=20, content_padding=16, actions_padding=12,
         shape=ft.RoundedRectangleBorder(radius=20),
-        title=ft.Row(spacing=14, controls=[
-            ft.Container(width=54, height=64, border_radius=10, bgcolor=theme.ACCENT,
+        title=ft.Row(rtl=theme.rtl(), spacing=14, controls=[
+            ft.Container(rtl=theme.rtl(), width=54, height=64, border_radius=10, bgcolor=theme.ACCENT,
                 alignment=ft.Alignment(0, 0),
                 content=ft.Text(str(player.shirt_number or player.position.value),
-                    size=30, font_family=theme.display_font(), color=theme.BG_DARK)),
-            ft.Column(expand=True, spacing=3, controls=[
-                ft.Text(display_name(player), size=24, font_family=theme.display_font(),
+                    rtl=theme.rtl(), size=30, font_family=theme.display_font(), color=theme.BG_DARK)),
+            ft.Column(rtl=theme.rtl(), expand=True, spacing=3, controls=[
+                ft.Text(display_name(player), rtl=theme.rtl(), size=24, font_family=theme.display_font(),
                         max_lines=2, color=theme.TEXT_PRIMARY),
-                ft.Text(f"{player.position.value} · {t('overall')} {ovr}", size=12, color=theme.ACCENT),
+                ft.Text(f"{player.position.value} · {t('overall')} {ovr}", rtl=theme.rtl(), size=12, color=theme.ACCENT),
             ]),
         ]),
-        content=ft.Container(width=min((page.width or 390)-64, 480),
+        content=ft.Container(rtl=theme.rtl(), width=min((page.width or 390)-64, 480),
             height=min((page.height or 844)-240, 520),
-            content=ft.Column(spacing=18, scroll=ft.ScrollMode.AUTO,
+            content=ft.Column(rtl=theme.rtl(), spacing=18, scroll=ft.ScrollMode.AUTO,
                               controls=[tabs, overview, attributes, management])),
-        actions=[ft.TextButton(t("close"), on_click=lambda e: page.pop_dialog())],
+        actions=[ft.TextButton(t("close"), rtl=theme.rtl(), on_click=lambda e: page.pop_dialog())],
     )
     page.show_dialog(dlg)
 
@@ -559,7 +559,7 @@ def _talk_to_player(page, player_id, player_name):
         return
 
     morale_desc = get_morale_description(player)
-    result_text = ft.Text("", size=12)
+    result_text = ft.Text("", rtl=theme.rtl(), size=12)
 
     talks = [
         ("💪 Praise Performance", "praise",
@@ -639,9 +639,9 @@ def _talk_to_player(page, player_id, player_name):
     for label, talk_type, msg, resp in talks:
         talk_buttons.append(
             ft.Container(
-                content=ft.Column(spacing=1, controls=[
-                    ft.Text(label, size=13, weight=ft.FontWeight.W_500),
-                    ft.Text(msg, size=10, color=ft.Colors.GREY_500, italic=True),
+                rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=1, controls=[
+                    ft.Text(label, rtl=theme.rtl(), size=13, weight=ft.FontWeight.W_500),
+                    ft.Text(msg, rtl=theme.rtl(), size=10, color=ft.Colors.GREY_500, italic=True),
                 ]),
                 padding=ft.padding.symmetric(horizontal=10, vertical=10),
                 border_radius=10,
@@ -653,21 +653,21 @@ def _talk_to_player(page, player_id, player_name):
         )
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"🗣️ Talk to {player_name}", size=15,
+        rtl=theme.rtl(), title=ft.Text(f"🗣️ Talk to {player_name}", rtl=theme.rtl(), size=15,
                        weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
-            content=ft.Column(spacing=6, controls=[
-                ft.Text(f"Current mood: {morale_desc}", size=12, color=ft.Colors.GREY_400),
-                ft.Text(f"Morale: {player.morale}/100", size=12),
-                ft.Divider(height=1),
+            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=6, controls=[
+                ft.Text(f"Current mood: {morale_desc}", rtl=theme.rtl(), size=12, color=ft.Colors.GREY_400),
+                ft.Text(f"Morale: {player.morale}/100", rtl=theme.rtl(), size=12),
+                ft.Divider(rtl=theme.rtl(), height=1),
                 *talk_buttons,
-                ft.Divider(height=1),
+                ft.Divider(rtl=theme.rtl(), height=1),
                 result_text,
             ]),
             width=290, height=320,
         ),
         actions=[
-            ft.TextButton("Done", on_click=lambda e: (page.pop_dialog(), navigate(page, "/squad"))),
+            ft.TextButton("Done", rtl=theme.rtl(), on_click=lambda e: (page.pop_dialog(), navigate(page, "/squad"))),
         ],
     )
     page.show_dialog(dlg)
@@ -691,7 +691,7 @@ def _renew_contract(page, player_id):
     expiry_str = player.contract.contract_expiry.strftime("%b %Y") if player.contract.contract_expiry else "N/A"
 
     years_dd = ft.Dropdown(
-        label="Contract Length",
+        border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label="Contract Length",
         value="2",
         options=[ft.dropdown.Option("1", text="1 year"),
                  ft.dropdown.Option("2", text="2 years"),
@@ -701,12 +701,12 @@ def _renew_contract(page, player_id):
     )
 
     wage_field = ft.TextField(
-        label="Weekly Wage Offer (EGP)",
+        border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label="Weekly Wage Offer (EGP)",
         value=str(min_acceptable),
         width=180, text_size=13,
     )
 
-    result_text = ft.Text("", size=12, color=ft.Colors.GREY_400)
+    result_text = ft.Text("", rtl=theme.rtl(), size=12, color=ft.Colors.GREY_400)
 
     def submit_renewal(e):
         try:
@@ -754,16 +754,16 @@ def _renew_contract(page, player_id):
             page.update()
 
     renewal_dlg = ft.AlertDialog(
-        title=ft.Text(f"📝 Renew: {player.name}", size=16,
+        rtl=theme.rtl(), title=ft.Text(f"📝 Renew: {player.name}", rtl=theme.rtl(), size=16,
                        weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
-            content=ft.Column(spacing=8, controls=[
-                ft.Row(spacing=10, controls=[
-                    ft.Text(f"Current wage: {current_wage:,} EGP/wk", size=12),
-                    ft.Text(f"Expires: {expiry_str}", size=12, color=ft.Colors.GREY_400),
+            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=8, controls=[
+                ft.Row(rtl=theme.rtl(), spacing=10, controls=[
+                    ft.Text(f"Current wage: {current_wage:,} EGP/wk", rtl=theme.rtl(), size=12),
+                    ft.Text(f"Expires: {expiry_str}", rtl=theme.rtl(), size=12, color=ft.Colors.GREY_400),
                 ]),
                 ft.Text(f"Player expects: ≥{min_acceptable:,} EGP/wk (+{min_raise_pct}%)",
-                        size=11, color=theme.GOLD, italic=True),
+                        rtl=theme.rtl(), size=11, color=theme.GOLD, italic=True),
                 years_dd,
                 wage_field,
                 result_text,
@@ -771,8 +771,8 @@ def _renew_contract(page, player_id):
             width=300, height=220,
         ),
         actions=[
-            ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),
-            ft.ElevatedButton("Offer", on_click=submit_renewal,
+            ft.TextButton("Cancel", rtl=theme.rtl(), on_click=lambda e: page.pop_dialog()),
+            ft.ElevatedButton("Offer", rtl=theme.rtl(), on_click=submit_renewal,
                               style=ft.ButtonStyle(bgcolor=theme.ACCENT_DARK,
                                                    color=ft.Colors.WHITE)),
         ],
@@ -806,13 +806,13 @@ def _start_compare(page, players):
         ovr = calculate_overall_rating(p)
         player_list_1.append(
             ft.ListTile(
-                title=ft.Text(f"{p.name} ({p.position.value})", size=12),
-                subtitle=ft.Text(f"OVR {ovr} | Age {p.age}", size=10, color=ft.Colors.GREY_400),
+                rtl=theme.rtl(), title=ft.Text(f"{p.name} ({p.position.value})", rtl=theme.rtl(), size=12),
+                subtitle=ft.Text(f"OVR {ovr} | Age {p.age}", rtl=theme.rtl(), size=10, color=ft.Colors.GREY_400),
                 on_click=make_pick_handler(p, 0),
             )
         )
 
-    step_text = ft.Text("Pick Player 1", size=14, weight=ft.FontWeight.BOLD,
+    step_text = ft.Text("Pick Player 1", rtl=theme.rtl(), size=14, weight=ft.FontWeight.BOLD,
                          color=theme.GOLD)
 
     def rebuild_for_p2():
@@ -825,8 +825,8 @@ def _start_compare(page, players):
             ovr = calculate_overall_rating(p)
             list_view.controls.append(
                 ft.ListTile(
-                    title=ft.Text(f"{p.name} ({p.position.value})", size=12),
-                    subtitle=ft.Text(f"OVR {ovr} | Age {p.age}", size=10, color=ft.Colors.GREY_400),
+                    rtl=theme.rtl(), title=ft.Text(f"{p.name} ({p.position.value})", rtl=theme.rtl(), size=12),
+                    subtitle=ft.Text(f"OVR {ovr} | Age {p.age}", rtl=theme.rtl(), size=10, color=ft.Colors.GREY_400),
                     on_click=make_pick_handler(p, 1),
                 )
             )
@@ -839,25 +839,25 @@ def _start_compare(page, players):
             rebuild_for_p2()
         return handler
 
-    list_view = ft.ListView(spacing=2, height=340, controls=[])
+    list_view = ft.ListView(rtl=theme.rtl(), spacing=2, height=340, controls=[])
     for p in players:
         ovr = calculate_overall_rating(p)
         list_view.controls.append(
             ft.ListTile(
-                title=ft.Text(f"{p.name} ({p.position.value})", size=12),
-                subtitle=ft.Text(f"OVR {ovr} | Age {p.age}", size=10, color=ft.Colors.GREY_400),
+                rtl=theme.rtl(), title=ft.Text(f"{p.name} ({p.position.value})", rtl=theme.rtl(), size=12),
+                subtitle=ft.Text(f"OVR {ovr} | Age {p.age}", rtl=theme.rtl(), size=10, color=ft.Colors.GREY_400),
                 on_click=make_step1_handler(p),
             )
         )
 
     dlg = ft.AlertDialog(
-        title=ft.Text("⚖️ Compare Players", color=theme.GOLD),
+        rtl=theme.rtl(), title=ft.Text("⚖️ Compare Players", rtl=theme.rtl(), color=theme.GOLD),
         content=ft.Container(
-            content=ft.Column(controls=[step_text, list_view], spacing=6, tight=True),
+            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), controls=[step_text, list_view], spacing=6, tight=True),
             width=290, height=400,
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
         ),
-        actions=[ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog())],
+        actions=[ft.TextButton("Cancel", rtl=theme.rtl(), on_click=lambda e: page.pop_dialog())],
     )
     page.show_dialog(dlg)
 
@@ -883,36 +883,36 @@ def _show_compare_dialog(page, p1, p2):
         c1 = ft.Colors.GREEN_400 if v1 > v2 else (ft.Colors.RED_400 if v1 < v2 else ft.Colors.WHITE)
         c2 = ft.Colors.GREEN_400 if v2 > v1 else (ft.Colors.RED_400 if v2 < v1 else ft.Colors.WHITE)
         rows.append(ft.Row(
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             controls=[
-                ft.Text(str(v1), size=12, weight=ft.FontWeight.BOLD, color=c1, width=30),
-                ft.Text(label, size=10, color=ft.Colors.GREY_400, text_align=ft.TextAlign.CENTER, expand=True),
-                ft.Text(str(v2), size=12, weight=ft.FontWeight.BOLD, color=c2, width=30,
-                         text_align=ft.TextAlign.RIGHT),
+                ft.Text(str(v1), rtl=theme.rtl(), size=12, weight=ft.FontWeight.BOLD, color=c1, width=30),
+                ft.Text(label, rtl=theme.rtl(), size=10, color=ft.Colors.GREY_400, text_align=ft.TextAlign.CENTER, expand=True),
+                ft.Text(str(v2), rtl=theme.rtl(), size=12, weight=ft.FontWeight.BOLD, color=c2, width=30,
+                         text_align=ft.TextAlign.LEFT if theme.rtl() else ft.TextAlign.RIGHT),
             ],
         ))
 
     dlg = ft.AlertDialog(
-        title=ft.Row(
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        rtl=theme.rtl(), title=ft.Row(
+            rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             controls=[
-                ft.Column(spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
-                    ft.Text(p1.name, size=13, weight=ft.FontWeight.BOLD),
-                    ft.Text(f"{p1.position.value} | OVR {ovr1}", size=10, color=theme.GOLD),
+                ft.Column(rtl=theme.rtl(), spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
+                    ft.Text(p1.name, rtl=theme.rtl(), size=13, weight=ft.FontWeight.BOLD),
+                    ft.Text(f"{p1.position.value} | OVR {ovr1}", rtl=theme.rtl(), size=10, color=theme.GOLD),
                 ]),
-                ft.Text("VS", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_500),
-                ft.Column(spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
-                    ft.Text(p2.name, size=13, weight=ft.FontWeight.BOLD),
-                    ft.Text(f"{p2.position.value} | OVR {ovr2}", size=10, color=theme.GOLD),
+                ft.Text("VS", rtl=theme.rtl(), size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_500),
+                ft.Column(rtl=theme.rtl(), spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
+                    ft.Text(p2.name, rtl=theme.rtl(), size=13, weight=ft.FontWeight.BOLD),
+                    ft.Text(f"{p2.position.value} | OVR {ovr2}", rtl=theme.rtl(), size=10, color=theme.GOLD),
                 ]),
             ],
         ),
         content=ft.Container(
-            content=ft.Column(controls=rows, spacing=4, scroll=ft.ScrollMode.AUTO),
+            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), controls=rows, spacing=4, scroll=ft.ScrollMode.AUTO),
             width=290, height=380,
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
         ),
-        actions=[ft.TextButton("Close", on_click=lambda e: page.pop_dialog())],
+        actions=[ft.TextButton("Close", rtl=theme.rtl(), on_click=lambda e: page.pop_dialog())],
     )
     page.show_dialog(dlg)
 
@@ -947,15 +947,15 @@ def _build_career_bar(conn, page) -> list:
         _show_achievements_dialog(page, conn)
 
     career_row = ft.Container(
-        content=ft.Column(spacing=4, controls=[
+        rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=4, controls=[
             ft.Row(
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
-                    ft.Text("📊 Manager Career", size=12, weight=ft.FontWeight.W_500,
+                    ft.Text("📊 Manager Career", rtl=theme.rtl(), size=12, weight=ft.FontWeight.W_500,
                             color=theme.GOLD),
                     ft.Container(
-                        content=ft.Text(f"⭐ {career['manager_rating']:.0f}",
-                                        size=12, weight=ft.FontWeight.BOLD,
+                        rtl=theme.rtl(), content=ft.Text(f"⭐ {career['manager_rating']:.0f}",
+                                        rtl=theme.rtl(), size=12, weight=ft.FontWeight.BOLD,
                                         color=rating_color),
                         padding=ft.padding.symmetric(horizontal=8, vertical=2),
                         border_radius=6,
@@ -964,30 +964,30 @@ def _build_career_bar(conn, page) -> list:
                 ],
             ),
             ft.Row(
-                spacing=0,
+                rtl=theme.rtl(), spacing=0,
                 controls=[
-                    ft.Text(f"W{career['total_wins']}", size=11,
+                    ft.Text(f"W{career['total_wins']}", rtl=theme.rtl(), size=11,
                             color=ft.Colors.GREEN_400, weight=ft.FontWeight.BOLD, width=40),
-                    ft.Text(f"D{career['total_draws']}", size=11,
+                    ft.Text(f"D{career['total_draws']}", rtl=theme.rtl(), size=11,
                             color=ft.Colors.YELLOW_400, width=30),
-                    ft.Text(f"L{career['total_losses']}", size=11,
+                    ft.Text(f"L{career['total_losses']}", rtl=theme.rtl(), size=11,
                             color=ft.Colors.RED_400, width=30),
-                    ft.Text(f"{win_pct:.0f}%", size=11, color=ft.Colors.GREY_400, width=35),
-                    ft.Container(expand=True),
-                    ft.Text(f"🔥{career['longest_win_streak']}", size=10,
+                    ft.Text(f"{win_pct:.0f}%", rtl=theme.rtl(), size=11, color=ft.Colors.GREY_400, width=35),
+                    ft.Container(rtl=theme.rtl(), expand=True),
+                    ft.Text(f"🔥{career['longest_win_streak']}", rtl=theme.rtl(), size=10,
                             color=ft.Colors.GREY_500, width=30),
-                    ft.Text(f"🧤{career['clean_sheets']}", size=10,
+                    ft.Text(f"🧤{career['clean_sheets']}", rtl=theme.rtl(), size=10,
                             color=ft.Colors.GREY_500, width=30),
-                    ft.Text(f"⚽{career['total_goals_scored']}", size=10,
+                    ft.Text(f"⚽{career['total_goals_scored']}", rtl=theme.rtl(), size=10,
                             color=ft.Colors.GREY_500, width=35),
                 ],
             ),
             ft.Row(
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
-                    ft.Text(f"🏆 {unlocked_count}/{total_achs} achievements", size=10,
+                    ft.Text(f"🏆 {unlocked_count}/{total_achs} achievements", rtl=theme.rtl(), size=10,
                             color=ft.Colors.GREY_500),
-                    ft.TextButton("View All →", on_click=show_achievements,
+                    ft.TextButton("View All →", rtl=theme.rtl(), on_click=show_achievements,
                                    style=ft.ButtonStyle(
                                        text_style=ft.TextStyle(size=10))),
                 ],
@@ -1010,15 +1010,15 @@ def _show_achievements_dialog(page, conn):
     for a in achs:
         if a["unlocked"]:
             rows.append(ft.Container(
-                content=ft.Row(spacing=8, controls=[
-                    ft.Text(a["icon"], size=22),
-                    ft.Column(spacing=0, expand=True, controls=[
-                        ft.Text(a["title"], size=12, weight=ft.FontWeight.BOLD,
+                rtl=theme.rtl(), content=ft.Row(rtl=theme.rtl(), spacing=8, controls=[
+                    ft.Text(a["icon"], rtl=theme.rtl(), size=22),
+                    ft.Column(rtl=theme.rtl(), spacing=0, expand=True, controls=[
+                        ft.Text(a["title"], rtl=theme.rtl(), size=12, weight=ft.FontWeight.BOLD,
                                 color=theme.GOLD),
-                        ft.Text(a["description"], size=10, color=ft.Colors.GREY_400),
+                        ft.Text(a["description"], rtl=theme.rtl(), size=10, color=ft.Colors.GREY_400),
                     ]),
                     ft.Text(a["unlock_date"][:10] if a["unlock_date"] else "",
-                            size=9, color=ft.Colors.GREY_600),
+                            rtl=theme.rtl(), size=9, color=ft.Colors.GREY_600),
                 ]),
                 padding=ft.padding.symmetric(horizontal=8, vertical=6),
                 border_radius=10,
@@ -1027,11 +1027,11 @@ def _show_achievements_dialog(page, conn):
             ))
         else:
             rows.append(ft.Container(
-                content=ft.Row(spacing=8, controls=[
-                    ft.Text("🔒", size=18, color=ft.Colors.GREY_700),
-                    ft.Column(spacing=0, expand=True, controls=[
-                        ft.Text(a["title"], size=12, color=ft.Colors.GREY_600),
-                        ft.Text(a["description"], size=10, color=ft.Colors.GREY_700),
+                rtl=theme.rtl(), content=ft.Row(rtl=theme.rtl(), spacing=8, controls=[
+                    ft.Text("🔒", rtl=theme.rtl(), size=18, color=ft.Colors.GREY_700),
+                    ft.Column(rtl=theme.rtl(), spacing=0, expand=True, controls=[
+                        ft.Text(a["title"], rtl=theme.rtl(), size=12, color=ft.Colors.GREY_600),
+                        ft.Text(a["description"], rtl=theme.rtl(), size=10, color=ft.Colors.GREY_700),
                     ]),
                 ]),
                 padding=ft.padding.symmetric(horizontal=8, vertical=6),
@@ -1041,12 +1041,12 @@ def _show_achievements_dialog(page, conn):
             ))
 
     dlg = ft.AlertDialog(
-        title=ft.Text("🏆 Achievements", size=16,
+        rtl=theme.rtl(), title=ft.Text("🏆 Achievements", rtl=theme.rtl(), size=16,
                        weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
-            content=ft.Column(spacing=4, controls=rows, scroll=ft.ScrollMode.AUTO),
+            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=4, controls=rows, scroll=ft.ScrollMode.AUTO),
             width=300, height=400,
         ),
-        actions=[ft.TextButton("Close", on_click=lambda e: page.pop_dialog())],
+        actions=[ft.TextButton("Close", rtl=theme.rtl(), on_click=lambda e: page.pop_dialog())],
     )
     page.show_dialog(dlg)

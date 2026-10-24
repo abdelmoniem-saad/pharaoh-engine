@@ -11,7 +11,7 @@ from src.core.season import get_season_awards, start_new_season
 from src.core.board import get_confidence_level, generate_season_objectives, evaluate_objectives
 from src.core.fans import get_fan_happiness_level
 from src.utils.config import expectation_display, expectation_description
-from src.utils.localization import t
+from src.utils.localization import t, display_name
 
 
 def build_season_summary_screen(page: ft.Page) -> ft.Column:
@@ -21,7 +21,7 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = None  # No nav bar on this special screen
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text("No game loaded")])
+        return ft.Column(rtl=theme.rtl(), controls=[ft.Text("No game loaded", rtl=theme.rtl())])
 
     conn = app_state.db_conn
     gs = app_state.game_state
@@ -41,12 +41,12 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
 
     # Trophy section
     if is_champ:
-        trophy_icon = ft.Icon(ft.Icons.EMOJI_EVENTS, size=80, color=theme.ACCENT)
-        trophy_text = "🎉 CHAMPIONS! 🎉"
+        trophy_icon = ft.Icon(ft.Icons.EMOJI_EVENTS, rtl=theme.rtl(), size=80, color=theme.ACCENT)
+        trophy_text = t("champions")
         trophy_color = theme.GOLD
     else:
-        trophy_icon = ft.Icon(ft.Icons.EMOJI_EVENTS, size=60, color=ft.Colors.GREY_500)
-        trophy_text = f"{champion.club_name} are Champions" if champion else "Season Complete"
+        trophy_icon = ft.Icon(ft.Icons.EMOJI_EVENTS, rtl=theme.rtl(), size=60, color=ft.Colors.GREY_500)
+        trophy_text = t("season_complete")
         trophy_color = ft.Colors.GREY_400
 
     # User summary
@@ -80,7 +80,7 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
         for msg in eval_msgs:
             is_achieved = msg.startswith("✅")
             board_eval_rows.append(
-                ft.Text(msg, size=12,
+                ft.Text(msg, rtl=theme.rtl(), size=12,
                          color=ft.Colors.GREEN_400 if is_achieved else ft.Colors.RED_400)
             )
 
@@ -89,15 +89,15 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
     for i, s in enumerate(top_scorers[:5], 1):
         is_mine = s.get("club_short") == (club.short_name if club else "")
         scorer_rows.append(
-            ft.Row(spacing=6, controls=[
-                ft.Text(f"{i}.", size=12, width=20, color=ft.Colors.GREY_500),
-                ft.Text(s["name"], size=12, expand=True,
+            ft.Row(rtl=theme.rtl(), spacing=6, controls=[
+                ft.Text(f"{i}.", rtl=theme.rtl(), size=12, width=20, color=ft.Colors.GREY_500),
+                ft.Text(s["name"], rtl=theme.rtl(), size=12, expand=True,
                          weight=ft.FontWeight.BOLD if is_mine else ft.FontWeight.NORMAL,
                          color=ft.Colors.GREEN_300 if is_mine else None,
                          max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                ft.Text(f"⚽ {s['goals']}", size=12, weight=ft.FontWeight.BOLD,
+                ft.Text(f"⚽ {s['goals']}", rtl=theme.rtl(), size=12, weight=ft.FontWeight.BOLD,
                          color=theme.GOLD),
-                ft.Text(s.get("club_short", ""), size=10, color=ft.Colors.GREY_500),
+                ft.Text(s.get("club_short", ""), rtl=theme.rtl(), size=10, color=ft.Colors.GREY_500),
             ])
         )
 
@@ -106,14 +106,14 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
     for i, s in enumerate(standings[:5], 1):
         is_user = s.club_id == gs.user_club_id
         table_rows.append(
-            ft.Row(spacing=6, controls=[
-                ft.Text(f"{i}.", size=12, width=20,
+            ft.Row(rtl=theme.rtl(), spacing=6, controls=[
+                ft.Text(f"{i}.", rtl=theme.rtl(), size=12, width=20,
                          weight=ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL),
-                ft.Text(s.club_name, size=12, expand=True,
+                ft.Text(s.club_name, rtl=theme.rtl(), size=12, expand=True,
                          weight=ft.FontWeight.BOLD if is_user else ft.FontWeight.NORMAL,
                          color=ft.Colors.GREEN_300 if is_user else None,
                          max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                ft.Text(f"{s.points} pts", size=12, weight=ft.FontWeight.BOLD,
+                ft.Text(f"{s.points} pts", rtl=theme.rtl(), size=12, weight=ft.FontWeight.BOLD,
                          color=theme.GOLD if is_user else None),
             ])
         )
@@ -140,189 +140,72 @@ def build_season_summary_screen(page: ft.Page) -> ft.Column:
             _begin_next_season()
 
         page.show_dialog(ft.AlertDialog(
-            title=ft.Text("🔄 Start Next Season?"),
+            rtl=theme.rtl(), title=ft.Text("🔄 Start Next Season?", rtl=theme.rtl()),
             content=ft.Text(
                 "This closes the current campaign for good: players age, "
                 "retirements are processed, youth prospects join and next "
                 "season's fixtures are drawn.\n\nReady when you are, Boss."
-            ),
+            , rtl=theme.rtl()),
             actions=[
-                ft.TextButton(t("cancel"), on_click=lambda e2: page.pop_dialog()),
-                ft.ElevatedButton("🔄 Let's Go", on_click=_confirm),
+                ft.TextButton(t("cancel"), rtl=theme.rtl(), on_click=lambda e2: page.pop_dialog()),
+                ft.ElevatedButton("🔄 Let's Go", rtl=theme.rtl(), on_click=_confirm),
             ],
         ))
 
-    return ft.Column(
-        expand=True,
-        scroll=ft.ScrollMode.AUTO,
-        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        controls=[
-            ft.Container(
-                padding=ft.padding.only(left=16, right=16, top=20, bottom=20),
-                content=ft.Column(
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=10,
-                    controls=[
-                        trophy_icon,
-                        ft.Text(trophy_text, size=24, weight=ft.FontWeight.BOLD,
-                                 color=trophy_color, text_align=ft.TextAlign.CENTER),
-                        ft.Text(
-                            f"Season {gs.season_year}/{gs.season_year + 1}",
-                            size=14, color=ft.Colors.GREY_500,
-                        ),
-                        ft.Divider(height=1),
+    from src.ui.widgets.cards import section_card, kv_row
+    from src.ui.widgets.dossier import metric, section_tabs
+    review = ft.Column(rtl=theme.rtl(), spacing=20, controls=[
+        section_card(t("board_objectives"), [
+            kv_row(t("board_confidence"), f"{club.board_confidence}%"),
+            kv_row(t("fan_happiness"), f"{club.fan_happiness}%"),
+            *board_eval_rows,
+        ]) if club else ft.Container(rtl=theme.rtl()),
+        section_card(t("final_standings"), table_rows),
+    ])
+    award_cards = []
+    for winner, label, stat in [
+        (golden_boot, t("golden_boot"), "goals"),
+        (golden_glove, t("golden_glove"), "clean_sheets"),
+        (young_player, t("young_player"), "rating"),
+        (most_assists, t("most_assists"), "assists"),
+    ]:
+        if winner:
+            award_cards.append(_award_card(label, winner["name"],
+                f"{t(stat)}: {winner.get(stat, '—')}", winner.get("club_name", winner.get("club_short", ""))))
+    honours = ft.Column(rtl=theme.rtl(), spacing=16, controls=[
+        *award_cards, section_card(t("top_scorers"), scorer_rows),
+    ])
+    return ft.Column(rtl=theme.rtl(), expand=True, scroll=ft.ScrollMode.AUTO, controls=[
+        ft.Container(rtl=theme.rtl(), padding=theme.PAGE_PADDING, content=ft.Column(rtl=theme.rtl(), spacing=24, controls=[
+            theme.header_bar(trophy_text, subtitle=f"{gs.season_year} / {gs.season_year+1}", page=page, show_notification_bell=False),
+            ft.Container(rtl=theme.rtl(), padding=24, border_radius=16, bgcolor=theme.CARD_GLASS_STRONG,
+                border=ft.border.all(1, theme.GOLD_BORDER), content=ft.Column(rtl=theme.rtl(), spacing=20, controls=[
+                    ft.Icon(ft.Icons.EMOJI_EVENTS_OUTLINED, rtl=theme.rtl(), size=36, color=theme.ACCENT),
+                    ft.Text(display_name(club) if club else gs.user_club_name, rtl=theme.rtl(), size=28, font_family=theme.display_font()),
+                    ft.Row(rtl=theme.rtl(), spacing=8, controls=[
+                        metric(t("position"), str(user_pos)),
+                        metric(t("points"), str(user_standing.points if user_standing else 0)),
+                        metric(t("goals"), str(user_standing.goals_for if user_standing else 0)),
+                    ]),
+                ])),
+            ft.FilledButton(t("next_season"), rtl=theme.rtl(), height=52, style=theme.PRIMARY_BTN_STYLE, on_click=start_next),
+            section_tabs(page, [t("overview_tab"), t("season_awards")], [review, honours]),
+            review, honours,
+            ft.Row(rtl=theme.rtl(), wrap=True, controls=[
+                ft.OutlinedButton(t("view_full_table"), rtl=theme.rtl(), on_click=lambda e: navigate(page, "/table")),
+                ft.TextButton(t("main_menu"), rtl=theme.rtl(), on_click=lambda e: navigate(page, "/")),
+            ]),
+        ]))])
 
-                        # User result
-                        ft.Container(
-                            content=ft.Column(
-                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                spacing=4,
-                                controls=[
-                                    ft.Text(f"📍 {gs.user_club_name}", size=18,
-                                             weight=ft.FontWeight.BOLD),
-                                    ft.Text(user_summary, size=13, color=ft.Colors.GREY_400,
-                                             text_align=ft.TextAlign.CENTER),
-                                ],
-                            ),
-                            padding=12,
-                            bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.GREEN if is_champ else ft.Colors.WHITE),
-                            border_radius=10,
-                            border=ft.border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.AMBER)),
-                        ),
-
-                        # Board & Fans
-                        ft.Row(
-                            alignment=ft.MainAxisAlignment.CENTER, spacing=20,
-                            controls=[
-                                ft.Text(confidence_text, size=12, color=ft.Colors.GREY_400),
-                                ft.Text(fan_text, size=12, color=ft.Colors.GREY_400),
-                            ],
-                        ),
-
-                        # Season expectation callout
-                        ft.Container(
-                            content=ft.Text(
-                                expectation_text, size=14, weight=ft.FontWeight.W_500,
-                                color=theme.GOLD, text_align=ft.TextAlign.CENTER,
-                            ),
-                            padding=ft.padding.symmetric(horizontal=12, vertical=6),
-                            border_radius=6,
-                            bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.AMBER),
-                        ) if expectation_text else ft.Container(),
-
-                        # Board Objectives Evaluation
-                        *(
-                            [ft.Text("📋 Board Objectives", size=16, weight=ft.FontWeight.W_500)]
-                            + board_eval_rows
-                            if board_eval_rows else []
-                        ),
-                        ft.Divider(height=1),
-
-                        # Final Table (Top 5)
-                        ft.Text("🏆 Final Standings (Top 5)", size=16,
-                                 weight=ft.FontWeight.W_500),
-                        *table_rows,
-                        ft.Divider(height=1),
-
-                        # Top Scorers
-                        ft.Text("⚽ Top Scorers", size=16, weight=ft.FontWeight.W_500),
-                        *(scorer_rows if scorer_rows else [
-                            ft.Text("No goals scored!", size=12, color=ft.Colors.GREY_500)
-                        ]),
-                        ft.Divider(height=1),
-
-                        # Season Awards
-                        ft.Text("🏅 Season Awards", size=16, weight=ft.FontWeight.W_500),
-                        *(
-                            [_award_card("🥇 Golden Boot", golden_boot["name"],
-                                         f"⚽ {golden_boot['goals']} goals",
-                                         golden_boot.get("club_short", ""))]
-                            if golden_boot else []
-                        ),
-                        *(
-                            [_award_card("🧤 Golden Glove", golden_glove["name"],
-                                         f"🧤 {golden_glove['clean_sheets']} clean sheets",
-                                         golden_glove.get("club_name", ""))]
-                            if golden_glove else []
-                        ),
-                        *(
-                            [_award_card("⭐ Young Player", young_player["name"],
-                                         f"📊 {young_player['rating']:.1f} avg rating (Age {young_player['age']})",
-                                         young_player.get("club_name", ""))]
-                            if young_player else []
-                        ),
-                        *(
-                            [_award_card("🅰️ Most Assists", most_assists["name"],
-                                         f"🅰️ {most_assists['assists']} assists",
-                                         most_assists.get("club_name", ""))]
-                            if most_assists else []
-                        ),
-                        ft.Divider(height=1),
-
-                        # Actions
-                        ft.Container(height=10),
-                        ft.ElevatedButton(
-                            "🔄 Start Next Season",
-                            width=280, height=55,
-                            style=ft.ButtonStyle(
-                                bgcolor=theme.ACCENT_DARK, color=ft.Colors.WHITE,
-                                text_style=ft.TextStyle(size=18, weight=ft.FontWeight.BOLD),
-                                shape=ft.RoundedRectangleBorder(radius=12),
-                                elevation=4,
-                                shadow_color=ft.Colors.with_opacity(0.25, theme.GOLD),
-                            ),
-                            on_click=start_next,
-                        ),
-                        ft.Container(height=5),
-                        ft.OutlinedButton(
-                            "📊 View Full Table",
-                            width=280, height=45,
-                            on_click=lambda e: navigate(page, "/table"),
-                            style=ft.ButtonStyle(
-                                shape=ft.RoundedRectangleBorder(radius=12),
-                                side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, theme.GOLD)),
-                            ),
-                        ),
-                        ft.OutlinedButton(
-                            "🏠 Main Menu",
-                            width=280, height=45,
-                            on_click=lambda e: navigate(page, "/"),
-                            style=ft.ButtonStyle(
-                                shape=ft.RoundedRectangleBorder(radius=12),
-                                side=ft.BorderSide(1, ft.Colors.with_opacity(0.18, theme.GOLD)),
-                            ),
-                        ),
-                    ],
-                ),
-            ),
-        ],
-    )
 
 
 def _award_card(award_name: str, player_name: str, detail: str, club: str) -> ft.Container:
     """Build a small award card widget."""
-    return ft.Container(
-        content=ft.Row(
-            spacing=10,
-            controls=[
-                ft.Text(award_name.split()[0], size=22),  # emoji
-                ft.Column(spacing=0, expand=True, controls=[
-                    ft.Text(" ".join(award_name.split()[1:]), size=12,
-                            color=theme.GOLD, weight=ft.FontWeight.W_500),
-                    ft.Text(player_name, size=14, weight=ft.FontWeight.BOLD),
-                    ft.Row(spacing=6, controls=[
-                        ft.Text(detail, size=11, color=ft.Colors.GREY_400),
-                        ft.Text(f"({club})", size=10, color=ft.Colors.GREY_600) if club else ft.Container(),
-                    ]),
-                ]),
-            ],
-        ),
-        padding=ft.padding.symmetric(horizontal=12, vertical=8),
-        bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.AMBER),
-        border_radius=10,
-        border=ft.border.all(1, ft.Colors.with_opacity(0.18, ft.Colors.AMBER)),
-        shadow=ft.BoxShadow(
-            spread_radius=0, blur_radius=6,
-            color=ft.Colors.with_opacity(0.06, ft.Colors.AMBER),
-        ),
-    )
+    return ft.Container(rtl=theme.rtl(), padding=20, border_radius=12,
+        bgcolor=theme.CARD_GLASS_STRONG, border=ft.border.all(1, theme.GOLD_BORDER),
+        content=ft.Column(rtl=theme.rtl(), spacing=10, controls=[
+            ft.Text(award_name, rtl=theme.rtl(), size=12, color=theme.ACCENT),
+            ft.Text(player_name, rtl=theme.rtl(), size=24, font_family=theme.display_font()),
+            ft.Text(detail, rtl=theme.rtl(), size=13, color=theme.TEXT_SECONDARY),
+            ft.Text(club, rtl=theme.rtl(), size=12, color=theme.TEXT_MUTED),
+        ]))

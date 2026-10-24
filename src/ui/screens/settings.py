@@ -27,18 +27,18 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
     # sound_enabled = settings.get("sound_enabled", 1)  # [SOUND DISABLED]
 
     speed_dd = ft.Dropdown(
-        label=t("match_speed"), value=str(match_speed), expand=True,
+        border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label=t("match_speed"), value=str(match_speed), expand=True,
         options=[ft.dropdown.Option(str(i), text=f"{i} - {t(n)}")
                  for i, n in [(1, "slow"), (2, "normal"), (3, "fast"), (4, "very_fast"), (5, "instant")]],
     )
     diff_dd = ft.Dropdown(
-        label=t("difficulty"), value=difficulty, expand=True,
+        border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label=t("difficulty"), value=difficulty, expand=True,
         options=[ft.dropdown.Option(k, text=t(k)) for k in ("easy", "normal", "hard")],
     )
-    auto_save_switch = ft.Switch(label=t("auto_save"), value=bool(auto_save))
+    auto_save_switch = ft.Switch(rtl=theme.rtl(), label=t("auto_save"), value=bool(auto_save))
     # sound_switch = ft.Switch(label="Sound Effects", value=bool(sound_enabled))  # [SOUND DISABLED]
     interval_dd = ft.Dropdown(
-        label=t("auto_save_interval"), value=str(auto_save_interval), expand=True,
+        border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label=t("auto_save_interval"), value=str(auto_save_interval), expand=True,
         options=[ft.dropdown.Option(str(d), text=t("every_n_days").format(days=d)) for d in (3, 7, 14, 30)],
     )
 
@@ -71,11 +71,11 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
             show_snackbar(page, f"{t('save_deleted')}")
 
         page.show_dialog(ft.AlertDialog(
-            title=ft.Text(f"{t('delete_save')}?"),
-            content=ft.Text(t("delete_save_confirm")),
+            rtl=theme.rtl(), title=ft.Text(f"{t('delete_save')}?", rtl=theme.rtl()),
+            content=ft.Text(t("delete_save_confirm"), rtl=theme.rtl()),
             actions=[
-                ft.TextButton(t("cancel"), on_click=lambda e2: page.pop_dialog()),
-                ft.ElevatedButton(t("delete"), on_click=confirm_delete,
+                ft.TextButton(t("cancel"), rtl=theme.rtl(), on_click=lambda e2: page.pop_dialog()),
+                ft.ElevatedButton(t("delete"), rtl=theme.rtl(), on_click=confirm_delete,
                     style=theme.DANGER_BTN_STYLE),
             ],
         ))
@@ -90,8 +90,8 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
 
         # Gameplay section
         theme.glass_card(
-            content=ft.Column(spacing=18, controls=[
-                ft.Text("" + t("gameplay"), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
+            content=ft.Column(rtl=theme.rtl(), spacing=18, controls=[
+                ft.Text("" + t("gameplay"), rtl=theme.rtl(), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
                 speed_dd,
                 diff_dd,
             ]),
@@ -99,8 +99,8 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
 
         # Save section
         theme.glass_card(
-            content=ft.Column(spacing=18, controls=[
-                ft.Text("" + t("save"), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
+            content=ft.Column(rtl=theme.rtl(), spacing=18, controls=[
+                ft.Text("" + t("save"), rtl=theme.rtl(), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
                 auto_save_switch,
                 interval_dd,
                 # sound_switch,  # [SOUND DISABLED]
@@ -118,25 +118,25 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
         navigate(page, "/settings")
 
     appearance = ft.RadioGroup(
-        value=theme.current_theme(), on_change=on_theme_change,
-        content=ft.Column(controls=[
-            ft.Container(padding=12, border_radius=10, bgcolor=theme.BG_DARK,
-                content=ft.Row(controls=[
-                    ft.Radio(value=key, label=names[1 if is_rtl() else 0], expand=True),
-                    *[ft.Container(width=16, height=24, border_radius=4, bgcolor=color)
+        rtl=theme.rtl(), value=theme.current_theme(), on_change=on_theme_change,
+        content=ft.Column(rtl=theme.rtl(), controls=[
+            ft.Container(rtl=theme.rtl(), padding=12, border_radius=10, bgcolor=theme.BG_DARK,
+                content=ft.Row(rtl=theme.rtl(), controls=[
+                    ft.Radio(rtl=theme.rtl(), value=key, label=names[1 if is_rtl() else 0], expand=True),
+                    *[ft.Container(rtl=theme.rtl(), width=16, height=24, border_radius=4, bgcolor=color)
                       for color in (("#202833", "#DDC08A") if key == "classic"
                                     else ("#69C5DD", "#FFAC7A"))],
                 ]))
             for key, names in theme.THEME_NAMES.items()
         ]),
     )
-    controls_list.insert(1, theme.glass_card(ft.Column(spacing=18, controls=[
-        ft.Text("المظهر" if is_rtl() else "Appearance", size=18,
+    controls_list.insert(1, theme.glass_card(ft.Column(rtl=theme.rtl(), spacing=18, controls=[
+        ft.Text("المظهر" if is_rtl() else "Appearance", rtl=theme.rtl(), size=18,
                 weight=ft.FontWeight.BOLD, color=theme.GOLD),
         appearance,
         ft.Text("المدرج: تصور مستوحى من ألوان ارزع، بدون شعار أو شراكة رسمية."
                 if is_rtl() else "Supporter: an Erza3-inspired concept. No logo or official partnership.",
-                size=12, color=theme.TEXT_SECONDARY),
+                rtl=theme.rtl(), size=12, color=theme.TEXT_SECONDARY),
     ])))
 
     # Language section — use RadioGroup for reliable on_change
@@ -165,43 +165,43 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
         navigate(page, "/settings")
 
     lang_radio = ft.RadioGroup(
-        value=current_lang,
+        rtl=theme.rtl(), value=current_lang,
         on_change=on_lang_change,
         content=ft.Row(
-            alignment=ft.MainAxisAlignment.CENTER,
+            rtl=theme.rtl(), alignment=ft.MainAxisAlignment.CENTER,
             spacing=20,
             controls=[
-                ft.Radio(value="en", label="🇬🇧 English"),
-                ft.Radio(value="ar", label="🇪🇬 العربية"),
+                ft.Radio(rtl=theme.rtl(), value="en", label="🇬🇧 English"),
+                ft.Radio(rtl=theme.rtl(), value="ar", label="🇪🇬 العربية"),
             ],
         ),
     )
 
     controls_list.append(
         theme.glass_card(
-            content=ft.Column(spacing=18, controls=[
-                ft.Text("" + t("language"), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
+            content=ft.Column(rtl=theme.rtl(), spacing=18, controls=[
+                ft.Text("" + t("language"), rtl=theme.rtl(), size=16, weight=ft.FontWeight.W_600, color=theme.GOLD),
                 lang_radio,
                 ft.Text(
                     t("language_help"),
-                    size=11, color=theme.TEXT_MUTED, italic=True,
+                    rtl=theme.rtl(), size=11, color=theme.TEXT_MUTED, italic=True,
                 ),
             ]),
         ),
     )
 
     controls_list.extend([
-        ft.Container(height=10),
-        ft.ElevatedButton("" + t("save") + " " + t("settings"), width=280, height=48,
+        ft.Container(rtl=theme.rtl(), height=10),
+        ft.ElevatedButton("" + t("save") + " " + t("settings"), rtl=theme.rtl(), width=280, height=48,
             style=theme.PRIMARY_BTN_STYLE,
             on_click=save_click),
-        ft.Container(height=16),
+        ft.Container(rtl=theme.rtl(), height=16),
 
         # Danger zone
         theme.glass_card(
-            content=ft.Column(spacing=18, controls=[
-                ft.Text("" + t("danger_zone"), size=16, weight=ft.FontWeight.W_600, color=theme.TEXT_DANGER),
-                ft.OutlinedButton("" + t("delete_save"), width=250, height=42,
+            content=ft.Column(rtl=theme.rtl(), spacing=18, controls=[
+                ft.Text("" + t("danger_zone"), rtl=theme.rtl(), size=16, weight=ft.FontWeight.W_600, color=theme.TEXT_DANGER),
+                ft.OutlinedButton("" + t("delete_save"), rtl=theme.rtl(), width=250, height=42,
                     style=theme.DANGER_BTN_STYLE,
                     on_click=delete_save_click),
             ]),
@@ -210,10 +210,10 @@ def build_settings_screen(page: ft.Page) -> ft.Column:
     ])
 
     return ft.Column(
-        expand=True, scroll=ft.ScrollMode.AUTO,
+        rtl=theme.rtl(), expand=True, scroll=ft.ScrollMode.AUTO,
         controls=[ft.Container(
-            padding=ft.padding.all(theme.PAGE_PADDING),
-            content=ft.Column(spacing=24, controls=controls_list),
+            rtl=theme.rtl(), padding=ft.padding.all(theme.PAGE_PADDING),
+            content=ft.Column(rtl=theme.rtl(), spacing=24, controls=controls_list),
         )],
     )
 

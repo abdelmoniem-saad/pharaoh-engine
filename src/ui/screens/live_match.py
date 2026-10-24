@@ -125,25 +125,25 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
 
     # ── UI Controls ──────────────────────────────────────────────────
     score_text = ft.Text(
-        "0 - 0", size=44, weight=ft.FontWeight.BOLD,
+        "0 : 0", rtl=False, font_family=theme.display_font(), size=52, weight=ft.FontWeight.BOLD,
         color=theme.TEXT_PRIMARY, text_align=ft.TextAlign.CENTER,
     )
     minute_text = ft.Text(
-        "0'", size=16, color=ft.Colors.GREY_400,
+        "0'", rtl=theme.rtl(), size=16, color=ft.Colors.GREY_400,
         weight=ft.FontWeight.W_500, text_align=ft.TextAlign.CENTER,
     )
     progress_bar = ft.ProgressBar(
-        value=0, color=theme.ACCENT_DARK,
+        rtl=theme.rtl(), value=0, color=theme.ACCENT_DARK,
         bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
     )
     status_text = ft.Text(
-        ("⏳ قبل المباراة" if is_rtl() else "⏳ Pre-Match"), size=13, color=ft.Colors.GREY_500,
+        ("⏳ قبل المباراة" if is_rtl() else "⏳ Pre-Match"), rtl=theme.rtl(), size=13, color=ft.Colors.GREY_500,
         text_align=ft.TextAlign.CENTER,
     )
-    event_list = ft.ListView(spacing=6, height=max(180, min(340, (page.height or 844) - 400)), auto_scroll=True)
+    event_list = ft.ListView(rtl=theme.rtl(), spacing=6, height=max(180, min(340, (page.height or 844) - 400)), auto_scroll=True)
 
     skip_btn = ft.ElevatedButton(
-        ("تخطي للنهاية" if is_rtl() else "Skip to End"), width=140, height=42,
+        ("تخطي للنهاية" if is_rtl() else "Skip to End"), rtl=theme.rtl(), width=140, height=42,
         style=ft.ButtonStyle(
             bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
             color=ft.Colors.WHITE,
@@ -153,7 +153,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         ),
     )
     subs_btn = ft.ElevatedButton(
-        f"{t('substitution')} ({subs_remaining[0]})", width=150, height=46, visible=False,
+        f"{t('substitution')} ({subs_remaining[0]})", rtl=theme.rtl(), width=150, height=46, visible=False,
         style=ft.ButtonStyle(
             bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.BLUE),
             color=ft.Colors.WHITE,
@@ -163,7 +163,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         ),
     )
     continue_btn = ft.ElevatedButton(
-        t("continue_btn"), width=200, height=48, visible=False,
+        t("continue_btn"), rtl=theme.rtl(), width=200, height=48, visible=False,
         style=ft.ButtonStyle(
             bgcolor=theme.ACCENT_DARK, color=ft.Colors.WHITE,
             text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
@@ -260,15 +260,15 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
             bg = ft.Colors.with_opacity(0.05, ft.Colors.WHITE)
 
         return ft.Container(
-            content=ft.Row(
-                spacing=8,
+            rtl=theme.rtl(), content=ft.Row(
+                rtl=theme.rtl(), spacing=8,
                 controls=[
-                    ft.Text(f"{ev.minute}'", size=11, color=ft.Colors.GREY_500,
-                             width=30, text_align=ft.TextAlign.RIGHT),
-                    ft.Text(icon, size=14),
+                    ft.Text(f"{ev.minute}'", rtl=theme.rtl(), size=11, color=ft.Colors.GREY_500,
+                             width=30, text_align=ft.TextAlign.LEFT if theme.rtl() else ft.TextAlign.RIGHT),
+                    ft.Text(icon, rtl=theme.rtl(), size=14),
                     ft.Text(
                         ev.description_ar if is_rtl() else ev.description,
-                        size=13 if is_major else 11,
+                        rtl=theme.rtl(), size=13 if is_major else 11,
                         weight=ft.FontWeight.BOLD if is_goal else ft.FontWeight.NORMAL,
                         color=ft.Colors.GREEN_300 if is_goal else ft.Colors.WHITE,
                         expand=True,
@@ -355,7 +355,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                         home_goals[0] += 1
                     else:
                         away_goals[0] += 1
-                    score_text.value = f"{home_goals[0]} - {away_goals[0]}"
+                    score_text.value = theme.scoreline(home_goals[0], away_goals[0])
                     # play_goal()  # [SOUND DISABLED]
 
                 if ev.event_type == MatchEventType.HALF_TIME:
@@ -373,11 +373,11 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
                             await asyncio.sleep(0.15)
                         if halftime_choice[0]:
                             event_list.controls.append(ft.Container(
-                                content=ft.Row(spacing=6, controls=[
-                                    ft.Text("HT", size=11, color=ft.Colors.GREY_500, width=30,
-                                            text_align=ft.TextAlign.RIGHT),
-                                    ft.Text("🗣️", size=14),
-                                    ft.Text(f"Team Talk: {halftime_choice[0]}", size=12,
+                                rtl=theme.rtl(), content=ft.Row(rtl=theme.rtl(), spacing=6, controls=[
+                                    ft.Text("HT", rtl=theme.rtl(), size=11, color=ft.Colors.GREY_500, width=30,
+                                            text_align=ft.TextAlign.LEFT if theme.rtl() else ft.TextAlign.RIGHT),
+                                    ft.Text("🗣️", rtl=theme.rtl(), size=14),
+                                    ft.Text(f"Team Talk: {halftime_choice[0]}", rtl=theme.rtl(), size=12,
                                             color=ft.Colors.BLUE_300, weight=ft.FontWeight.W_500),
                                 ]),
                                 padding=ft.padding.symmetric(horizontal=8, vertical=4),
@@ -414,7 +414,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
         # ── Finish ───────────────────────────────────────────────
         home_goals[0] = result.home_goals
         away_goals[0] = result.away_goals
-        score_text.value = f"{result.home_goals} - {result.away_goals}"
+        score_text.value = theme.scoreline(result.home_goals, result.away_goals)
         minute_text.value = "FT"
         progress_bar.value = 1.0
         status_text.value = f"🏁 {t('full_time')}"
@@ -434,47 +434,47 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
 
     # ── Layout ───────────────────────────────────────────────────────
     content = ft.Column(
-        expand=True, scroll=ft.ScrollMode.AUTO,
+        rtl=theme.rtl(), expand=True, scroll=ft.ScrollMode.AUTO,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
             ft.Container(
-                padding=theme.PAGE_PADDING,
+                rtl=theme.rtl(), padding=theme.PAGE_PADDING,
                 width=min(page.width or 390, 800),
                 content=ft.Column(
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    rtl=theme.rtl(), horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=20,
                     controls=[
                         # Header
                         ft.Container(
-                            content=ft.Text(comp_text, size=12, color=theme.GOLD,
+                            rtl=theme.rtl(), content=ft.Text(comp_text, rtl=theme.rtl(), size=12, color=theme.GOLD,
                                              weight=ft.FontWeight.W_600),
                             padding=ft.padding.symmetric(horizontal=12, vertical=4),
                             border_radius=8,
                             bgcolor=ft.Colors.with_opacity(0.10, theme.GOLD),
                         ),
-                        ft.Text(matchday_label, size=11, color=ft.Colors.GREY_600),
+                        ft.Text(matchday_label, rtl=theme.rtl(), size=11, color=ft.Colors.GREY_600),
 
                         # Scoreboard — glass card
                         ft.Container(
-                            content=ft.Column(
-                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            rtl=theme.rtl(), content=ft.Column(
+                                rtl=theme.rtl(), horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                                 spacing=4,
                                 controls=[
                                     ft.Row(
-                                        alignment=ft.MainAxisAlignment.CENTER,
+                                        rtl=theme.rtl(), alignment=ft.MainAxisAlignment.CENTER,
                                         spacing=10,
                                         controls=[
                                             ft.Text(
-                                                display_home_name(result), size=14,
+                                                display_home_name(result), rtl=theme.rtl(), size=14,
                                                 weight=ft.FontWeight.BOLD,
-                                                text_align=ft.TextAlign.RIGHT, expand=True,
+                                                text_align=ft.TextAlign.LEFT if theme.rtl() else ft.TextAlign.RIGHT, expand=True,
                                                 max_lines=2, overflow=ft.TextOverflow.ELLIPSIS,
                                             ),
                                             score_text,
                                             ft.Text(
-                                                display_away_name(result), size=14,
+                                                display_away_name(result), rtl=theme.rtl(), size=14,
                                                 weight=ft.FontWeight.BOLD,
-                                                text_align=ft.TextAlign.LEFT, expand=True,
+                                                text_align=ft.TextAlign.RIGHT if theme.rtl() else ft.TextAlign.LEFT, expand=True,
                                                 max_lines=2, overflow=ft.TextOverflow.ELLIPSIS,
                                             ),
                                         ],
@@ -496,7 +496,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
 
                         # Event feed
                         ft.Container(
-                            content=ft.Text(t("match_commentary"), size=14,
+                            rtl=theme.rtl(), content=ft.Text(t("match_commentary"), rtl=theme.rtl(), size=14,
                                              weight=ft.FontWeight.W_500, color=ft.Colors.GREY_400),
                             padding=ft.padding.only(top=4),
                         ),
@@ -504,7 +504,7 @@ def build_live_match_screen(page: ft.Page, outcome) -> ft.Column:
 
                         # Buttons
                         ft.Row(
-                            alignment=ft.MainAxisAlignment.CENTER,
+                            rtl=theme.rtl(), alignment=ft.MainAxisAlignment.CENTER,
                             spacing=8, wrap=True,
                             controls=[subs_btn, skip_btn, continue_btn],
                         ),
@@ -542,9 +542,9 @@ def _show_halftime_talk(page: ft.Page, event_list, halftime_choice):
             return handler
 
         btn = ft.Container(
-            content=ft.Column(spacing=2, controls=[
-                ft.Text(emoji_label, size=14, weight=ft.FontWeight.W_600),
-                ft.Text(desc, size=11, color=ft.Colors.GREY_400, italic=True),
+            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=2, controls=[
+                ft.Text(emoji_label, rtl=theme.rtl(), size=14, weight=ft.FontWeight.W_600),
+                ft.Text(desc, rtl=theme.rtl(), size=11, color=ft.Colors.GREY_400, italic=True),
             ]),
             padding=ft.padding.symmetric(horizontal=12, vertical=12),
             border_radius=10,
@@ -556,8 +556,8 @@ def _show_halftime_talk(page: ft.Page, event_list, halftime_choice):
         talk_controls.append(btn)
 
     header = ft.Container(
-        content=ft.Text(f"🗣️ {t('halftime_team_talk')}",
-                        size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_300),
+        rtl=theme.rtl(), content=ft.Text(f"🗣️ {t('halftime_team_talk')}",
+                        rtl=theme.rtl(), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_300),
         padding=ft.padding.symmetric(horizontal=8, vertical=4),
     )
     talk_controls.insert(0, header)
@@ -618,21 +618,21 @@ def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi
     selected_off = [None]
     selected_on = [None]
 
-    off_label = ft.Text(f"1. {t('select_player_off')}:", size=12,
+    off_label = ft.Text(f"1. {t('select_player_off')}:", rtl=theme.rtl(), size=12,
                          color=ft.Colors.RED_300, weight=ft.FontWeight.W_500)
-    on_label = ft.Text(f"2. {t('select_player_on')}:", size=12,
+    on_label = ft.Text(f"2. {t('select_player_on')}:", rtl=theme.rtl(), size=12,
                         color=ft.Colors.GREEN_300, weight=ft.FontWeight.W_500)
 
-    off_list = ft.Column(spacing=2)
-    on_list = ft.Column(spacing=2)
+    off_list = ft.Column(rtl=theme.rtl(), spacing=2)
+    on_list = ft.Column(rtl=theme.rtl(), spacing=2)
     confirm_btn = ft.ElevatedButton(
-        f"✅ {t('confirm')}", disabled=True, width=200, height=40,
+        f"✅ {t('confirm')}", rtl=theme.rtl(), disabled=True, width=200, height=40,
         style=ft.ButtonStyle(
             bgcolor=ft.Colors.GREEN_800, color=ft.Colors.WHITE,
             shape=ft.RoundedRectangleBorder(radius=10),
         ),
     )
-    summary = ft.Text("", size=11, color=ft.Colors.GREY_400)
+    summary = ft.Text("", rtl=theme.rtl(), size=11, color=ft.Colors.GREY_400)
 
     def _player_btn(player, is_off=True):
         ovr = calculate_overall_rating(player)
@@ -651,13 +651,13 @@ def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi
             page.update()
 
         return ft.Container(
-            content=ft.Row(spacing=6, controls=[
-                ft.Text(player.position.value, size=10, color=theme.GOLD, width=30),
-                ft.Text(player.name, size=12, expand=True, max_lines=1,
+            rtl=theme.rtl(), content=ft.Row(rtl=theme.rtl(), spacing=6, controls=[
+                ft.Text(player.position.value, rtl=theme.rtl(), size=10, color=theme.GOLD, width=30),
+                ft.Text(player.name, rtl=theme.rtl(), size=12, expand=True, max_lines=1,
                          overflow=ft.TextOverflow.ELLIPSIS),
-                ft.Text(str(ovr), size=11, weight=ft.FontWeight.BOLD, color=color),
+                ft.Text(str(ovr), rtl=theme.rtl(), size=11, weight=ft.FontWeight.BOLD, color=color),
                 ft.Text(f"{'🟢' if player.fitness >= 70 else '🟡' if player.fitness >= 40 else '🔴'}",
-                         size=10),
+                         rtl=theme.rtl(), size=10),
             ]),
             padding=ft.padding.symmetric(horizontal=8, vertical=8),
             border_radius=8,
@@ -698,12 +698,12 @@ def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi
 
         # Add substitution event to the event feed
         event_list.controls.append(ft.Container(
-            content=ft.Row(spacing=6, controls=[
-                ft.Text(f"{current_min}'", size=11, color=ft.Colors.GREY_500,
-                         width=30, text_align=ft.TextAlign.RIGHT),
-                ft.Text("🔄", size=14),
+            rtl=theme.rtl(), content=ft.Row(rtl=theme.rtl(), spacing=6, controls=[
+                ft.Text(f"{current_min}'", rtl=theme.rtl(), size=11, color=ft.Colors.GREY_500,
+                         width=30, text_align=ft.TextAlign.LEFT if theme.rtl() else ft.TextAlign.RIGHT),
+                ft.Text("🔄", rtl=theme.rtl(), size=14),
                 ft.Text(f"{display_name(off_p)} ⬇️  {display_name(on_p)} ⬆️",
-                         size=12, color=ft.Colors.CYAN_300, weight=ft.FontWeight.W_500,
+                         rtl=theme.rtl(), size=12, color=ft.Colors.CYAN_300, weight=ft.FontWeight.W_500,
                          expand=True),
             ]),
             padding=ft.padding.symmetric(horizontal=8, vertical=4),
@@ -727,26 +727,26 @@ def _show_sub_dialog(page, outcome, event_list, events_by_minute, active_user_xi
     confirm_btn.on_click = do_sub
 
     dlg = ft.AlertDialog(
-        on_dismiss=lambda e: sub_pending.__setitem__(0, False),
+        rtl=theme.rtl(), on_dismiss=lambda e: sub_pending.__setitem__(0, False),
         title=ft.Text(f"{t('substitution')} ({subs_remaining[0]})",
-                       size=15, weight=ft.FontWeight.BOLD, color=theme.GOLD),
+                       rtl=theme.rtl(), size=15, weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
-            content=ft.Column(
-                scroll=ft.ScrollMode.AUTO, spacing=6,
+            rtl=theme.rtl(), content=ft.Column(
+                rtl=theme.rtl(), scroll=ft.ScrollMode.AUTO, spacing=6,
                 controls=[
                     off_label,
                     off_list,
-                    ft.Divider(height=1),
+                    ft.Divider(rtl=theme.rtl(), height=1),
                     on_label,
                     on_list,
-                    ft.Divider(height=1),
+                    ft.Divider(rtl=theme.rtl(), height=1),
                     summary,
                 ],
             ),
             width=290, height=380,
         ),
         actions=[
-            ft.TextButton(t("cancel"), on_click=cancel_sub),
+            ft.TextButton(t("cancel"), rtl=theme.rtl(), on_click=cancel_sub),
             confirm_btn,
         ],
     )
@@ -835,7 +835,7 @@ def _restore_page_root(page: ft.Page):
     # app_state references remain valid.
     if tc is None:
         tc = ft.Container(
-            expand=True,
+            rtl=theme.rtl(), expand=True,
             opacity=1,
             animate_opacity=ft.Animation(200, ft.AnimationCurve.EASE_IN_OUT),
         )
@@ -843,21 +843,21 @@ def _restore_page_root(page: ft.Page):
 
     if nc is None:
         nc = ft.Column(
-            spacing=6,
+            rtl=theme.rtl(), spacing=6,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         )
         app_state._notification_column = nc
 
     notification_overlay = ft.Container(
-        content=nc,
+        rtl=theme.rtl(), content=nc,
         alignment=ft.Alignment(0, -1),
     )
 
     root = ft.Stack(
-        controls=[
+        rtl=theme.rtl(), controls=[
             tc,
             ft.TransparentPointer(
-                content=notification_overlay,
+                rtl=theme.rtl(), content=notification_overlay,
                 top=10,
                 left=0,
                 right=0,
@@ -868,7 +868,7 @@ def _restore_page_root(page: ft.Page):
 
     page.controls.clear()
     # Apply global SafeArea when restoring the root
-    page.controls.append(ft.SafeArea(content=root, expand=True))
+    page.controls.append(ft.SafeArea(rtl=theme.rtl(), content=root, expand=True))
     page.update()
 
 

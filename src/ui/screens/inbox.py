@@ -35,7 +35,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = build_nav_bar(page, 4)
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
+        return ft.Column(rtl=theme.rtl(), controls=[ft.Text(t("no_game_loaded"), rtl=theme.rtl())])
 
     conn = app_state.db_conn
     gs = app_state.game_state
@@ -46,14 +46,14 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
     if not messages:
         msg_tiles.append(
             ft.Container(
-                content=ft.Column(
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                rtl=theme.rtl(), content=ft.Column(
+                    rtl=theme.rtl(), horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        ft.Icon(ft.Icons.INBOX, size=48, color=theme.TEXT_MUTED),
-                        ft.Container(height=8),
-                        ft.Text(t("no_messages_yet"), size=theme.BODY_SIZE, color=theme.TEXT_SECONDARY),
+                        ft.Icon(ft.Icons.INBOX, rtl=theme.rtl(), size=48, color=theme.TEXT_MUTED),
+                        ft.Container(rtl=theme.rtl(), height=8),
+                        ft.Text(t("no_messages_yet"), rtl=theme.rtl(), size=theme.BODY_SIZE, color=theme.TEXT_SECONDARY),
                         ft.Text(t("play_matches_updates"),
-                                size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED),
+                                rtl=theme.rtl(), size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED),
                     ],
                 ),
                 padding=40,
@@ -77,7 +77,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
             if not msg.is_read:
                 unread_badge.append(
                     ft.Container(
-                        content=ft.Text(t("new_label"), size=8, color=ft.Colors.WHITE,
+                        rtl=theme.rtl(), content=ft.Text(t("new_label"), rtl=theme.rtl(), size=8, color=ft.Colors.WHITE,
                                         weight=ft.FontWeight.BOLD),
                         bgcolor=ft.Colors.RED_400,
                         padding=ft.padding.symmetric(horizontal=5, vertical=2),
@@ -87,44 +87,39 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
 
             msg_tiles.append(
                 ft.Container(
-                    content=ft.Row(
-                        spacing=10,
+                    rtl=theme.rtl(), content=ft.Row(
+                        rtl=theme.rtl(), spacing=10,
                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
                         controls=[
                             # Category icon
                             ft.Container(
-                                content=ft.Icon(cat_icon, size=18, color=icon_color),
+                                rtl=theme.rtl(), content=ft.Icon(cat_icon, rtl=theme.rtl(), size=18, color=icon_color),
                                 width=36, height=36, border_radius=18,
                                 bgcolor=ft.Colors.with_opacity(0.12, cat_color),
                                 alignment=ft.Alignment(0, 0),
                             ),
                             # Content
-                            ft.Column(spacing=2, expand=True, controls=[
-                                ft.Row(spacing=4, tight=True, controls=[
-                                    ft.Text(msg.subject, size=theme.BODY_SIZE, weight=title_weight,
+                            ft.Column(rtl=theme.rtl(), spacing=2, expand=True, controls=[
+                                ft.Row(rtl=theme.rtl(), spacing=4, tight=True, controls=[
+                                    ft.Text(msg.subject, rtl=theme.rtl(), size=theme.BODY_SIZE, weight=title_weight,
                                             max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                             expand=True),
                                     *unread_badge,
                                 ]),
                                 ft.Text(
                                     f"{msg.date.strftime('%d %b')} — {msg.body}",
-                                    size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY,
+                                    rtl=theme.rtl(), size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY,
                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                 ),
                             ]),
                             # Chevron
-                            ft.Icon(ft.Icons.CHEVRON_RIGHT, size=16, color=theme.ACCENT),
+                            ft.Icon(ft.Icons.CHEVRON_RIGHT, rtl=theme.rtl(), size=16, color=theme.ACCENT),
                         ],
                     ),
-                    padding=ft.padding.symmetric(horizontal=12, vertical=10),
+                    padding=ft.padding.symmetric(horizontal=16, vertical=18),
                     border_radius=theme.CARD_RADIUS_SM,
                     bgcolor=theme.CARD_GLASS_STRONG if not msg.is_read else theme.CARD_GLASS,
-                    border=ft.border.only(
-                        left=ft.BorderSide(3, cat_color),
-                        top=ft.BorderSide(1, theme.GOLD_BORDER),
-                        right=ft.BorderSide(1, theme.GOLD_BORDER),
-                        bottom=ft.BorderSide(1, theme.GOLD_BORDER),
-                    ),
+                    border=theme.leading_border(cat_color, outline=True),
                     on_click=make_handler(),
                     ink=True,
                 )
@@ -140,13 +135,13 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
             navigate(page, "/inbox")
 
         header_extra.append(
-            ft.TextButton(t("mark_all_read_btn"), icon=ft.Icons.DONE_ALL,
+            ft.TextButton(t("mark_all_read_btn"), rtl=theme.rtl(), icon=ft.Icons.DONE_ALL,
                           on_click=mark_all_read)
         )
 
     # Category filter chips
     active_filter = ["all"]
-    msg_tiles_col = ft.Column(spacing=4, controls=msg_tiles)
+    msg_tiles_col = ft.Column(rtl=theme.rtl(), spacing=4, controls=msg_tiles)
 
     def _apply_filter(category):
         def handler(e):
@@ -169,7 +164,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                 if not msg.is_read:
                     unread_badge.append(
                         ft.Container(
-                            content=ft.Text(t("new_label"), size=8, color=ft.Colors.WHITE,
+                            rtl=theme.rtl(), content=ft.Text(t("new_label"), rtl=theme.rtl(), size=8, color=ft.Colors.WHITE,
                                             weight=ft.FontWeight.BOLD),
                             bgcolor=ft.Colors.RED_400,
                             padding=ft.padding.symmetric(horizontal=5, vertical=2),
@@ -179,48 +174,43 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
 
                 msg_tiles_col.controls.append(
                     ft.Container(
-                        content=ft.Row(
-                            spacing=10,
+                        rtl=theme.rtl(), content=ft.Row(
+                            rtl=theme.rtl(), spacing=10,
                             vertical_alignment=ft.CrossAxisAlignment.CENTER,
                             controls=[
                                 ft.Container(
-                                    content=ft.Icon(cat_icon, size=18, color=icon_color),
+                                    rtl=theme.rtl(), content=ft.Icon(cat_icon, rtl=theme.rtl(), size=18, color=icon_color),
                                     width=36, height=36, border_radius=18,
                                     bgcolor=ft.Colors.with_opacity(0.12, cat_color),
                                     alignment=ft.Alignment(0, 0),
                                 ),
-                                ft.Column(spacing=2, expand=True, controls=[
-                                    ft.Row(spacing=4, tight=True, controls=[
-                                        ft.Text(msg.subject, size=theme.BODY_SIZE, weight=title_weight,
+                                ft.Column(rtl=theme.rtl(), spacing=2, expand=True, controls=[
+                                    ft.Row(rtl=theme.rtl(), spacing=4, tight=True, controls=[
+                                        ft.Text(msg.subject, rtl=theme.rtl(), size=theme.BODY_SIZE, weight=title_weight,
                                                 max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                                 expand=True),
                                         *unread_badge,
                                     ]),
                                     ft.Text(
                                         f"{msg.date.strftime('%d %b')} — {msg.body}",
-                                        size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY,
+                                        rtl=theme.rtl(), size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY,
                                         max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                     ),
                                 ]),
-                                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=16, color=theme.ACCENT),
+                                ft.Icon(ft.Icons.CHEVRON_RIGHT, rtl=theme.rtl(), size=16, color=theme.ACCENT),
                             ],
                         ),
-                        padding=ft.padding.symmetric(horizontal=12, vertical=10),
+                        padding=ft.padding.symmetric(horizontal=16, vertical=18),
                         border_radius=theme.CARD_RADIUS_SM,
                         bgcolor=theme.CARD_GLASS_STRONG if not msg.is_read else theme.CARD_GLASS,
-                        border=ft.border.only(
-                            left=ft.BorderSide(3, cat_color),
-                            top=ft.BorderSide(1, theme.GOLD_BORDER),
-                            right=ft.BorderSide(1, theme.GOLD_BORDER),
-                            bottom=ft.BorderSide(1, theme.GOLD_BORDER),
-                        ),
+                        border=theme.leading_border(cat_color, outline=True),
                         on_click=make_handler(),
                         ink=True,
                     )
                 )
             if not msg_tiles_col.controls:
                 msg_tiles_col.controls.append(
-                    ft.Text(t("no_messages_category"), size=12, color=theme.TEXT_SECONDARY))
+                    ft.Text(t("no_messages_category"), rtl=theme.rtl(), size=12, color=theme.TEXT_SECONDARY))
             # Update chip styles
             for chip_cat, chip_ctrl in filter_chips:
                 if chip_cat == category:
@@ -234,15 +224,15 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
 
     # Build filter chip controls
     categories = ["all", "match", "board", "transfer", "media", "general"]
-    cat_labels = {"all": t("all_filter"), "match": f"⚽ {t('match_filter')}", "board": f"🏛️ {t('board_filter')}",
-                  "transfer": f"💰 {t('transfer_filter')}", "media": f"📰 {t('media_filter')}", "general": f"📧 {t('other_filter')}"}
+    cat_labels = {"all": t("all_filter"), "match": f"{t('match_filter')}", "board": f"{t('board_filter')}",
+                  "transfer": f"{t('transfer_filter')}", "media": f"{t('media_filter')}", "general": f"{t('other_filter')}"}
     filter_chips = []
     for cat in categories:
         chip = ft.Container(
-            content=ft.Text(cat_labels.get(cat, cat.title()), size=10,
+            rtl=theme.rtl(), content=ft.Text(cat_labels.get(cat, cat.title()), rtl=theme.rtl(), size=12,
                             weight=ft.FontWeight.W_500,
                             color=theme.ACCENT if cat == "all" else theme.TEXT_SECONDARY),
-            padding=ft.padding.symmetric(horizontal=10, vertical=5),
+            padding=ft.padding.symmetric(horizontal=14, vertical=12),
             border_radius=12,
             bgcolor=ft.Colors.with_opacity(0.15, theme.ACCENT) if cat == "all" else theme.CARD_GLASS,
             border=ft.border.all(1, theme.ACCENT if cat == "all" else theme.GOLD_BORDER),
@@ -251,17 +241,17 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
         )
         filter_chips.append((cat, chip))
 
-    filter_row = ft.Row(spacing=4, scroll=ft.ScrollMode.AUTO,
+    filter_row = ft.Row(rtl=theme.rtl(), spacing=4, wrap=True,
                         controls=[c for _, c in filter_chips])
 
     return ft.Column(
-        expand=True,
+        rtl=theme.rtl(), expand=True,
         scroll=ft.ScrollMode.AUTO,
         controls=[
             ft.Container(
-                padding=ft.padding.all(theme.PAGE_PADDING),
+                rtl=theme.rtl(), padding=ft.padding.all(theme.PAGE_PADDING),
                 content=ft.Column(
-                    spacing=theme.SECTION_SPACING,
+                    rtl=theme.rtl(), spacing=theme.SECTION_SPACING,
                     controls=[
                         theme.header_bar(
                             title=t("inbox"),
@@ -296,7 +286,7 @@ def _show_message_detail(page: ft.Page, conn, msg):
         navigate(page, "/inbox")
 
     # Check if this is a transfer offer with parseable data
-    actions = [ft.TextButton(t("close_btn"), on_click=close_handler)]
+    actions = [ft.TextButton(t("close_btn"), rtl=theme.rtl(), on_click=close_handler)]
     display_body = msg.body
 
     if msg.category == "transfer" and "TRANSFER_OFFER|" in msg.body:
@@ -332,30 +322,30 @@ def _show_message_detail(page: ft.Page, conn, msg):
                 navigate(page, "/inbox")
 
             actions = [
-                ft.TextButton("❌ Decline", on_click=decline_offer),
-                ft.ElevatedButton("✅ Accept", on_click=accept_offer),
+                ft.TextButton("❌ Decline", rtl=theme.rtl(), on_click=decline_offer),
+                ft.ElevatedButton("✅ Accept", rtl=theme.rtl(), on_click=accept_offer),
             ]
         except (IndexError, ValueError):
             pass  # Not a valid offer format, show normally
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"{cat_emoji} {msg.subject}", size=16,
+        rtl=theme.rtl(), title=ft.Text(f"{cat_emoji} {msg.subject}", rtl=theme.rtl(), size=16,
                       weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
-            content=ft.Column(
-                controls=[
+            rtl=theme.rtl(), content=ft.Column(
+                rtl=theme.rtl(), controls=[
                     ft.Container(
-                        content=ft.Row(
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        rtl=theme.rtl(), content=ft.Row(
+                            rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
                                 ft.Text(
                                     msg.date.strftime("%A, %d %B %Y"),
-                                    size=11, color=ft.Colors.GREY_500,
+                                    rtl=theme.rtl(), size=11, color=ft.Colors.GREY_500,
                                 ),
                                 ft.Container(
-                                    content=ft.Text(
+                                    rtl=theme.rtl(), content=ft.Text(
                                         msg.category.title(),
-                                        size=9, color=theme.ACCENT,
+                                        rtl=theme.rtl(), size=9, color=theme.ACCENT,
                                         weight=ft.FontWeight.W_500,
                                     ),
                                     padding=ft.padding.symmetric(horizontal=8, vertical=2),
@@ -366,14 +356,14 @@ def _show_message_detail(page: ft.Page, conn, msg):
                         ),
                     ),
                     ft.Container(
-                        height=1,
+                        rtl=theme.rtl(), height=1,
                         bgcolor=ft.Colors.with_opacity(0.18, theme.GOLD),
                         margin=ft.margin.symmetric(vertical=4),
                     ),
-                    ft.Container(height=3),
+                    ft.Container(rtl=theme.rtl(), height=3),
                     ft.Text(
                         display_body,
-                        size=14,
+                        rtl=theme.rtl(), size=14,
                     ),
                 ],
                 spacing=4,

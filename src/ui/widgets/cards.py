@@ -16,18 +16,18 @@ from src.utils.localization import t
 def empty_state(icon, title: str, subtitle: str = "") -> ft.Container:
     """Friendly centered placeholder for empty lists and screens."""
     controls = [
-        ft.Icon(icon, size=52, color=theme.TEXT_MUTED),
-        ft.Container(height=10),
-        ft.Text(title, size=theme.BODY_SIZE, weight=ft.FontWeight.W_600,
+        ft.Icon(icon, rtl=theme.rtl(), size=52, color=theme.TEXT_MUTED),
+        ft.Container(rtl=theme.rtl(), height=10),
+        ft.Text(title, rtl=theme.rtl(), size=theme.BODY_SIZE, weight=ft.FontWeight.W_600,
                 color=theme.TEXT_SECONDARY, text_align=ft.TextAlign.CENTER),
     ]
     if subtitle:
-        controls.append(ft.Container(height=4))
-        controls.append(ft.Text(subtitle, size=theme.CAPTION_SIZE,
+        controls.append(ft.Container(rtl=theme.rtl(), height=4))
+        controls.append(ft.Text(subtitle, rtl=theme.rtl(), size=theme.CAPTION_SIZE,
                                 color=theme.TEXT_MUTED, text_align=ft.TextAlign.CENTER))
     return ft.Container(
-        content=ft.Column(
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        rtl=theme.rtl(), content=ft.Column(
+            rtl=theme.rtl(), horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             controls=controls,
         ),
         padding=40,
@@ -51,18 +51,18 @@ def section_card(
     title_color = theme.ACCENT if title_color is None else title_color
     header_controls = []
     if icon:
-        header_controls.append(ft.Icon(icon, size=16, color=title_color))
+        header_controls.append(ft.Icon(icon, rtl=theme.rtl(), size=16, color=title_color))
     header_controls.append(
-        ft.Text(title.lstrip("📊📋🏟️💰📈⚽🏆💡🎯🎛️⚡🏥🚫 "), size=16, weight=ft.FontWeight.W_600, color=title_color, expand=True)
+        ft.Text(title.lstrip("📊📋🏟️💰📈⚽🏆💡🎯🎛️⚡🏥🚫 "), rtl=theme.rtl(), size=16, weight=ft.FontWeight.W_600, color=title_color, expand=True)
     )
     if extra_action:
         header_controls.append(extra_action)
 
     return ft.Container(
-        content=ft.Column(
-            spacing=theme.ITEM_SPACING,
+        rtl=theme.rtl(), content=ft.Column(
+            rtl=theme.rtl(), spacing=theme.ITEM_SPACING,
             controls=[
-                ft.Row(controls=header_controls, spacing=6),
+                ft.Row(rtl=theme.rtl(), controls=header_controls, spacing=6),
                 *(controls if not collapsed else []),
             ],
         ),
@@ -95,13 +95,13 @@ def collapsible_section(
     title_color = theme.ACCENT if title_color is None else title_color
     leading = None
     if icon:
-        leading = ft.Icon(icon, size=16, color=title_color)
+        leading = ft.Icon(icon, rtl=theme.rtl(), size=16, color=title_color)
 
     return ft.Container(
-        content=ft.ExpansionTile(
-            title=ft.Text(title.lstrip("📊📋🏟️💰📈⚽🏆💡🎯🎛️⚡🏥🚫 "), size=16, weight=ft.FontWeight.W_600,
+        rtl=theme.rtl(), content=ft.ExpansionTile(
+            rtl=theme.rtl(), title=ft.Text(title.lstrip("📊📋🏟️💰📈⚽🏆💡🎯🎛️⚡🏥🚫 "), rtl=theme.rtl(), size=16, weight=ft.FontWeight.W_600,
                           color=title_color),
-            subtitle=ft.Text(subtitle, size=theme.TINY_SIZE, color=theme.TEXT_MUTED) if subtitle else None,
+            subtitle=ft.Text(subtitle, rtl=theme.rtl(), size=theme.TINY_SIZE, color=theme.TEXT_MUTED) if subtitle else None,
             leading=leading,
             controls=controls,
             expanded=initially_expanded,
@@ -143,17 +143,17 @@ def info_tile(
     """
     color = theme.TEXT_PRIMARY if color is None else color
     inner = ft.Row(
-        spacing=4, tight=True,
+        rtl=theme.rtl(), spacing=4, tight=True,
         controls=[
-            *([ ft.Icon(icon, size=13, color=theme.ACCENT) ] if icon else []),
-            ft.Column(spacing=0, controls=[
-                ft.Text(label, size=theme.TINY_SIZE, color=theme.TEXT_MUTED),
-                ft.Text(value, size=theme.CAPTION_SIZE, weight=ft.FontWeight.BOLD, color=color),
+            *([ ft.Icon(icon, rtl=theme.rtl(), size=13, color=theme.ACCENT) ] if icon else []),
+            ft.Column(rtl=theme.rtl(), spacing=0, controls=[
+                ft.Text(label, rtl=theme.rtl(), size=theme.TINY_SIZE, color=theme.TEXT_MUTED),
+                ft.Text(value, rtl=theme.rtl(), size=theme.CAPTION_SIZE, weight=ft.FontWeight.BOLD, color=color),
             ]),
         ],
     )
     return ft.Container(
-        content=inner,
+        rtl=theme.rtl(), content=inner,
         padding=ft.padding.symmetric(horizontal=10, vertical=5),
         border_radius=theme.CARD_RADIUS_SM,
         bgcolor=theme.CARD_GLASS_STRONG,
@@ -173,11 +173,11 @@ def kv_row(
     Full-width key-value row — replaces _finance_row scattered across files.
     """
     return ft.Container(
-        content=ft.Row(
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        rtl=theme.rtl(), content=ft.Row(
+            rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             controls=[
-                ft.Text(label, size=theme.BODY_SIZE, color=theme.TEXT_SECONDARY),
-                ft.Text(value, size=theme.BODY_SIZE,
+                ft.Text(label, rtl=theme.rtl(), size=theme.BODY_SIZE, color=theme.TEXT_SECONDARY),
+                ft.Text(value, rtl=theme.rtl(), size=theme.BODY_SIZE,
                         weight=ft.FontWeight.BOLD if bold else ft.FontWeight.NORMAL,
                         color=color or theme.TEXT_PRIMARY),
             ],
@@ -196,7 +196,7 @@ def badge(
 ) -> ft.Container:
     """Small colored pill badge (e.g. "NEW", "C", "🏥")."""
     return ft.Container(
-        content=ft.Text(text, size=size, color=color, weight=ft.FontWeight.BOLD),
+        rtl=theme.rtl(), content=ft.Text(text, rtl=theme.rtl(), size=size, color=color, weight=ft.FontWeight.BOLD),
         bgcolor=bgcolor,
         padding=ft.padding.symmetric(horizontal=5, vertical=2),
         border_radius=4,
@@ -214,7 +214,7 @@ def form_chips(results: list[str]) -> ft.Row:
     color_map = {"W": theme.TEXT_SUCCESS, "D": theme.TEXT_WARNING, "L": theme.TEXT_DANGER}
     chips = [
         ft.Container(
-            content=ft.Text(r, size=10, weight=ft.FontWeight.BOLD,
+            rtl=theme.rtl(), content=ft.Text(r, rtl=theme.rtl(), size=10, weight=ft.FontWeight.BOLD,
                             color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER),
             width=22, height=22, border_radius=11,
             bgcolor=color_map.get(r, theme.TEXT_MUTED),
@@ -222,8 +222,8 @@ def form_chips(results: list[str]) -> ft.Row:
         )
         for r in results
     ]
-    return ft.Row(spacing=3, controls=chips if chips else [
-        ft.Text("—", size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED)
+    return ft.Row(rtl=theme.rtl(), spacing=3, controls=chips if chips else [
+        ft.Text("—", rtl=theme.rtl(), size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED)
     ])
 
 
@@ -246,19 +246,19 @@ def stat_comparison_bar(
     away_flex = max(1, int((1 - hv / total) * 100))
 
     return ft.Container(
-        content=ft.Column(spacing=2, controls=[
-            ft.Row(alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
-                ft.Text(home_val, size=12, weight=ft.FontWeight.BOLD),
-                ft.Text(label, size=10, color=theme.TEXT_MUTED),
-                ft.Text(away_val, size=12, weight=ft.FontWeight.BOLD),
+        rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=2, controls=[
+            ft.Row(rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
+                ft.Text(home_val, rtl=theme.rtl(), size=12, weight=ft.FontWeight.BOLD),
+                ft.Text(label, rtl=theme.rtl(), size=10, color=theme.TEXT_MUTED),
+                ft.Text(away_val, rtl=theme.rtl(), size=12, weight=ft.FontWeight.BOLD),
             ]),
-            ft.Row(spacing=2, controls=[
+            ft.Row(rtl=theme.rtl(), spacing=2, controls=[
                 ft.Container(
-                    expand=home_flex, height=4,
+                    rtl=theme.rtl(), expand=home_flex, height=4,
                     bgcolor=home_color, border_radius=2,
                 ),
                 ft.Container(
-                    expand=away_flex, height=4,
+                    rtl=theme.rtl(), expand=away_flex, height=4,
                     bgcolor=away_color, border_radius=2,
                 ),
             ]),
@@ -281,18 +281,18 @@ def action_card(
     """
     color = theme.ACCENT if color is None else color
     return ft.Container(
-        content=ft.Row(
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        rtl=theme.rtl(), content=ft.Row(
+            rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             controls=[
-                ft.Row(spacing=10, tight=True, controls=[
-                    ft.Icon(icon, size=20, color=color),
-                    ft.Column(spacing=0, controls=[
-                        ft.Text(title, size=theme.BODY_SIZE, weight=ft.FontWeight.W_600),
-                        *([ ft.Text(subtitle, size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY) ]
+                ft.Row(rtl=theme.rtl(), spacing=10, tight=True, controls=[
+                    ft.Icon(icon, rtl=theme.rtl(), size=20, color=color),
+                    ft.Column(rtl=theme.rtl(), spacing=0, controls=[
+                        ft.Text(title, rtl=theme.rtl(), size=theme.BODY_SIZE, weight=ft.FontWeight.W_600),
+                        *([ ft.Text(subtitle, rtl=theme.rtl(), size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY) ]
                           if subtitle else []),
                     ]),
                 ]),
-                ft.Icon(ft.Icons.CHEVRON_RIGHT, size=18, color=theme.ACCENT),
+                ft.Icon(ft.Icons.CHEVRON_RIGHT, rtl=theme.rtl(), size=18, color=theme.ACCENT),
             ],
         ),
         padding=ft.padding.symmetric(horizontal=14, vertical=12),
@@ -318,41 +318,41 @@ def match_score_card(
     from src.utils.localization import is_rtl
     def club(name, managed):
         initials = "".join(word[0] for word in name.split()[:2])
-        return ft.Column(expand=True, spacing=12,
+        return ft.Column(rtl=theme.rtl(), expand=True, spacing=12,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
-                ft.Container(width=60, height=68, border_radius=12,
+                ft.Container(rtl=theme.rtl(), width=60, height=68, border_radius=12,
                     bgcolor=theme.ACCENT_BG if managed else theme.BG_SURFACE,
                     border=ft.border.all(1, theme.GOLD_BORDER),
                     alignment=ft.Alignment(0, 0),
-                    content=ft.Text(initials, size=22, weight=ft.FontWeight.W_700,
+                    content=ft.Text(initials, rtl=theme.rtl(), size=22, weight=ft.FontWeight.W_700,
                                     color=theme.ACCENT if managed else theme.TEXT_SECONDARY)),
-                ft.Text(name, size=14, weight=ft.FontWeight.W_600,
+                ft.Text(name, rtl=theme.rtl(), size=14, weight=ft.FontWeight.W_600,
                     text_align=ft.TextAlign.CENTER, max_lines=2,
                     overflow=ft.TextOverflow.ELLIPSIS),
                 ft.Text(("ناديك" if is_rtl() else "YOUR CLUB") if managed else
                         ("المنافس" if is_rtl() else "OPPOSITION"),
-                        size=10, color=theme.TEXT_MUTED),
+                        rtl=theme.rtl(), size=10, color=theme.TEXT_MUTED),
             ])
     played = home_goals != ""
-    return ft.Card(elevation=0, margin=0, content=ft.Container(
-        padding=24, border_radius=theme.CARD_RADIUS,
+    return ft.Card(rtl=theme.rtl(), elevation=0, margin=0, content=ft.Container(
+        rtl=theme.rtl(), padding=24, border_radius=theme.CARD_RADIUS,
         bgcolor=theme.CARD_GLASS_STRONG,
         border=ft.border.all(1, theme.GOLD_BORDER),
-        content=ft.Column(spacing=24, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
-            ft.Column(spacing=6, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
-                ft.Text(competition.upper(), size=11, weight=ft.FontWeight.W_600,
+        content=ft.Column(rtl=theme.rtl(), spacing=24, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
+            ft.Column(rtl=theme.rtl(), spacing=6, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
+                ft.Text(competition.upper(), rtl=theme.rtl(), size=11, weight=ft.FontWeight.W_600,
                         color=theme.ACCENT, text_align=ft.TextAlign.CENTER),
-                ft.Text(matchday, size=12, color=theme.TEXT_MUTED),
+                ft.Text(matchday, rtl=theme.rtl(), size=12, color=theme.TEXT_MUTED),
             ]),
-            ft.Row(spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER, controls=[
+            ft.Row(rtl=theme.rtl(), spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER, controls=[
                 club(home_name, is_home),
-                ft.Text(f"{home_goals} : {away_goals}" if played else "VS",
-                        size=40 if played else 16, font_family=theme.display_font(), weight=ft.FontWeight.W_700,
+                ft.Text(theme.scoreline(home_goals, away_goals) if played else t("versus_short"),
+                        rtl=False, size=40 if played else 16, font_family=theme.display_font(), weight=ft.FontWeight.W_700,
                         color=theme.TEXT_PRIMARY if played else theme.TEXT_MUTED),
                 club(away_name, not is_home),
             ]),
-            *([ft.Container(height=1, bgcolor=theme.GOLD_BORDER),
-               ft.Text(date_str, size=12, color=theme.TEXT_SECONDARY,
+            *([ft.Container(rtl=theme.rtl(), height=1, bgcolor=theme.GOLD_BORDER),
+               ft.Text(date_str, rtl=theme.rtl(), size=12, color=theme.TEXT_SECONDARY,
                        text_align=ft.TextAlign.CENTER)] if date_str else []),
         ])))
 
@@ -383,34 +383,34 @@ def player_card_h(
         (transfer_listed, ft.Icons.SWAP_HORIZ, t("transfers"), theme.TEXT_INFO),
     ]:
         if active:
-            status.append(ft.Icon(icon, size=15, color=color, tooltip=label))
+            status.append(ft.Icon(icon, rtl=theme.rtl(), size=15, color=color, tooltip=label))
     if is_captain:
-        status.append(ft.Text("C", size=11, color=theme.ACCENT, tooltip=t("captain")))
+        status.append(ft.Text("C", rtl=theme.rtl(), size=11, color=theme.ACCENT, tooltip=t("captain")))
     return ft.Container(
-        padding=ft.padding.symmetric(horizontal=14, vertical=16),
+        rtl=theme.rtl(), padding=ft.padding.symmetric(horizontal=14, vertical=16),
         bgcolor=theme.CARD_BG_HIGHLIGHT if highlight else theme.CARD_GLASS,
         border=ft.border.only(bottom=ft.BorderSide(1, theme.GOLD_BORDER)),
         on_click=on_click, ink=True,
         tooltip=f"{t('morale')}: {morale}" + (f" · {training_focus}" if training_focus else ""),
-        content=ft.Row(spacing=12, controls=[
-            ft.Container(width=40, height=42, border_radius=8,
+        content=ft.Row(rtl=theme.rtl(), spacing=12, controls=[
+            ft.Container(rtl=theme.rtl(), width=40, height=42, border_radius=8,
                 bgcolor=theme.BG_SURFACE, alignment=ft.Alignment(0, 0),
-                content=ft.Text(position, size=11, weight=ft.FontWeight.W_700,
+                content=ft.Text(position, rtl=theme.rtl(), size=11, weight=ft.FontWeight.W_700,
                                 color=theme.position_color(position))),
-            ft.Column(expand=True, spacing=6, controls=[
-                ft.Row(spacing=5, controls=[
-                    ft.Text(name, size=14, weight=ft.FontWeight.W_600, expand=True,
+            ft.Column(rtl=theme.rtl(), expand=True, spacing=6, controls=[
+                ft.Row(rtl=theme.rtl(), spacing=5, controls=[
+                    ft.Text(name, rtl=theme.rtl(), size=14, weight=ft.FontWeight.W_600, expand=True,
                             max_lines=1, overflow=ft.TextOverflow.ELLIPSIS), *status]),
                 ft.Text(f"{t('age')} {age}  ·  {t('form')} {form:.1f}",
-                        size=12, color=theme.TEXT_MUTED),
+                        rtl=theme.rtl(), size=12, color=theme.TEXT_MUTED),
             ]),
-            ft.Column(width=36, spacing=5, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
-                ft.Text(str(ovr), font_family=theme.display_font(), size=24, weight=ft.FontWeight.W_600, color=theme.TEXT_PRIMARY),
-                ft.Text(t("overall"), size=9, color=theme.TEXT_MUTED, max_lines=1),
+            ft.Column(rtl=theme.rtl(), width=36, spacing=5, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
+                ft.Text(str(ovr), rtl=theme.rtl(), font_family=theme.display_font(), size=24, weight=ft.FontWeight.W_600, color=theme.TEXT_PRIMARY),
+                ft.Text(t("overall"), rtl=theme.rtl(), size=9, color=theme.TEXT_MUTED, max_lines=1),
             ]),
-            ft.Column(width=42, spacing=8, horizontal_alignment=ft.CrossAxisAlignment.END, controls=[
-                ft.Text(f"{fitness}%", size=12, color=theme.fitness_color(fitness)),
-                ft.ProgressBar(value=fitness / 100, width=36, height=3,
+            ft.Column(rtl=theme.rtl(), width=42, spacing=8, horizontal_alignment=ft.CrossAxisAlignment.END, controls=[
+                ft.Text(f"{fitness}%", rtl=theme.rtl(), size=12, color=theme.fitness_color(fitness)),
+                ft.ProgressBar(rtl=theme.rtl(), value=fitness / 100, width=36, height=3,
                                color=theme.fitness_color(fitness), bgcolor=theme.GOLD_BORDER),
             ]),
         ]))
@@ -438,35 +438,35 @@ def player_card_compact(
     badges_text = " ".join(badges_list) if badges_list else ""
 
     return ft.Container(
-        content=ft.Row(
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        rtl=theme.rtl(), content=ft.Row(
+            rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                ft.Row(spacing=8, tight=True, expand=True, controls=[
+                ft.Row(rtl=theme.rtl(), spacing=8, tight=True, expand=True, controls=[
                     ft.Container(
-                        content=ft.Text(position, size=9, weight=ft.FontWeight.BOLD,
+                        rtl=theme.rtl(), content=ft.Text(position, rtl=theme.rtl(), size=9, weight=ft.FontWeight.BOLD,
                                         color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER),
                         width=30, height=18, border_radius=4,
                         bgcolor=pos_clr, alignment=ft.Alignment(0, 0),
                     ),
-                    ft.Column(spacing=0, expand=True, controls=[
-                        ft.Row(spacing=4, tight=True, controls=[
-                            ft.Text(name, size=12, weight=ft.FontWeight.W_500,
+                    ft.Column(rtl=theme.rtl(), spacing=0, expand=True, controls=[
+                        ft.Row(rtl=theme.rtl(), spacing=4, tight=True, controls=[
+                            ft.Text(name, rtl=theme.rtl(), size=12, weight=ft.FontWeight.W_500,
                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
-                            *([ ft.Text(badges_text, size=9) ] if badges_text else []),
+                            *([ ft.Text(badges_text, rtl=theme.rtl(), size=9) ] if badges_text else []),
                         ]),
-                        ft.Row(spacing=8, tight=True, controls=[
-                            ft.Text(f"Age {age}", size=10, color=theme.TEXT_SECONDARY),
-                            ft.Text(str(ovr), size=10, weight=ft.FontWeight.BOLD, color=ovr_clr),
-                            *([ ft.Text(club_name, size=10, color=theme.TEXT_MUTED) ] if club_name else []),
+                        ft.Row(rtl=theme.rtl(), spacing=8, tight=True, controls=[
+                            ft.Text(f"Age {age}", rtl=theme.rtl(), size=10, color=theme.TEXT_SECONDARY),
+                            ft.Text(str(ovr), rtl=theme.rtl(), size=10, weight=ft.FontWeight.BOLD, color=ovr_clr),
+                            *([ ft.Text(club_name, rtl=theme.rtl(), size=10, color=theme.TEXT_MUTED) ] if club_name else []),
                         ]),
                     ]),
                 ]),
-                *([ ft.Column(spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END,
+                *([ ft.Column(rtl=theme.rtl(), spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END,
                               controls=[
-                        ft.Text(value_str, size=theme.CAPTION_SIZE, weight=ft.FontWeight.BOLD,
+                        ft.Text(value_str, rtl=theme.rtl(), size=theme.CAPTION_SIZE, weight=ft.FontWeight.BOLD,
                                 color=theme.ACCENT),
-                        ft.Text("EGP", size=theme.TINY_SIZE, color=theme.TEXT_MUTED),
+                        ft.Text("EGP", rtl=theme.rtl(), size=theme.TINY_SIZE, color=theme.TEXT_MUTED),
                     ]) ] if value_str else []),
             ],
         ),
@@ -490,15 +490,15 @@ def position_group_header(group_name: str, count: int) -> ft.Container:
     clr = group_colors.get(group_name, theme.TEXT_MUTED)
 
     return ft.Container(
-        content=ft.Row(
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        rtl=theme.rtl(), content=ft.Row(
+            rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             controls=[
-                ft.Row(spacing=6, tight=True, controls=[
-                    ft.Container(width=3, height=14, bgcolor=clr, border_radius=2),
-                    ft.Text(group_name, size=theme.CAPTION_SIZE, weight=ft.FontWeight.BOLD,
+                ft.Row(rtl=theme.rtl(), spacing=6, tight=True, controls=[
+                    ft.Container(rtl=theme.rtl(), width=3, height=14, bgcolor=clr, border_radius=2),
+                    ft.Text(group_name, rtl=theme.rtl(), size=theme.CAPTION_SIZE, weight=ft.FontWeight.BOLD,
                             color=clr),
                 ]),
-                ft.Text(f"{count}", size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED),
+                ft.Text(f"{count}", rtl=theme.rtl(), size=theme.CAPTION_SIZE, color=theme.TEXT_MUTED),
             ],
         ),
         padding=ft.padding.only(left=2, right=2, top=20, bottom=10),

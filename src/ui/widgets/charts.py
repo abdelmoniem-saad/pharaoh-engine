@@ -34,7 +34,7 @@ def player_form_line_chart(
     """
     if not ratings:
         return ft.Container(
-            content=ft.Text("No match data yet", size=11, color=theme.TEXT_MUTED,
+            rtl=theme.rtl(), content=ft.Text(t("no_match_data"), rtl=theme.rtl(), size=11, color=theme.TEXT_MUTED,
                             text_align=ft.TextAlign.CENTER),
             width=width, height=60,
             alignment=ft.Alignment(0, 0),
@@ -54,16 +54,16 @@ def player_form_line_chart(
 
         dots.append(
             ft.Container(
-                content=ft.Column(
-                    spacing=2,
+                rtl=theme.rtl(), content=ft.Column(
+                    rtl=theme.rtl(), spacing=2,
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     alignment=ft.MainAxisAlignment.END,
                     controls=[
-                        ft.Text(f"{r:.1f}", size=8, color=color,
+                        ft.Text(f"{r:.1f}", rtl=theme.rtl(), size=8, color=color,
                                 weight=ft.FontWeight.BOLD,
                                 text_align=ft.TextAlign.CENTER),
                         ft.Container(
-                            width=max(6, (width - 40) // len(ratings) - 4),
+                            rtl=theme.rtl(), width=max(6, (width - 40) // len(ratings) - 4),
                             height=dot_bottom,
                             border_radius=ft.border_radius.only(top_left=3, top_right=3),
                             bgcolor=color,
@@ -73,7 +73,7 @@ def player_form_line_chart(
                                 end=ft.Alignment(0, -1),
                             ),
                         ),
-                        ft.Text(f"{md}", size=7, color=theme.TEXT_MUTED),
+                        ft.Text(f"{md}", rtl=theme.rtl(), size=7, color=theme.TEXT_MUTED),
                     ],
                 ),
                 expand=True,
@@ -81,20 +81,20 @@ def player_form_line_chart(
         )
 
     return ft.Container(
-        content=ft.Column(
-            spacing=2,
+        rtl=theme.rtl(), content=ft.Column(
+            rtl=theme.rtl(), spacing=2,
             controls=[
                 ft.Row(
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     controls=[
-                        ft.Text("Match Ratings", size=10, color=theme.TEXT_MUTED),
-                        ft.Text(f"Avg: {avg_rating:.1f}", size=10, color=theme.GOLD,
+                        ft.Text(t("match_ratings"), rtl=theme.rtl(), size=10, color=theme.TEXT_MUTED),
+                        ft.Text(f"{t('average')}: {avg_rating:.1f}", rtl=theme.rtl(), size=10, color=theme.GOLD,
                                 weight=ft.FontWeight.BOLD),
                     ],
                 ),
                 ft.Container(
-                    content=ft.Row(
-                        spacing=2,
+                    rtl=theme.rtl(), content=ft.Row(
+                        rtl=theme.rtl(), spacing=2,
                         alignment=ft.MainAxisAlignment.SPACE_EVENLY,
                         vertical_alignment=ft.CrossAxisAlignment.END,
                         controls=dots,
@@ -119,7 +119,7 @@ def player_stats_bar_chart(
 ) -> ft.Container:
     """Horizontal bar chart for player attribute categories."""
     if not categories:
-        return ft.Container()
+        return ft.Container(rtl=theme.rtl())
 
     max_val = 20.0
     bars = []
@@ -129,14 +129,14 @@ def player_stats_bar_chart(
 
         bars.append(
             ft.Container(
-                content=ft.Row(
-                    spacing=6,
+                rtl=theme.rtl(), content=ft.Row(
+                    rtl=theme.rtl(), spacing=6,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        ft.Text(name[:5], size=10, color=theme.TEXT_MUTED, width=40),
+                        ft.Text(name, rtl=theme.rtl(), size=11, color=theme.TEXT_MUTED, width=76, max_lines=2),
                         ft.Container(
-                            content=ft.Container(
-                                width=pct * (width - 110),
+                            rtl=theme.rtl(), content=ft.Container(
+                                rtl=theme.rtl(), width=pct * (width - 146),
                                 height=14,
                                 border_radius=ft.border_radius.only(
                                     top_right=4, bottom_right=4),
@@ -152,9 +152,9 @@ def player_stats_bar_chart(
                             border_radius=7,
                             bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
                         ),
-                        ft.Text(f"{value:.1f}", size=10, color=color,
+                        ft.Text(f"{value:.1f}", rtl=theme.rtl(), size=10, color=color,
                                 weight=ft.FontWeight.BOLD, width=32,
-                                text_align=ft.TextAlign.RIGHT),
+                                text_align=ft.TextAlign.LEFT if theme.rtl() else ft.TextAlign.RIGHT),
                     ],
                 ),
                 padding=ft.padding.symmetric(vertical=1),
@@ -162,7 +162,7 @@ def player_stats_bar_chart(
         )
 
     return ft.Container(
-        content=ft.Column(spacing=3, controls=bars),
+        rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=3, controls=bars),
         width=width,
         padding=ft.padding.only(top=4, right=4),
     )
@@ -177,7 +177,7 @@ def season_position_chart(
     """Visual position tracker — colored badges per matchday."""
     if not positions:
         return ft.Container(
-            content=ft.Text("No position data yet", size=11, color=theme.TEXT_MUTED,
+            rtl=theme.rtl(), content=ft.Text("No position data yet", rtl=theme.rtl(), size=11, color=theme.TEXT_MUTED,
                             text_align=ft.TextAlign.CENTER),
             width=width, height=50,
             alignment=ft.Alignment(0, 0),
@@ -189,13 +189,13 @@ def season_position_chart(
                  else _AMBER if pos <= 14 else _RED)
         badges.append(
             ft.Container(
-                content=ft.Column(
-                    spacing=1,
+                rtl=theme.rtl(), content=ft.Column(
+                    rtl=theme.rtl(), spacing=1,
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     controls=[
-                        ft.Text(f"{pos}", size=11, color=color,
+                        ft.Text(f"{pos}", rtl=theme.rtl(), size=11, color=color,
                                 weight=ft.FontWeight.BOLD),
-                        ft.Text(f"{md}", size=7, color=theme.TEXT_MUTED),
+                        ft.Text(f"{md}", rtl=theme.rtl(), size=7, color=theme.TEXT_MUTED),
                     ],
                 ),
                 width=max(28, (width - 20) // max(len(positions), 1)),
@@ -212,17 +212,17 @@ def season_position_chart(
                     else _AMBER if latest_pos <= 14 else _RED)
 
     return ft.Container(
-        content=ft.Column(
-            spacing=6,
+        rtl=theme.rtl(), content=ft.Column(
+            rtl=theme.rtl(), spacing=6,
             controls=[
                 ft.Row(
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     controls=[
-                        ft.Text("Position History", size=10, color=theme.TEXT_MUTED),
+                        ft.Text("Position History", rtl=theme.rtl(), size=10, color=theme.TEXT_MUTED),
                         ft.Container(
-                            content=ft.Text(
+                            rtl=theme.rtl(), content=ft.Text(
                                 f"{latest_pos}{_ordinal(latest_pos)}",
-                                size=12, color=latest_color,
+                                rtl=theme.rtl(), size=12, color=latest_color,
                                 weight=ft.FontWeight.BOLD),
                             padding=ft.padding.symmetric(horizontal=8, vertical=2),
                             border_radius=8,
@@ -231,7 +231,7 @@ def season_position_chart(
                     ],
                 ),
                 ft.Row(
-                    spacing=2,
+                    rtl=theme.rtl(), spacing=2,
                     scroll=ft.ScrollMode.AUTO,
                     controls=badges,
                 ),
@@ -249,7 +249,7 @@ def club_form_trend_line(
 ) -> ft.Container:
     """Mini trend visualization for W/D/L as colored blocks."""
     if not results:
-        return ft.Container()
+        return ft.Container(rtl=theme.rtl())
 
     ordered = list(reversed(results))
     color_map = {"W": _GREEN, "D": _AMBER, "L": _RED}
@@ -262,7 +262,7 @@ def club_form_trend_line(
         h = height_map.get(r, 15)
         blocks.append(
             ft.Container(
-                content=ft.Text(r[0], size=9, color=ft.Colors.WHITE,
+                rtl=theme.rtl(), content=ft.Text(r[0], rtl=theme.rtl(), size=9, color=ft.Colors.WHITE,
                                 weight=ft.FontWeight.BOLD,
                                 text_align=ft.TextAlign.CENTER),
                 width=max(20, (width - 20) // max(len(ordered), 1) - 4),
@@ -280,22 +280,22 @@ def club_form_trend_line(
     losses = sum(1 for r in results if r == "L")
 
     return ft.Container(
-        content=ft.Column(
-            spacing=4,
+        rtl=theme.rtl(), content=ft.Column(
+            rtl=theme.rtl(), spacing=4,
             controls=[
                 ft.Row(
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     controls=[
-                        ft.Text("Form Trend", size=10, color=theme.TEXT_MUTED),
-                        ft.Row(spacing=8, tight=True, controls=[
-                            ft.Text(f"W{wins}", size=10, color=_GREEN),
-                            ft.Text(f"D{draws}", size=10, color=_AMBER),
-                            ft.Text(f"L{losses}", size=10, color=_RED),
+                        ft.Text("Form Trend", rtl=theme.rtl(), size=10, color=theme.TEXT_MUTED),
+                        ft.Row(rtl=theme.rtl(), spacing=8, tight=True, controls=[
+                            ft.Text(f"W{wins}", rtl=theme.rtl(), size=10, color=_GREEN),
+                            ft.Text(f"D{draws}", rtl=theme.rtl(), size=10, color=_AMBER),
+                            ft.Text(f"L{losses}", rtl=theme.rtl(), size=10, color=_RED),
                         ]),
                     ],
                 ),
                 ft.Row(
-                    spacing=3,
+                    rtl=theme.rtl(), spacing=3,
                     alignment=ft.MainAxisAlignment.CENTER,
                     vertical_alignment=ft.CrossAxisAlignment.END,
                     controls=blocks,

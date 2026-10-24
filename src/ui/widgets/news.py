@@ -27,20 +27,20 @@ def news_ticker(headlines: list[dict]) -> ft.Container:
         headlines: list of dicts with keys: subject, category
     """
     if not headlines:
-        return ft.Container(height=0)
+        return ft.Container(rtl=theme.rtl(), height=0)
 
     items = []
     for h in headlines[:8]:
         icon = _CAT_ICONS.get(h.get("category", "general"), "📬")
         items.append(
             ft.Container(
-                content=ft.Row(
-                    spacing=4, tight=True,
+                rtl=theme.rtl(), content=ft.Row(
+                    rtl=theme.rtl(), spacing=4, tight=True,
                     controls=[
-                        ft.Text(icon, size=11),
+                        ft.Text(icon, rtl=theme.rtl(), size=11),
                         ft.Text(
                             h.get("subject", ""),
-                            size=10, color=_TEXT_PRIMARY,
+                            rtl=theme.rtl(), size=10, color=_TEXT_PRIMARY,
                             max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                         ),
                     ],
@@ -51,14 +51,14 @@ def news_ticker(headlines: list[dict]) -> ft.Container:
         # Separator
         items.append(
             ft.Container(
-                content=ft.Text("•", size=10, color=_GOLD),
+                rtl=theme.rtl(), content=ft.Text("•", rtl=theme.rtl(), size=10, color=_GOLD),
                 padding=ft.padding.symmetric(horizontal=4),
             )
         )
 
     return ft.Container(
-        content=ft.Row(
-            controls=items,
+        rtl=theme.rtl(), content=ft.Row(
+            rtl=theme.rtl(), controls=items,
             spacing=0,
             scroll=ft.ScrollMode.AUTO,
         ),
@@ -81,12 +81,12 @@ def quick_headline_bar(
     Single-line highlight bar for important news (e.g. transfer completed).
     """
     return ft.Container(
-        content=ft.Row(
-            spacing=6, tight=True,
+        rtl=theme.rtl(), content=ft.Row(
+            rtl=theme.rtl(), spacing=6, tight=True,
             alignment=ft.MainAxisAlignment.CENTER,
             controls=[
-                ft.Text(icon, size=12),
-                ft.Text(text, size=11, color=_TEXT_PRIMARY,
+                ft.Text(icon, rtl=theme.rtl(), size=12),
+                ft.Text(text, rtl=theme.rtl(), size=11, color=_TEXT_PRIMARY,
                         weight=ft.FontWeight.W_500,
                         max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
             ],

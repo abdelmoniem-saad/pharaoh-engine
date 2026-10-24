@@ -13,7 +13,7 @@ from src.core.player import calculate_overall_rating
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.ui.widgets.stat_bar import stat_bar
 from src.utils.config import Position
-from src.utils.localization import t, t_format
+from src.utils.localization import t, t_format, display_name
 
 
 def build_transfers_screen(page: ft.Page) -> ft.Column:
@@ -23,13 +23,13 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = build_nav_bar(page, 0)
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
+        return ft.Column(rtl=theme.rtl(), controls=[ft.Text(t("no_game_loaded"), rtl=theme.rtl())])
 
     conn = app_state.db_conn
     gs = app_state.game_state
     club = queries.get_club(conn, gs.user_club_id)
     if not club:
-        return ft.Column(controls=[ft.Text(t("club_not_found_msg"))])
+        return ft.Column(rtl=theme.rtl(), controls=[ft.Text(t("club_not_found_msg"), rtl=theme.rtl())])
 
     # ── Shortlist (in-memory for session) ────────────────────────────
     if not hasattr(app_state, "_shortlist"):
@@ -37,17 +37,17 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     shortlist: set = app_state._shortlist
 
     # ── Search controls ──────────────────────────────────────────────
-    name_field = ft.TextField(label=t("name"), expand=True, text_size=13,
+    name_field = ft.TextField(border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label=t("name"), expand=True, text_size=13,
                                hint_text=t("search_by_name"))
     pos_dd = ft.Dropdown(
-        label=t("position"), width=90,
-        options=[ft.dropdown.Option(t("any"))] + [ft.dropdown.Option(p.value) for p in Position],
-        value=t("any"),
+        border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label=t("position"), width=112,
+        options=[ft.dropdown.Option(key="", text=t("any"))] + [ft.dropdown.Option(p.value) for p in Position],
+        value="",
     )
-    max_age_field = ft.TextField(label=f"{t('age')} ≤", width=65, value="35", text_size=13)
-    min_ovr_field = ft.TextField(label=f"{t('overall')} ≥", width=65, value="", text_size=13)
+    max_age_field = ft.TextField(border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label=f"{t('age')} ≤", width=80, value="35", text_size=13)
+    min_ovr_field = ft.TextField(border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label=f"{t('overall')} ≥", width=80, value="", text_size=13)
 
-    results_list = ft.Column(spacing=4)
+    results_list = ft.Column(rtl=theme.rtl(), spacing=4)
 
     def _player_row(p, value, club_name, is_shortlisted=False, show_star=True):
         """Build a compact player row for search results."""
@@ -112,45 +112,45 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
             navigate(page, "/transfers")
 
         return ft.Container(
-            content=ft.Row(
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            rtl=theme.rtl(), content=ft.Row(
+                rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
                     ft.Column(
-                        spacing=0, expand=True,
+                        rtl=theme.rtl(), spacing=0, expand=True,
                         controls=[
-                            ft.Row(spacing=4, tight=True, controls=[
-                                ft.Text(p.name, size=12, weight=ft.FontWeight.W_500),
-                                ft.Text(badge_text, size=10) if badge_text else ft.Container(),
+                            ft.Row(rtl=theme.rtl(), spacing=4, tight=True, controls=[
+                                ft.Text(display_name(p), rtl=theme.rtl(), size=14, weight=ft.FontWeight.W_600, expand=True, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                                ft.Text(badge_text, rtl=theme.rtl(), size=10) if badge_text else ft.Container(rtl=theme.rtl()),
                             ]),
-                            ft.Row(spacing=8, tight=True, controls=[
-                                ft.Text(p.position.value, size=10, color=theme.GOLD),
-                                ft.Text(f"Age {p.age}", size=10, color=age_color),
-                                ft.Text(ovr_display, size=10,
+                            ft.Row(rtl=theme.rtl(), spacing=8, wrap=True, controls=[
+                                ft.Text(p.position.value, rtl=theme.rtl(), size=10, color=theme.GOLD),
+                                ft.Text(f"{t('age')} {p.age}", rtl=theme.rtl(), size=10, color=age_color),
+                                ft.Text(ovr_display, rtl=theme.rtl(), size=10,
                                         weight=ft.FontWeight.BOLD, color=ovr_color),
-                                ft.Text(club_name, size=10, color=ft.Colors.GREY_500),
+                                ft.Text(club_name, rtl=theme.rtl(), size=10, color=ft.Colors.GREY_500),
                             ]),
                         ],
                     ),
-                    ft.Row(spacing=4, tight=True, controls=[
-                        ft.Column(spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END, controls=[
-                            ft.Text(f"{value:,}", size=11, weight=ft.FontWeight.BOLD, color=theme.GOLD),
-                            ft.Text("EGP", size=9, color=ft.Colors.GREY_600),
+                    ft.Row(rtl=theme.rtl(), spacing=4, tight=True, controls=[
+                        ft.Column(rtl=theme.rtl(), spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END, controls=[
+                            ft.Text(f"{value:,}", rtl=theme.rtl(), size=11, weight=ft.FontWeight.BOLD, color=theme.GOLD),
+                            ft.Text("EGP", rtl=theme.rtl(), size=11, color=ft.Colors.GREY_600),
                         ]),
                         ft.IconButton(
-                            icon=star_icon, icon_size=16,
+                            rtl=theme.rtl(), icon=star_icon, icon_size=16,
                             icon_color=theme.ACCENT if is_shortlisted else ft.Colors.GREY_600,
-                            on_click=toggle_shortlist, tooltip="Shortlist",
-                        ) if show_star else ft.Container(),
+                            on_click=toggle_shortlist, tooltip=t("shortlist"),
+                        ) if show_star else ft.Container(rtl=theme.rtl()),
                         ft.IconButton(
-                            icon=ft.Icons.TRAVEL_EXPLORE, icon_size=16,
+                            rtl=theme.rtl(), icon=ft.Icons.TRAVEL_EXPLORE, icon_size=16,
                             icon_color=ft.Colors.BLUE_300,
                             tooltip=f"Send scout ({25_000:,} EGP)",
                             on_click=send_scout,
-                        ) if not scouted else ft.Container(),
+                        ) if not scouted else ft.Container(rtl=theme.rtl()),
                     ]),
                 ],
             ),
-            padding=ft.padding.symmetric(horizontal=10, vertical=10),
+            padding=ft.padding.symmetric(horizontal=14, vertical=16),
             border_radius=theme.CARD_RADIUS_SM,
             bgcolor=theme.CARD_GLASS,
             border=ft.border.all(1, theme.GOLD_BORDER),
@@ -167,10 +167,10 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
         results_list.controls.clear()
         if not players:
             results_list.controls.append(
-                ft.Text(t("no_players_available"), size=13, color=ft.Colors.GREY_500))
+                ft.Text(t("no_players_available"), rtl=theme.rtl(), size=13, color=ft.Colors.GREY_500))
         else:
             results_list.controls.append(
-                ft.Text(f"{len(players)} {t('available')}", size=11,
+                ft.Text(f"{len(players)} {t('available')}", rtl=theme.rtl(), size=11,
                          color=ft.Colors.GREY_500))
             for p in players:
                 value = estimate_player_value(p, current_date=gs.current_date)
@@ -182,7 +182,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     _auto_load_results()
 
     def do_search(e):
-        pos = pos_dd.value if pos_dd.value != "Any" else ""
+        pos = pos_dd.value or ""
         try:
             max_age = int(max_age_field.value) if max_age_field.value else 99
         except ValueError:
@@ -205,7 +205,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                 empty_state(ft.Icons.SEARCH_OFF, t("no_players_found")))
         else:
             results_list.controls.append(
-                ft.Text(f"{len(players)} {t('available')}", size=11, color=ft.Colors.GREY_500))
+                ft.Text(f"{len(players)} {t('available')}", rtl=theme.rtl(), size=11, color=ft.Colors.GREY_500))
             for p in players:
                 value = estimate_player_value(p, current_date=gs.current_date)
                 p_club = queries.get_club(conn, p.club_id) if p.club_id else None
@@ -241,7 +241,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
 
     # ── My Squad (sell list) ─────────────────────────────────────────
     my_players = queries.get_players_by_club(conn, gs.user_club_id)
-    sell_list = ft.Column(spacing=4)
+    sell_list = ft.Column(rtl=theme.rtl(), spacing=4)
 
     # Sort: listed first, then by OVR desc
     my_players.sort(key=lambda p: (-int(p.transfer_listed), -calculate_overall_rating(p)))
@@ -268,28 +268,28 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
 
         sell_list.controls.append(
             ft.Container(
-                content=ft.Row(
-                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                rtl=theme.rtl(), content=ft.Row(
+                    rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     controls=[
                         ft.Column(
-                            spacing=0, expand=True,
+                            rtl=theme.rtl(), spacing=0, expand=True,
                             controls=[
-                                ft.Row(spacing=5, tight=True, controls=[
-                                    ft.Text(p.name, size=12, weight=ft.FontWeight.W_500),
-                                    ft.Text(" ".join(badges_parts), size=10,
+                                ft.Row(rtl=theme.rtl(), spacing=5, tight=True, controls=[
+                                    ft.Text(display_name(p), rtl=theme.rtl(), size=14, weight=ft.FontWeight.W_600, expand=True, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                                    ft.Text(" ".join(badges_parts), rtl=theme.rtl(), size=10,
                                              color=ft.Colors.RED_400 if listed else ft.Colors.GREY_500)
-                                    if badges_parts else ft.Container(),
+                                    if badges_parts else ft.Container(rtl=theme.rtl()),
                                 ]),
-                                ft.Row(spacing=8, tight=True, controls=[
-                                    ft.Text(p.position.value, size=10, color=theme.GOLD),
-                                    ft.Text(f"Age {p.age}", size=10, color=ft.Colors.GREY_400),
-                                    ft.Text(f"OVR {ovr}", size=10, weight=ft.FontWeight.BOLD),
-                                    ft.Text(f"💰 {p.contract.wage_weekly:,}/wk", size=9,
+                                ft.Row(rtl=theme.rtl(), spacing=8, wrap=True, controls=[
+                                    ft.Text(p.position.value, rtl=theme.rtl(), size=10, color=theme.GOLD),
+                                    ft.Text(f"{t('age')} {p.age}", rtl=theme.rtl(), size=10, color=ft.Colors.GREY_400),
+                                    ft.Text(f"OVR {ovr}", rtl=theme.rtl(), size=10, weight=ft.FontWeight.BOLD),
+                                    ft.Text(f"💰 {p.contract.wage_weekly:,}/wk", rtl=theme.rtl(), size=11,
                                              color=ft.Colors.GREY_500),
                                 ]),
                             ],
                         ),
-                        ft.Text(f"{value:,} EGP", size=11, color=theme.GOLD),
+                        ft.Text(f"{value:,} EGP", rtl=theme.rtl(), size=11, color=theme.GOLD),
                     ],
                 ),
                 padding=ft.padding.symmetric(horizontal=8, vertical=6),
@@ -302,7 +302,7 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
         )
 
     # ── Free agents tab ──────────────────────────────────────────────
-    free_agents_list = ft.Column(spacing=4)
+    free_agents_list = ft.Column(rtl=theme.rtl(), spacing=4)
 
     def load_free_agents(e=None):
         free_agents_list.controls.clear()
@@ -311,10 +311,10 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
         frees = [p for p in queries.search_players(conn, limit=200) if p.club_id == 0 or p.club_id is None]
         if not frees:
             free_agents_list.controls.append(
-                ft.Text(t("no_players_available"), size=13, color=ft.Colors.GREY_500))
+                ft.Text(t("no_players_available"), rtl=theme.rtl(), size=13, color=ft.Colors.GREY_500))
         else:
             free_agents_list.controls.append(
-                ft.Text(f"{len(frees)} free agent(s)", size=11, color=ft.Colors.GREY_500))
+                ft.Text(f"{len(frees)} free agent(s)", rtl=theme.rtl(), size=11, color=ft.Colors.GREY_500))
             for p in frees[:20]:
                 ovr = calculate_overall_rating(p)
                 value = estimate_player_value(p, current_date=gs.current_date)
@@ -326,18 +326,18 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
 
                 free_agents_list.controls.append(
                     ft.Container(
-                        content=ft.Row(
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                        rtl=theme.rtl(), content=ft.Row(
+                            rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
-                                ft.Column(spacing=0, expand=True, controls=[
-                                    ft.Text(p.name, size=12, weight=ft.FontWeight.W_500),
-                                    ft.Row(spacing=8, tight=True, controls=[
-                                        ft.Text(p.position.value, size=10, color=theme.GOLD),
-                                        ft.Text(f"Age {p.age}", size=10),
-                                        ft.Text(f"OVR {ovr}", size=10, weight=ft.FontWeight.BOLD),
+                                ft.Column(rtl=theme.rtl(), spacing=0, expand=True, controls=[
+                                    ft.Text(display_name(p), rtl=theme.rtl(), size=14, weight=ft.FontWeight.W_600, expand=True, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
+                                    ft.Row(rtl=theme.rtl(), spacing=8, wrap=True, controls=[
+                                        ft.Text(p.position.value, rtl=theme.rtl(), size=10, color=theme.GOLD),
+                                        ft.Text(f"{t('age')} {p.age}", rtl=theme.rtl(), size=10),
+                                        ft.Text(f"OVR {ovr}", rtl=theme.rtl(), size=10, weight=ft.FontWeight.BOLD),
                                     ]),
                                 ]),
-                                ft.Text("FREE", size=11, color=ft.Colors.GREEN_400,
+                                ft.Text(t("free"), rtl=theme.rtl(), size=11, color=ft.Colors.GREEN_400,
                                          weight=ft.FontWeight.BOLD),
                             ],
                         ),
@@ -356,76 +356,39 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     window_open = is_transfer_window_open(gs.current_date)
 
     weekly_wage = sum(p.contract.wage_weekly for p in my_players)
-    budget_bar = ft.Container(
-        content=ft.Column(spacing=2, controls=[
-            ft.Container(
-                content=ft.Text(window_status, size=12,
-                                weight=ft.FontWeight.W_500,
-                                color=ft.Colors.GREEN_400 if window_open else ft.Colors.RED_400),
-                padding=ft.padding.symmetric(vertical=4),
-            ),
-            ft.Row(
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                controls=[
-                    ft.Text(f"💰 {t('transfer_budget')}", size=12, color=ft.Colors.GREY_400),
-                    ft.Text(f"{club.finances.transfer_budget:,} EGP", size=13,
-                             weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_400),
-                ],
-            ),
-            ft.Row(
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                controls=[
-                    ft.Text(f"💵 {t('weekly_wage_bill')}", size=11, color=ft.Colors.GREY_500),
-                    ft.Text(f"{weekly_wage:,} EGP/wk", size=11, color=ft.Colors.GREY_400),
-                ],
-            ),
-            ft.Row(
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                controls=[
-                    ft.Text(f"👤 {t('squad_size')}", size=11, color=ft.Colors.GREY_500),
-                    ft.Text(f"{len(my_players)} players", size=11, color=ft.Colors.GREY_400),
-                ],
-            ),
-        ]),
-        padding=ft.padding.symmetric(horizontal=10, vertical=8),
-        bgcolor=theme.CARD_GLASS_STRONG,
-        border_radius=theme.CARD_RADIUS_SM,
-        border=ft.border.all(1, theme.GOLD_BORDER),
-    )
-
     # ── Negotiations tab ───────────────────────────────────────────────
     from src.core.transfers import (
         get_user_negotiations, submit_counter_response,
         submit_wage_offer, cancel_negotiation, negotiation_pacing_hint,
     )
 
-    negotiations_content = ft.Column(spacing=4, visible=False)
+    negotiations_content = ft.Column(rtl=theme.rtl(), spacing=4, visible=False)
 
     def _build_negotiations_list():
         items = []
         negs = get_user_negotiations(conn, gs.user_club_id)
         if not negs:
             items.append(ft.Text("No active negotiations.\nMake an offer from the Search tab.",
-                                  size=13, color=ft.Colors.GREY_500, text_align=ft.TextAlign.CENTER))
+                                  rtl=theme.rtl(), size=13, color=ft.Colors.GREY_500, text_align=ft.TextAlign.CENTER))
             return items
 
         for neg in negs:
             # Status badge
             if neg.status == "pending":
                 badge = ft.Container(
-                    content=ft.Text("⏳ Waiting", size=9, color=ft.Colors.WHITE),
+                    rtl=theme.rtl(), content=ft.Text("⏳ Waiting", rtl=theme.rtl(), size=11, color=ft.Colors.WHITE),
                     bgcolor=ft.Colors.BLUE_700, padding=ft.padding.symmetric(horizontal=6, vertical=2),
                     border_radius=4,
                 )
                 action_btn = ft.Text(
                     negotiation_pacing_hint(neg, gs.current_date),
-                    size=10,
+                    rtl=theme.rtl(), size=10,
                     color=ft.Colors.GREY_500,
                     italic=True,
                 )
             elif neg.status == "countered":
                 badge = ft.Container(
-                    content=ft.Text("↩️ Countered", size=9, color=ft.Colors.WHITE),
+                    rtl=theme.rtl(), content=ft.Text("↩️ Countered", rtl=theme.rtl(), size=11, color=ft.Colors.WHITE),
                     bgcolor=theme.ACCENT_DARK, padding=ft.padding.symmetric(horizontal=6, vertical=2),
                     border_radius=4,
                 )
@@ -434,13 +397,13 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                     def handler(e):
                         _show_counter_dialog(page, conn, gs, n)
                     return handler
-                action_btn = ft.ElevatedButton("Respond", on_click=make_counter_handler(), height=30,
+                action_btn = ft.ElevatedButton("Respond", rtl=theme.rtl(), on_click=make_counter_handler(), height=30,
                                                 style=ft.ButtonStyle(bgcolor=theme.ACCENT_DARK,
                                                                       color=ft.Colors.WHITE,
                                                                       text_style=ft.TextStyle(size=11)))
             elif neg.status == "fee_agreed":
                 badge = ft.Container(
-                    content=ft.Text("✅ Fee Agreed", size=9, color=ft.Colors.WHITE),
+                    rtl=theme.rtl(), content=ft.Text("✅ Fee Agreed", rtl=theme.rtl(), size=11, color=ft.Colors.WHITE),
                     bgcolor=ft.Colors.GREEN_700, padding=ft.padding.symmetric(horizontal=6, vertical=2),
                     border_radius=4,
                 )
@@ -449,16 +412,16 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
                     def handler(e):
                         _show_wage_dialog(page, conn, gs, n)
                     return handler
-                action_btn = ft.ElevatedButton("Offer Wage", on_click=make_wage_handler(), height=30,
+                action_btn = ft.ElevatedButton("Offer Wage", rtl=theme.rtl(), on_click=make_wage_handler(), height=30,
                                                 style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_700,
                                                                       color=ft.Colors.WHITE,
                                                                       text_style=ft.TextStyle(size=11)))
             else:
                 badge = ft.Container(
-                    content=ft.Text(neg.status.title(), size=9, color=ft.Colors.GREY_400),
+                    rtl=theme.rtl(), content=ft.Text(neg.status.title(), rtl=theme.rtl(), size=11, color=ft.Colors.GREY_400),
                     padding=ft.padding.symmetric(horizontal=6, vertical=2),
                 )
-                action_btn = ft.Container()
+                action_btn = ft.Container(rtl=theme.rtl())
 
             # Cancel button
             def make_cancel(n_id=neg.id):
@@ -479,21 +442,21 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
 
             items.append(
                 ft.Container(
-                    content=ft.Column(spacing=4, controls=[
-                        ft.Row(spacing=6, controls=[
-                            ft.Text(neg.player_name, size=13, weight=ft.FontWeight.BOLD, expand=True),
+                    rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=4, controls=[
+                        ft.Row(rtl=theme.rtl(), spacing=6, controls=[
+                            ft.Text(neg.player_name, rtl=theme.rtl(), size=13, weight=ft.FontWeight.BOLD, expand=True),
                             badge,
                         ]),
-                        ft.Text(f"{neg.from_club_name} → {neg.to_club_name}", size=10,
+                        ft.Text(f"{neg.from_club_name} → {neg.to_club_name}", rtl=theme.rtl(), size=10,
                                  color=ft.Colors.GREY_500),
-                        ft.Text(offer_text, size=11, color=theme.GOLD),
+                        ft.Text(offer_text, rtl=theme.rtl(), size=11, color=theme.GOLD),
                         ft.Text(f"Attempt {neg.attempt}/{neg.max_attempts} | {phase_text} phase",
-                                 size=10, color=ft.Colors.GREY_500),
+                                 rtl=theme.rtl(), size=10, color=ft.Colors.GREY_500),
                         ft.Text(negotiation_pacing_hint(neg, gs.current_date),
-                                size=10, color=ft.Colors.GREY_500),
-                        ft.Row(spacing=8, controls=[
+                                rtl=theme.rtl(), size=10, color=ft.Colors.GREY_500),
+                        ft.Row(rtl=theme.rtl(), spacing=8, controls=[
                             action_btn,
-                            ft.TextButton("✖ Withdraw", on_click=make_cancel(),
+                            ft.TextButton("✖ Withdraw", rtl=theme.rtl(), on_click=make_cancel(),
                                            style=ft.ButtonStyle(color=ft.Colors.RED_400)),
                         ]),
                     ]),
@@ -508,39 +471,39 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
 
     # ── Tab content containers ───────────────────────────────────────
     search_content = ft.Column(
-        spacing=8, visible=True,
+        rtl=theme.rtl(), spacing=8, visible=True,
         controls=[
             # Row 1: Name + Position (expand fills remaining space)
-            ft.Row(spacing=6, controls=[
+            ft.Row(rtl=theme.rtl(), spacing=6, controls=[
                 name_field, pos_dd,
             ]),
             # Row 2: Age + OVR + Search button
-            ft.Row(spacing=6, controls=[
+            ft.Row(rtl=theme.rtl(), spacing=6, controls=[
                 max_age_field, min_ovr_field,
-                ft.ElevatedButton(f"🔍 {t('search')}", on_click=do_search,
+                ft.ElevatedButton(f"🔍 {t('search')}", rtl=theme.rtl(), on_click=do_search,
                                    expand=True, height=44),
             ]),
-            ft.Divider(height=1),
+            ft.Divider(rtl=theme.rtl(), height=1),
             results_list,
         ],
     )
 
     sell_content = ft.Column(
-        spacing=4, visible=False,
+        rtl=theme.rtl(), spacing=4, visible=False,
         scroll=ft.ScrollMode.AUTO,
         controls=[
-            ft.Text(t("tap_to_list"), size=11,
+            ft.Text(t("tap_to_list"), rtl=theme.rtl(), size=11,
                      color=ft.Colors.GREY_500, italic=True),
             sell_list,
         ],
     )
 
-    shortlist_content = ft.Column(spacing=4, visible=False)
+    shortlist_content = ft.Column(rtl=theme.rtl(), spacing=4, visible=False)
 
     free_content = ft.Column(
-        spacing=4, visible=False,
+        rtl=theme.rtl(), spacing=4, visible=False,
         controls=[
-            ft.ElevatedButton(f"🔄 {t('free_agent')}", on_click=load_free_agents, width=180),
+            ft.ElevatedButton(f"🔄 {t('free_agent')}", rtl=theme.rtl(), on_click=load_free_agents, width=180),
             free_agents_list,
         ],
     )
@@ -561,13 +524,13 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     tab_contents = [search_content, sell_content, shortlist_content,
                     free_content, negotiations_content]
 
-    neg_label = f"📋 ({len(active_negs)})" if active_negs else "📋"
-    tab_labels = ["🔍 Search", "💰 Sell", f"⭐ ({len(shortlist)})",
-                  "🆓 Free", neg_label]
+    neg_label = f"{t('negotiations')} ({len(active_negs)})"
+    tab_labels = [t("search"), t("sell"), f"{t('shortlist')} ({len(shortlist)})",
+                  t("free_agent"), neg_label]
     tab_btns = []
     for i, lbl in enumerate(tab_labels):
         tab_btns.append(
-            ft.ElevatedButton(lbl, on_click=None, height=34,
+            ft.ElevatedButton(lbl, rtl=theme.rtl(), on_click=None, height=44,
                                style=_active_style if i == 0 else _inactive_style)
         )
 
@@ -592,27 +555,34 @@ def build_transfers_screen(page: ft.Page) -> ft.Column:
     for i, btn in enumerate(tab_btns):
         btn.on_click = switch_tab(i)
 
-    tab_row = ft.Row(spacing=4, scroll=ft.ScrollMode.AUTO, controls=tab_btns)
+    tab_row = ft.Row(rtl=theme.rtl(), spacing=4, wrap=True, controls=tab_btns)
 
     # ── Budget summary (collapsible) ─────────────────────────────────
     from src.ui.widgets.cards import collapsible_section
 
-    budget_section = collapsible_section(
-        f"💰 {t('transfer_budget')}",
-        [budget_bar],
-        initially_expanded=False,
-        title_color=ft.Colors.GREEN_400,
-        subtitle=f"{club.finances.transfer_budget:,} EGP  •  {'🟢 Open' if window_open else '🔴 Closed'}",
-    )
+    from src.ui.widgets.cards import kv_row
+    budget_section = ft.Container(rtl=theme.rtl(), padding=20, border_radius=14,
+        bgcolor=theme.CARD_GLASS_STRONG, border=ft.border.all(1, theme.GOLD_BORDER),
+        content=ft.Column(rtl=theme.rtl(), spacing=12, controls=[
+            ft.Row(rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN, controls=[
+                ft.Text(t("transfer_budget"), rtl=theme.rtl(), size=12, color=theme.TEXT_MUTED),
+                ft.Icon(ft.Icons.LOCK_OPEN if window_open else ft.Icons.LOCK_OUTLINED,
+                        rtl=theme.rtl(), size=18, color=theme.TEXT_SUCCESS if window_open else theme.TEXT_WARNING),
+            ]),
+            ft.Text(f"{club.finances.transfer_budget:,}", rtl=False, size=36, font_family=theme.display_font()),
+            ft.Text("EGP · " + (t("open_window") if window_open else t("closed_window")), rtl=theme.rtl(), size=12, color=theme.TEXT_SECONDARY),
+            kv_row(t("weekly_wage_bill"), f"{weekly_wage:,} EGP"),
+        ]))
+
 
     return ft.Column(
-        expand=True,
+        rtl=theme.rtl(), expand=True,
         scroll=ft.ScrollMode.AUTO,
         controls=[
             ft.Container(
-                padding=ft.padding.only(left=12, right=12, top=10, bottom=10),
+                rtl=theme.rtl(), padding=theme.PAGE_PADDING,
                 content=ft.Column(
-                    spacing=8,
+                    rtl=theme.rtl(), spacing=24,
                     controls=[
                         theme.header_bar(
                             title=t("transfer_market"),
@@ -653,7 +623,7 @@ def _show_buy_dialog(page, conn, gs, user_club, player, estimated_value, shortli
     suggested_offer = int(estimated_value * 0.85)
 
     offer_field = ft.TextField(
-        label="Transfer Fee Offer (EGP)", value=str(suggested_offer),
+        border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label="Transfer Fee Offer (EGP)", value=str(suggested_offer),
         width=220, text_size=14,
     )
 
@@ -712,45 +682,45 @@ def _show_buy_dialog(page, conn, gs, user_club, player, estimated_value, shortli
     expiry_str = expiry.strftime("%b %Y") if expiry else "N/A"
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"📝 Sign {player.name}", color=theme.GOLD),
+        rtl=theme.rtl(), title=ft.Text(f"📝 Sign {player.name}", rtl=theme.rtl(), color=theme.GOLD),
         content=ft.Container(
-            content=ft.Column(
-                spacing=6, scroll=ft.ScrollMode.AUTO,
+            rtl=theme.rtl(), content=ft.Column(
+                rtl=theme.rtl(), spacing=6, scroll=ft.ScrollMode.AUTO,
                 controls=[
-                    ft.Row(spacing=8, controls=[
-                        ft.Text(f"📍 {player.position.value}", size=12, color=theme.GOLD),
-                        ft.Text(f"Age {player.age}", size=12),
+                    ft.Row(rtl=theme.rtl(), spacing=8, controls=[
+                        ft.Text(f"📍 {player.position.value}", rtl=theme.rtl(), size=12, color=theme.GOLD),
+                        ft.Text(f"{t('age')} {player.age}", rtl=theme.rtl(), size=12),
                         ft.Container(
-                            content=ft.Text(str(ovr), size=14, weight=ft.FontWeight.BOLD),
+                            rtl=theme.rtl(), content=ft.Text(str(ovr), rtl=theme.rtl(), size=14, weight=ft.FontWeight.BOLD),
                             bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.GREEN),
                             padding=ft.padding.symmetric(horizontal=8, vertical=2),
                             border_radius=6,
                         ),
                     ]),
-                    ft.Text(f"Club: {selling_name}", size=12),
-                    ft.Row(spacing=12, controls=[
-                        ft.Text(f"💰 Value: {estimated_value:,} EGP", size=11, color=theme.GOLD),
-                        ft.Text(f"📅 Contract: {expiry_str}", size=11, color=ft.Colors.GREY_400),
+                    ft.Text(f"Club: {selling_name}", rtl=theme.rtl(), size=12),
+                    ft.Row(rtl=theme.rtl(), spacing=12, controls=[
+                        ft.Text(f"💰 Value: {estimated_value:,} EGP", rtl=theme.rtl(), size=11, color=theme.GOLD),
+                        ft.Text(f"📅 Contract: {expiry_str}", rtl=theme.rtl(), size=11, color=ft.Colors.GREY_400),
                     ]),
-                    ft.Text(f"Current wage: {player.contract.wage_weekly:,} EGP/wk", size=11,
+                    ft.Text(f"Current wage: {player.contract.wage_weekly:,} EGP/wk", rtl=theme.rtl(), size=11,
                              color=ft.Colors.GREY_500),
-                    ft.Divider(height=1),
-                    ft.Text("📊 Key Stats", size=12, weight=ft.FontWeight.W_500,
+                    ft.Divider(rtl=theme.rtl(), height=1),
+                    ft.Text("📊 Key Stats", rtl=theme.rtl(), size=12, weight=ft.FontWeight.W_500,
                              color=theme.GOLD),
                     *key_stats,
-                    ft.Divider(height=1),
-                    ft.Text("💼 Step 1: Offer Transfer Fee", size=12, weight=ft.FontWeight.W_500),
+                    ft.Divider(rtl=theme.rtl(), height=1),
+                    ft.Text("💼 Step 1: Offer Transfer Fee", rtl=theme.rtl(), size=12, weight=ft.FontWeight.W_500),
                     ft.Text("The club will respond the next day.\n"
                              "If accepted, you'll negotiate wages with the player.",
-                             size=10, color=ft.Colors.GREY_500),
+                             rtl=theme.rtl(), size=10, color=ft.Colors.GREY_500),
                     offer_field,
                 ],
             ),
             width=290, height=380,
         ),
         actions=[
-            ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),
-            ft.ElevatedButton("📨 Submit Offer", on_click=submit_offer,
+            ft.TextButton("Cancel", rtl=theme.rtl(), on_click=lambda e: page.pop_dialog()),
+            ft.ElevatedButton("📨 Submit Offer", rtl=theme.rtl(), on_click=submit_offer,
                               style=ft.ButtonStyle(bgcolor=theme.ACCENT_DARK,
                                                     color=ft.Colors.WHITE,
                                                     shape=ft.RoundedRectangleBorder(radius=10))),
@@ -768,23 +738,23 @@ def _show_sell_dialog(page, conn, gs, user_club, player, estimated_value):
     if player.transfer_listed:
         # Already listed — offer to unlist
         dlg = ft.AlertDialog(
-            title=ft.Text(f"📤 {player.name}", color=theme.GOLD),
+            rtl=theme.rtl(), title=ft.Text(f"📤 {player.name}", rtl=theme.rtl(), color=theme.GOLD),
             content=ft.Container(
-                content=ft.Column(spacing=6, controls=[
-                    ft.Row(spacing=8, controls=[
-                        ft.Text(f"{player.position.value}", size=12, color=theme.GOLD),
-                        ft.Text(f"Age {player.age}", size=12),
-                        ft.Text(f"OVR {ovr}", size=12, weight=ft.FontWeight.BOLD),
+                rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=6, controls=[
+                    ft.Row(rtl=theme.rtl(), spacing=8, controls=[
+                        ft.Text(f"{player.position.value}", rtl=theme.rtl(), size=12, color=theme.GOLD),
+                        ft.Text(f"{t('age')} {player.age}", rtl=theme.rtl(), size=12),
+                        ft.Text(f"OVR {ovr}", rtl=theme.rtl(), size=12, weight=ft.FontWeight.BOLD),
                     ]),
-                    ft.Text(f"Currently listed at {estimated_value:,} EGP", size=12,
+                    ft.Text(f"Currently listed at {estimated_value:,} EGP", rtl=theme.rtl(), size=12,
                              color=ft.Colors.RED_400),
-                    ft.Text("Remove from the transfer list?", size=12),
+                    ft.Text("Remove from the transfer list?", rtl=theme.rtl(), size=12),
                 ]),
                 width=280,
             ),
             actions=[
-                ft.TextButton("Keep Listed", on_click=lambda e: page.pop_dialog()),
-                ft.ElevatedButton("Remove Listing", on_click=lambda e: (
+                ft.TextButton("Keep Listed", rtl=theme.rtl(), on_click=lambda e: page.pop_dialog()),
+                ft.ElevatedButton("Remove Listing", rtl=theme.rtl(), on_click=lambda e: (
                     queries.set_transfer_listed(conn, player.id, False),
                     page.pop_dialog(),
                     show_snackbar(page, f"{player.name} removed from transfer list."),
@@ -795,7 +765,7 @@ def _show_sell_dialog(page, conn, gs, user_club, player, estimated_value):
     else:
         # Not listed — offer to list with asking price
         asking_field = ft.TextField(
-            label="Asking Price (EGP)", value=str(estimated_value),
+            border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label="Asking Price (EGP)", value=str(estimated_value),
             width=200, text_size=14,
         )
 
@@ -806,29 +776,29 @@ def _show_sell_dialog(page, conn, gs, user_club, player, estimated_value):
             navigate(page, "/transfers")
 
         dlg = ft.AlertDialog(
-            title=ft.Text(f"💰 Sell {player.name}?", color=theme.GOLD),
+            rtl=theme.rtl(), title=ft.Text(f"💰 Sell {player.name}?", rtl=theme.rtl(), color=theme.GOLD),
             content=ft.Container(
-                content=ft.Column(spacing=6, controls=[
-                    ft.Row(spacing=8, controls=[
-                        ft.Text(f"{player.position.value}", size=12, color=theme.GOLD),
-                        ft.Text(f"Age {player.age}", size=12),
-                        ft.Text(f"OVR {ovr}", size=12, weight=ft.FontWeight.BOLD),
+                rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=6, controls=[
+                    ft.Row(rtl=theme.rtl(), spacing=8, controls=[
+                        ft.Text(f"{player.position.value}", rtl=theme.rtl(), size=12, color=theme.GOLD),
+                        ft.Text(f"{t('age')} {player.age}", rtl=theme.rtl(), size=12),
+                        ft.Text(f"OVR {ovr}", rtl=theme.rtl(), size=12, weight=ft.FontWeight.BOLD),
                     ]),
-                    ft.Text(f"Wage: {player.contract.wage_weekly:,} EGP/wk", size=11,
+                    ft.Text(f"Wage: {player.contract.wage_weekly:,} EGP/wk", rtl=theme.rtl(), size=11,
                              color=ft.Colors.GREY_500),
-                    ft.Text(f"Estimated value: {estimated_value:,} EGP", size=12,
+                    ft.Text(f"Estimated value: {estimated_value:,} EGP", rtl=theme.rtl(), size=12,
                              color=theme.GOLD),
-                    ft.Divider(height=1),
+                    ft.Divider(rtl=theme.rtl(), height=1),
                     ft.Text("AI clubs will make offers once listed.\n"
-                             "Higher-value players attract more interest.", size=11,
+                             "Higher-value players attract more interest.", rtl=theme.rtl(), size=11,
                              color=ft.Colors.GREY_500),
                     asking_field,
                 ]),
                 width=280,
             ),
             actions=[
-                ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),
-                ft.ElevatedButton("📤 List for Transfer", on_click=list_player,
+                ft.TextButton("Cancel", rtl=theme.rtl(), on_click=lambda e: page.pop_dialog()),
+                ft.ElevatedButton("📤 List for Transfer", rtl=theme.rtl(), on_click=list_player,
                                   style=ft.ButtonStyle(bgcolor=theme.ACCENT_DARK,
                                                         color=ft.Colors.WHITE,
                                                         shape=ft.RoundedRectangleBorder(radius=10))),
@@ -847,7 +817,7 @@ def _show_free_agent_dialog(page, conn, gs, user_club, player):
     suggested_wage = max(5000, int(player.current_ability * 200))
 
     wage_field = ft.TextField(
-        label="Weekly Wage Offer", value=str(suggested_wage),
+        border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label="Weekly Wage Offer", value=str(suggested_wage),
         width=200, text_size=14,
     )
 
@@ -888,25 +858,25 @@ def _show_free_agent_dialog(page, conn, gs, user_club, player):
         navigate(page, "/transfers")
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"🆓 Sign {player.name}", color=theme.GOLD),
+        rtl=theme.rtl(), title=ft.Text(f"🆓 Sign {player.name}", rtl=theme.rtl(), color=theme.GOLD),
         content=ft.Container(
-            content=ft.Column(spacing=6, controls=[
-                ft.Row(spacing=8, controls=[
-                    ft.Text(f"{player.position.value}", size=12, color=theme.GOLD),
-                    ft.Text(f"Age {player.age}", size=12),
-                    ft.Text(f"OVR {ovr}", size=12, weight=ft.FontWeight.BOLD),
+            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=6, controls=[
+                ft.Row(rtl=theme.rtl(), spacing=8, controls=[
+                    ft.Text(f"{player.position.value}", rtl=theme.rtl(), size=12, color=theme.GOLD),
+                    ft.Text(f"{t('age')} {player.age}", rtl=theme.rtl(), size=12),
+                    ft.Text(f"OVR {ovr}", rtl=theme.rtl(), size=12, weight=ft.FontWeight.BOLD),
                 ]),
-                ft.Text("Free Agent — No transfer fee required", size=12,
+                ft.Text("Free Agent — No transfer fee required", rtl=theme.rtl(), size=12,
                          color=ft.Colors.GREEN_400),
-                ft.Divider(height=1),
-                ft.Text("Offer a weekly wage to sign this player:", size=12),
+                ft.Divider(rtl=theme.rtl(), height=1),
+                ft.Text("Offer a weekly wage to sign this player:", rtl=theme.rtl(), size=12),
                 wage_field,
             ]),
             width=280,
         ),
         actions=[
-            ft.TextButton("Cancel", on_click=lambda e: page.pop_dialog()),
-            ft.ElevatedButton("✅ Sign Player", on_click=sign_free,
+            ft.TextButton("Cancel", rtl=theme.rtl(), on_click=lambda e: page.pop_dialog()),
+            ft.ElevatedButton("✅ Sign Player", rtl=theme.rtl(), on_click=sign_free,
                               style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_800,
                                                     color=ft.Colors.WHITE,
                                                     shape=ft.RoundedRectangleBorder(radius=10))),
@@ -921,7 +891,7 @@ def _show_counter_dialog(page, conn, gs, neg):
     from src.core.transfers import submit_counter_response, cancel_negotiation
 
     offer_field = ft.TextField(
-        label="Your Revised Offer (EGP)", value=str(neg.counter_price),
+        border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label="Your Revised Offer (EGP)", value=str(neg.counter_price),
         width=220, text_size=14,
     )
 
@@ -955,27 +925,27 @@ def _show_counter_dialog(page, conn, gs, neg):
         navigate(page, "/transfers")
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"↩️ Counter-Offer: {neg.player_name}", color=theme.GOLD),
+        rtl=theme.rtl(), title=ft.Text(f"↩️ Counter-Offer: {neg.player_name}", rtl=theme.rtl(), color=theme.GOLD),
         content=ft.Container(
-            content=ft.Column(spacing=6, controls=[
-                ft.Text(f"From: {neg.from_club_name}", size=12, color=ft.Colors.GREY_400),
-                ft.Divider(height=1),
-                ft.Text(f"Your offer: {neg.current_offer:,} EGP", size=12),
+            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=6, controls=[
+                ft.Text(f"From: {neg.from_club_name}", rtl=theme.rtl(), size=12, color=ft.Colors.GREY_400),
+                ft.Divider(rtl=theme.rtl(), height=1),
+                ft.Text(f"Your offer: {neg.current_offer:,} EGP", rtl=theme.rtl(), size=12),
                 ft.Text(f"Their counter: {neg.counter_price:,} EGP",
-                         size=13, weight=ft.FontWeight.BOLD, color=theme.GOLD),
-                ft.Text(f"Attempt {neg.attempt}/{neg.max_attempts}", size=11,
+                         rtl=theme.rtl(), size=13, weight=ft.FontWeight.BOLD, color=theme.GOLD),
+                ft.Text(f"Attempt {neg.attempt}/{neg.max_attempts}", rtl=theme.rtl(), size=11,
                          color=ft.Colors.GREY_500),
-                ft.Divider(height=1),
+                ft.Divider(rtl=theme.rtl(), height=1),
                 ft.Text("You can accept their price, submit a new offer,\nor walk away.",
-                         size=10, color=ft.Colors.GREY_500),
+                         rtl=theme.rtl(), size=10, color=ft.Colors.GREY_500),
                 offer_field,
             ]),
             width=300,
         ),
         actions=[
-            ft.TextButton("❌ Walk Away", on_click=walk_away),
-            ft.OutlinedButton("✅ Accept Counter", on_click=accept_counter),
-            ft.ElevatedButton("📨 New Offer", on_click=submit_revised,
+            ft.TextButton("❌ Walk Away", rtl=theme.rtl(), on_click=walk_away),
+            ft.OutlinedButton("✅ Accept Counter", rtl=theme.rtl(), on_click=accept_counter),
+            ft.ElevatedButton("📨 New Offer", rtl=theme.rtl(), on_click=submit_revised,
                               style=ft.ButtonStyle(bgcolor=theme.ACCENT_DARK,
                                                     color=ft.Colors.WHITE,
                                                     shape=ft.RoundedRectangleBorder(radius=10))),
@@ -992,7 +962,7 @@ def _show_wage_dialog(page, conn, gs, neg):
     suggested_wage = int(neg.current_wage * 1.1)  # 10% raise as suggestion
 
     wage_field = ft.TextField(
-        label="Weekly Wage Offer (EGP)", value=str(suggested_wage),
+        border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label="Weekly Wage Offer (EGP)", value=str(suggested_wage),
         width=220, text_size=14,
     )
 
@@ -1019,34 +989,34 @@ def _show_wage_dialog(page, conn, gs, neg):
         navigate(page, "/transfers")
 
     dlg = ft.AlertDialog(
-        title=ft.Text(f"💰 Personal Terms: {neg.player_name}", color=theme.GOLD),
+        rtl=theme.rtl(), title=ft.Text(f"💰 Personal Terms: {neg.player_name}", rtl=theme.rtl(), color=theme.GOLD),
         content=ft.Container(
-            content=ft.Column(spacing=6, controls=[
-                ft.Text(f"✅ Transfer fee agreed: {neg.current_offer:,} EGP", size=12,
+            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=6, controls=[
+                ft.Text(f"✅ Transfer fee agreed: {neg.current_offer:,} EGP", rtl=theme.rtl(), size=12,
                          color=ft.Colors.GREEN_400),
-                ft.Divider(height=1),
-                ft.Text(f"Player's current wage: {neg.current_wage:,} EGP/wk", size=12),
+                ft.Divider(rtl=theme.rtl(), height=1),
+                ft.Text(f"Player's current wage: {neg.current_wage:,} EGP/wk", rtl=theme.rtl(), size=12),
                 *(
-                    [ft.Text(f"Last rejected offer: {neg.wage_offer:,} EGP/wk", size=11,
+                    [ft.Text(f"Last rejected offer: {neg.wage_offer:,} EGP/wk", rtl=theme.rtl(), size=11,
                               color=ft.Colors.RED_400)]
                     if neg.wage_offer > 0 else []
                 ),
                 *(
-                    [ft.Text(f"Player wants at least: ~{neg.counter_price:,} EGP/wk", size=11,
+                    [ft.Text(f"Player wants at least: ~{neg.counter_price:,} EGP/wk", rtl=theme.rtl(), size=11,
                               color=theme.GOLD)]
                     if neg.counter_price > 0 and neg.phase == "wage" else []
                 ),
-                ft.Divider(height=1),
+                ft.Divider(rtl=theme.rtl(), height=1),
                 ft.Text("Step 2: Agree personal terms with the player.\n"
                          "The player will respond the next day.",
-                         size=10, color=ft.Colors.GREY_500),
+                         rtl=theme.rtl(), size=10, color=ft.Colors.GREY_500),
                 wage_field,
             ]),
             width=300,
         ),
         actions=[
-            ft.TextButton("❌ Walk Away", on_click=walk_away),
-            ft.ElevatedButton("📨 Offer Wage", on_click=submit_wage,
+            ft.TextButton("❌ Walk Away", rtl=theme.rtl(), on_click=walk_away),
+            ft.ElevatedButton("📨 Offer Wage", rtl=theme.rtl(), on_click=submit_wage,
                               style=ft.ButtonStyle(bgcolor=theme.ACCENT_DARK,
                                                     color=ft.Colors.WHITE,
                                                     shape=ft.RoundedRectangleBorder(radius=10))),

@@ -42,13 +42,13 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
     page.navigation_bar = build_nav_bar(page, 1)
 
     if not app_state.db_conn or not app_state.game_state:
-        return ft.Column(controls=[ft.Text(t("no_game_loaded"))])
+        return ft.Column(rtl=theme.rtl(), controls=[ft.Text(t("no_game_loaded"), rtl=theme.rtl())])
 
     conn = app_state.db_conn
     gs = app_state.game_state
     club = queries.get_club(conn, gs.user_club_id)
     if not club:
-        return ft.Column(controls=[ft.Text(t("club_not_found_msg"))])
+        return ft.Column(rtl=theme.rtl(), controls=[ft.Text(t("club_not_found_msg"), rtl=theme.rtl())])
 
     formations = get_available_formations()
     mentality_options = [
@@ -106,24 +106,24 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
         return handler
 
     def _slider_row(label, value, attr_name, low_label="Low", high_label="High"):
-        return ft.Column(spacing=2, controls=[
+        return ft.Column(rtl=theme.rtl(), spacing=2, controls=[
             ft.Row(
-                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
-                    ft.Text(label, size=14, weight=ft.FontWeight.W_500),
-                    ft.Text(str(value), size=12, color=theme.ACCENT,
+                    ft.Text(label, rtl=theme.rtl(), size=14, weight=ft.FontWeight.W_500),
+                    ft.Text(str(value), rtl=theme.rtl(), size=12, color=theme.ACCENT,
                             weight=ft.FontWeight.BOLD),
                 ],
             ),
-            ft.Row(spacing=4, controls=[
-                ft.Text(low_label, size=11, color=theme.TEXT_MUTED),
+            ft.Row(rtl=theme.rtl(), spacing=4, controls=[
+                ft.Text(low_label, rtl=theme.rtl(), size=11, color=theme.TEXT_MUTED),
                 ft.Slider(
-                    min=1, max=10, divisions=9, value=value,
+                    rtl=theme.rtl(), min=1, max=10, divisions=9, value=value,
                     on_change_end=_make_slider_handler(attr_name, label),
                     expand=True,
                     active_color=theme.ACCENT,
                 ),
-                ft.Text(high_label, size=11, color=theme.TEXT_MUTED),
+                ft.Text(high_label, rtl=theme.rtl(), size=11, color=theme.TEXT_MUTED),
             ]),
         ])
 
@@ -150,17 +150,17 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
         preset_desc = t(f"{key}_desc") if t(f"{key}_desc") != f"[{key}_desc]" else preset.description
         preset_cards.append(
             ft.Card(
-                content=ft.Container(
-                    content=ft.ListTile(
-                        leading=ft.Icon(
+                rtl=theme.rtl(), content=ft.Container(
+                    rtl=theme.rtl(), content=ft.ListTile(
+                        rtl=theme.rtl(), leading=ft.Icon(
                             ft.Icons.CHECK_CIRCLE if is_active else ft.Icons.PLAY_ARROW,
-                            color=ft.Colors.GREEN_400 if is_active else ft.Colors.GREY_500,
+                            rtl=theme.rtl(), color=ft.Colors.GREEN_400 if is_active else ft.Colors.GREY_500,
                         ),
-                        title=ft.Text(preset_name, weight=ft.FontWeight.W_500,
+                        title=ft.Text(preset_name, rtl=theme.rtl(), weight=ft.FontWeight.W_500,
                                       size=13),
                         subtitle=ft.Text(
                             f"{preset.formation} · {preset_desc}",
-                            size=12, color=theme.TEXT_SECONDARY,
+                            rtl=theme.rtl(), size=12, color=theme.TEXT_SECONDARY,
                         ),
                         on_click=make_preset_handler(key),
                     ),
@@ -173,13 +173,13 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
         )
 
     return ft.Column(
-        expand=True,
+        rtl=theme.rtl(), expand=True,
         scroll=ft.ScrollMode.AUTO,
         controls=[
             ft.Container(
-                padding=theme.PAGE_PADDING,
+                rtl=theme.rtl(), padding=theme.PAGE_PADDING,
                 content=ft.Column(
-                    spacing=22,
+                    rtl=theme.rtl(), spacing=22,
                     controls=[
                         theme.header_bar(
                             title=t("tactics"),
@@ -191,17 +191,17 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                         ),
                         # Dropdowns
                         ft.Row(
-                            spacing=22,
+                            rtl=theme.rtl(), spacing=22,
                             controls=[
                                 ft.Dropdown(
-                                    label=t("formation"),
+                                    border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label=t("formation"),
                                     value=club.formation,
                                     options=[ft.dropdown.Option(f) for f in formations],
                                     on_select=on_formation_change,
                                     expand=True,
                                 ),
                                 ft.Dropdown(
-                                    label=t("mentality"),
+                                    border_radius=10, border_color=theme.GOLD_BORDER, focused_border_color=theme.ACCENT, filled=True, fill_color=theme.BG_MID, rtl=theme.rtl(), label=t("mentality"),
                                     value=club.mentality.name,
                                     options=mentality_options,
                                     on_select=on_mentality_change,
@@ -210,7 +210,7 @@ def build_tactics_screen(page: ft.Page) -> ft.Column:
                             ],
                         ),
                         # Pitch
-                        ft.Text(t("projected_lineup"), size=12, color=theme.TEXT_MUTED),
+                        ft.Text(t("projected_lineup"), rtl=theme.rtl(), size=12, color=theme.TEXT_MUTED),
                         pitch,
 
                         # Tactical Sliders (collapsible, expanded by default)
@@ -273,32 +273,32 @@ def _build_formation_pitch(formation: str, page: ft.Page = None, squad=None) -> 
             if p and page:
                 from src.ui.screens.squad import _show_player_detail
                 _show_player_detail(page, p, calculate_overall_rating(p))
-        markers.append(ft.Container(left=x / 100 * pw - 34, top=y / 100 * ph - 24,
+        markers.append(ft.Container(rtl=theme.rtl(), left=x / 100 * pw - 34, top=y / 100 * ph - 24,
             width=68, on_click=details if player else None,
             tooltip=display_name(player) if player else pos.value,
-            content=ft.Column(spacing=3, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
-                ft.Container(width=32, height=32, border_radius=9,
+            content=ft.Column(rtl=theme.rtl(), spacing=3, horizontal_alignment=ft.CrossAxisAlignment.CENTER, controls=[
+                ft.Container(rtl=theme.rtl(), width=32, height=32, border_radius=9,
                     bgcolor=theme.ACCENT if pos == Position.GK else "#F1F3ED",
                     alignment=ft.Alignment(0, 0),
                     content=ft.Text(str(player.shirt_number or i+1) if player else pos.value,
-                                    size=13, color="#142921", weight=ft.FontWeight.BOLD)),
-                ft.Container(padding=ft.padding.symmetric(horizontal=4, vertical=2),
+                                    rtl=theme.rtl(), size=13, color="#142921", weight=ft.FontWeight.BOLD)),
+                ft.Container(rtl=theme.rtl(), padding=ft.padding.symmetric(horizontal=4, vertical=2),
                     bgcolor="#122A26", border_radius=3,
-                    content=ft.Text(label, size=10, color="#FFFFFF", max_lines=1,
+                    content=ft.Text(label, rtl=theme.rtl(), size=10, color="#FFFFFF", max_lines=1,
                                     overflow=ft.TextOverflow.ELLIPSIS)),
             ])))
     cc = pw * .22
-    return ft.Container(alignment=ft.Alignment(0, 0), content=ft.Container(
-        padding=12, border_radius=16, bgcolor="#142E2A",
-        content=ft.Stack(width=pw, height=ph, controls=[
-            ft.Container(left=0, top=0, width=pw, height=ph,
+    return ft.Container(rtl=theme.rtl(), alignment=ft.Alignment(0, 0), content=ft.Container(
+        rtl=theme.rtl(), padding=12, border_radius=16, bgcolor="#142E2A",
+        content=ft.Stack(rtl=theme.rtl(), width=pw, height=ph, controls=[
+            ft.Container(rtl=theme.rtl(), left=0, top=0, width=pw, height=ph,
                          border=ft.border.all(1, lines), border_radius=4),
-            *[ft.Container(left=0, top=ph*i/8, width=pw, height=ph/8,
+            *[ft.Container(rtl=theme.rtl(), left=0, top=ph*i/8, width=pw, height=ph/8,
                            bgcolor="#14332D") for i in (0,2,4,6)],
-            ft.Container(left=0, top=ph/2, width=pw, height=1, bgcolor=lines),
-            ft.Container(left=(pw-cc)/2, top=(ph-cc)/2, width=cc, height=cc,
+            ft.Container(rtl=theme.rtl(), left=0, top=ph/2, width=pw, height=1, bgcolor=lines),
+            ft.Container(rtl=theme.rtl(), left=(pw-cc)/2, top=(ph-cc)/2, width=cc, height=cc,
                          border_radius=cc/2, border=ft.border.all(1, lines)),
-            *[ft.Container(left=pw*.22, top=y, width=pw*.56, height=ph*.15,
+            *[ft.Container(rtl=theme.rtl(), left=pw*.22, top=y, width=pw*.56, height=ph*.15,
                            border=ft.border.all(1, lines)) for y in (0,ph*.85)],
             *markers,
         ])))

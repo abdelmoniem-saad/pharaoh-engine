@@ -13,29 +13,24 @@ def section_tabs(page, labels, sections):
                 buttons[i].style = style(i == index)
             page.update()
         return handler
-    def style(selected):
-        return ft.ButtonStyle(
-            color=theme.TEXT_PRIMARY if selected else theme.TEXT_MUTED,
-            bgcolor=theme.BG_SURFACE if selected else ft.Colors.TRANSPARENT,
-            shape=ft.RoundedRectangleBorder(radius=8),
-            padding=ft.padding.symmetric(horizontal=10, vertical=12))
+    style = theme.tab_style
     for i, label in enumerate(labels):
         sections[i].visible = i == 0
-        buttons.append(ft.TextButton(label, expand=True, height=44,
+        buttons.append(ft.TextButton(label, rtl=theme.rtl(), expand=True, height=44,
                                     style=style(i == 0), on_click=choose(i)))
-    return ft.Container(padding=4, border_radius=12, bgcolor=theme.BG_DARK,
+    return ft.Container(rtl=theme.rtl(), padding=4, border_radius=12, bgcolor=theme.BG_DARK,
                         content=ft.Row(spacing=2, rtl=is_rtl(), controls=buttons))
 
 
 def metric(label, value, color=None):
-    return ft.Container(expand=True, padding=12, border_radius=10, bgcolor=theme.BG_SURFACE,
-        content=ft.Column(spacing=6, controls=[
-            ft.Text(str(value), size=28, font_family=theme.display_font(),
+    return ft.Container(rtl=theme.rtl(), expand=True, padding=12, border_radius=10, bgcolor=theme.BG_SURFACE,
+        content=ft.Column(rtl=theme.rtl(), spacing=6, controls=[
+            ft.Text(str(value), rtl=theme.rtl(), size=28, font_family=theme.display_font(),
                     color=color or theme.TEXT_PRIMARY),
-            ft.Text(label, size=11, color=theme.TEXT_MUTED),
+            ft.Text(label, rtl=theme.rtl(), size=11, color=theme.TEXT_MUTED),
         ]))
 
 
 def section_title(text):
-    return ft.Container(padding=ft.padding.only(top=10, bottom=4),
-        content=ft.Text(text, size=15, weight=ft.FontWeight.W_600, color=theme.TEXT_PRIMARY))
+    return ft.Container(rtl=theme.rtl(), padding=ft.padding.only(top=10, bottom=4),
+        content=ft.Text(text, rtl=theme.rtl(), size=15, weight=ft.FontWeight.W_600, color=theme.TEXT_PRIMARY))
