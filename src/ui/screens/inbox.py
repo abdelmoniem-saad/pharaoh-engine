@@ -9,6 +9,7 @@ from src.ui import theme
 from src.data import queries
 from src.ui.widgets.nav_bar import build_nav_bar
 from src.utils.localization import t, t_format
+from src.utils.inbox_localization import localize_message, entity_names
 
 
 # Category styling
@@ -41,6 +42,8 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
     gs = app_state.game_state
     messages = queries.get_inbox(conn, limit=30)
     unread = queries.get_unread_count(conn)
+    names = entity_names(conn)
+    displays = {msg.id: localize_message(msg, names=names) for msg in messages}
 
     msg_tiles = []
     if not messages:
@@ -101,13 +104,13 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                             # Content
                             ft.Column(rtl=theme.rtl(), spacing=2, expand=True, controls=[
                                 ft.Row(rtl=theme.rtl(), spacing=4, tight=True, controls=[
-                                    ft.Text(msg.subject, rtl=theme.rtl(), size=theme.BODY_SIZE, weight=title_weight,
+                                    ft.Text(displays[msg.id].subject, rtl=theme.rtl(), size=theme.BODY_SIZE, weight=title_weight,
                                             max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                             expand=True),
                                     *unread_badge,
                                 ]),
                                 ft.Text(
-                                    f"{msg.date.strftime('%d %b')} — {msg.body}",
+                                    f"{msg.date.strftime('%d / %m')} — {displays[msg.id].body}",
                                     rtl=theme.rtl(), size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY,
                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                 ),
@@ -186,13 +189,13 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                                 ),
                                 ft.Column(rtl=theme.rtl(), spacing=2, expand=True, controls=[
                                     ft.Row(rtl=theme.rtl(), spacing=4, tight=True, controls=[
-                                        ft.Text(msg.subject, rtl=theme.rtl(), size=theme.BODY_SIZE, weight=title_weight,
+                                        ft.Text(displays[msg.id].subject, rtl=theme.rtl(), size=theme.BODY_SIZE, weight=title_weight,
                                                 max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                                 expand=True),
                                         *unread_badge,
                                     ]),
                                     ft.Text(
-                                        f"{msg.date.strftime('%d %b')} — {msg.body}",
+                                        f"{msg.date.strftime('%d / %m')} — {displays[msg.id].body}",
                                         rtl=theme.rtl(), size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY,
                                         max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                     ),
@@ -287,7 +290,8 @@ def _show_message_detail(page: ft.Page, conn, msg):
 
     # Check if this is a transfer offer with parseable data
     actions = [ft.TextButton(t("close_btn"), rtl=theme.rtl(), on_click=close_handler)]
-    display_body = msg.body
+    localized = localize_message(msg, conn)
+    display_body = localized.body
 
     if msg.category == "transfer" and "TRANSFER_OFFER|" in msg.body:
         # Parse transfer offer: TRANSFER_OFFER|player_id|from_club|to_club|fee|wage
@@ -301,13 +305,15 @@ def _show_message_detail(page: ft.Page, conn, msg):
             fee = int(parts[3])
             wage = int(parts[4])
 
-            # Show body without the parseable line
-            display_body = msg.body.split("\nTRANSFER_OFFER|")[0]
-
             def accept_offer(e):
-                queries.transfer_player(conn, player_id, from_club_id, to_club_id,
-                                         fee=fee, wage=wage,
-                                         current_date=gs.current_date)
+                try:
+                    queries.transfer_player(conn, player_id, from_club_id, to_club_id,
+                                             fee=fee, wage=wage,
+                                             current_date=gs.current_date)
+                except ValueError:
+                    page.pop_dialog()
+                    show_snackbar(page, t("offer_unavailable"))
+                    return
                 if not msg.is_read:
                     queries.mark_message_read(conn, msg.id)
                 page.pop_dialog()
@@ -322,14 +328,14 @@ def _show_message_detail(page: ft.Page, conn, msg):
                 navigate(page, "/inbox")
 
             actions = [
-                ft.TextButton("❌ Decline", rtl=theme.rtl(), on_click=decline_offer),
-                ft.ElevatedButton("✅ Accept", rtl=theme.rtl(), on_click=accept_offer),
+                ft.TextButton(t("decline"), rtl=theme.rtl(), on_click=decline_offer),
+                ft.ElevatedButton(t("accept"), rtl=theme.rtl(), on_click=accept_offer),
             ]
         except (IndexError, ValueError):
             pass  # Not a valid offer format, show normally
 
     dlg = ft.AlertDialog(
-        rtl=theme.rtl(), title=ft.Text(f"{cat_emoji} {msg.subject}", rtl=theme.rtl(), size=16,
+        rtl=theme.rtl(), title=ft.Text(localized.subject, rtl=theme.rtl(), size=16,
                       weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
             rtl=theme.rtl(), content=ft.Column(
@@ -339,12 +345,12 @@ def _show_message_detail(page: ft.Page, conn, msg):
                             rtl=theme.rtl(), alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
                                 ft.Text(
-                                    msg.date.strftime("%A, %d %B %Y"),
+                                    msg.date.strftime("%d / %m / %Y"),
                                     rtl=theme.rtl(), size=11, color=ft.Colors.GREY_500,
                                 ),
                                 ft.Container(
                                     rtl=theme.rtl(), content=ft.Text(
-                                        msg.category.title(),
+                                        t({"general": "other_filter", "media": "media_filter", "transfer": "transfer_filter", "board": "board_filter", "match": "match_filter"}.get(msg.category, "other_filter")),
                                         rtl=theme.rtl(), size=9, color=theme.ACCENT,
                                         weight=ft.FontWeight.W_500,
                                     ),
@@ -361,6 +367,7 @@ def _show_message_detail(page: ft.Page, conn, msg):
                         margin=ft.margin.symmetric(vertical=4),
                     ),
                     ft.Container(rtl=theme.rtl(), height=3),
+                    *([ft.Text(t("inbox_original_notice"), rtl=theme.rtl(), size=12, color=theme.TEXT_WARNING)] if localized.has_original_text else []),
                     ft.Text(
                         display_body,
                         rtl=theme.rtl(), size=14,
@@ -369,8 +376,8 @@ def _show_message_detail(page: ft.Page, conn, msg):
                 spacing=4,
                 scroll=ft.ScrollMode.AUTO,
             ),
-            width=290,
-            height=250,
+            width=theme.dialog_width(page),
+            height=min(480, (page.height or 844) - 260),
         ),
         actions=actions,
     )

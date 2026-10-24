@@ -64,3 +64,39 @@ def test_language_toggle_and_reload_on_windows(monkeypatch, career):
             assert t('language_help') != '[language_help]'
     finally:
         set_language('en')
+
+
+def test_playback_saves_immediately_and_survives_rebuild(monkeypatch):
+    from src.ui.screens.settings import _load_settings
+    state = app.AppState()
+    state.db_conn = database.connect('speed-test')
+    monkeypatch.setattr(app, 'app_state', state)
+    page = SimpleNamespace(navigation_bar=None, rtl=False, update=lambda: None)
+    set_language('en')
+    screen = build_settings_screen(page)
+    dropdowns = [c for c in walk(screen) if isinstance(c, ft.Dropdown)]
+    assert len(dropdowns) == 1
+    speed = dropdowns[0]
+    speed.value = '5'
+    speed.on_select(SimpleNamespace(control=speed))
+    assert _load_settings(state.db_conn)['match_speed'] == 5
+    screen = build_settings_screen(page)
+    assert next(c for c in walk(screen) if isinstance(c, ft.Dropdown)).value == '5'
+
+
+def test_playback_write_failure_reverts_selection(monkeypatch):
+    from src.ui.screens import settings
+    state = app.AppState()
+    state.db_conn = database.connect('speed-failure')
+    monkeypatch.setattr(app, 'app_state', state)
+    page = SimpleNamespace(navigation_bar=None, rtl=False, update=lambda: None)
+    screen = build_settings_screen(page)
+    speed = next(c for c in walk(screen) if isinstance(c, ft.Dropdown))
+    previous = speed.value
+    def fail(*args):
+        raise OSError('disk full')
+    monkeypatch.setattr(settings, '_save_settings', fail)
+    speed.value = '5'
+    speed.on_select(SimpleNamespace(control=speed))
+    assert speed.value == previous
+    assert any(isinstance(c, ft.Text) and c.value == t('settings_save_failed') for c in walk(screen))
