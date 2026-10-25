@@ -11,6 +11,13 @@ _current_language = "en"
 # String tables keyed by language → key → display string
 _strings: dict[str, dict[str, str]] = {
     "en": {
+        "offer_state_pending": "Awaiting your decision",
+        "offer_state_accepted": "Offer accepted",
+        "offer_state_declined": "Offer declined",
+        "offer_state_expired": "Offer expired or no longer valid",
+        "offer_expiry": "Decision due before {date}",
+        "offer_save_failed": "Could not save the decision. No transfer was completed. Try again.",
+
         "offer_unavailable": "This offer is no longer available.",
         "settings_apply_immediately": "Changes save automatically",
         "settings_save_failed": "Could not save this change. Please try again.",
@@ -779,6 +786,13 @@ _strings: dict[str, dict[str, str]] = {
         "match_es": "{n} match(es)",
 },
     "ar": {
+        "offer_state_pending": "بانتظار قرارك",
+        "offer_state_accepted": "تم قبول العرض",
+        "offer_state_declined": "تم رفض العرض",
+        "offer_state_expired": "انتهت صلاحية العرض أو لم يعد صالحاً",
+        "offer_expiry": "يجب اتخاذ القرار قبل {date}",
+        "offer_save_failed": "تعذر حفظ القرار. لم يتم الانتقال. حاول مرة أخرى.",
+
         "offer_unavailable": "لم يعد هذا العرض متاحاً.",
         "settings_apply_immediately": "تُحفظ التغييرات تلقائياً",
         "settings_save_failed": "تعذر حفظ التغيير. حاول مرة أخرى.",

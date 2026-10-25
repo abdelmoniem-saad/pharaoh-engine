@@ -138,6 +138,9 @@ def show_breaking_news(page: ft.Page, headline: str,
                        body: str = "",
                        category: str = "general") -> None:
     """Show a prominent 'Breaking News' banner that auto-dismisses."""
+    from src.utils.inbox_localization import display_news
+    headline = display_news(headline, app_state.db_conn)
+    body = display_news(body, app_state.db_conn)
     accent = _NOTIFY_COLORS.get(category, theme.ACCENT)
 
     banner = ft.Container(
@@ -146,7 +149,7 @@ def show_breaking_news(page: ft.Page, headline: str,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
                 ft.Container(
-                    rtl=theme.rtl(), content=ft.Text("⚡ BREAKING NEWS", rtl=theme.rtl(), size=9,
+                    rtl=theme.rtl(), content=ft.Text(display_news("⚡ BREAKING NEWS"), rtl=theme.rtl(), size=9,
                                     weight=ft.FontWeight.BOLD,
                                     color=ft.Colors.BLACK,
                                     text_align=ft.TextAlign.CENTER),

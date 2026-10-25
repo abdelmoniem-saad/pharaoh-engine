@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import flet as ft
 from src.ui import theme
+from src.utils.inbox_localization import display_news
 
 from src.data import queries
 from src.data.models import MatchResult, MatchdayOutcome, InboxMessage
@@ -440,8 +441,8 @@ def _show_press_conference(page, conn, gs, result, is_home):
         answer_buttons.append(
             ft.Container(
                 rtl=theme.rtl(), content=ft.ListTile(
-                    rtl=theme.rtl(), title=ft.Text(f'"{answer_text}"', rtl=theme.rtl(), size=13),
-                    subtitle=ft.Text(f"({tone})", rtl=theme.rtl(), size=10, color=ft.Colors.GREY_500),
+                    rtl=theme.rtl(), title=ft.Text(display_news(answer_text, conn), rtl=theme.rtl(), size=13),
+                    subtitle=ft.Text(display_news(tone), rtl=theme.rtl(), size=10, color=ft.Colors.GREY_500),
                     on_click=make_answer_handler(answer_text, tone, board_change, fan_change),
                 ),
                 bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.WHITE),
@@ -461,7 +462,7 @@ def _show_press_conference(page, conn, gs, result, is_home):
                 rtl=theme.rtl(), spacing=8,
                 controls=[
                     ft.Container(
-                        rtl=theme.rtl(), content=ft.Text(f'"{question_text}"', rtl=theme.rtl(), size=14, italic=True),
+                        rtl=theme.rtl(), content=ft.Text(display_news(question_text, conn), rtl=theme.rtl(), size=14, italic=True),
                         padding=10,
                         bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.BLUE),
                         border_radius=8,

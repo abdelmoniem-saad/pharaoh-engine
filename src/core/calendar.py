@@ -51,6 +51,8 @@ def advance_day(conn: sqlite3.Connection, game_state: GameState,
     messages: list[str] = []
     game_state.current_date += timedelta(days=1)
     game_state.day_count += 1
+    from src.core.incoming_offers import refresh_offers
+    refresh_offers(conn, game_state.current_date)
 
     # Check if today is a match day (league)
     is_match_day = False

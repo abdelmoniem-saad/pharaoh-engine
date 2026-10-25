@@ -831,4 +831,15 @@ _MIGRATIONS = [
         # Scouting knowledge: a player here has had his true ability revealed
         "CREATE TABLE IF NOT EXISTS scouting_reports (player_id INTEGER PRIMARY KEY, scouted_on TEXT NOT NULL DEFAULT '')",
     ]),
+    (16, [
+        """CREATE TABLE IF NOT EXISTS incoming_offers (
+            message_id INTEGER PRIMARY KEY REFERENCES inbox(id),
+            player_id INTEGER NOT NULL, seller_id INTEGER NOT NULL,
+            buyer_id INTEGER NOT NULL, fee INTEGER NOT NULL CHECK(fee>=0),
+            wage INTEGER NOT NULL CHECK(wage>=0), expires_on TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted','declined','expired')),
+            resolved_on TEXT
+        )""",
+    ]),
+
 ]

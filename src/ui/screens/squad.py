@@ -551,6 +551,7 @@ def _talk_to_player(page, player_id, player_name):
     from src.core.player import get_morale_description
     from src.data.models import InboxMessage
     from src.utils import rng
+    from src.utils.inbox_localization import display_news
 
     conn = app_state.db_conn
     gs = app_state.game_state
@@ -628,7 +629,7 @@ def _talk_to_player(page, player_id, player_name):
                 category="general",
             ))
 
-            result_text.value = feedback
+            result_text.value = display_news(feedback, conn)
             result_text.color = (ft.Colors.GREEN_400 if morale_change > 0
                                   else ft.Colors.RED_400 if morale_change < 0
                                   else ft.Colors.GREY_400)
@@ -640,8 +641,8 @@ def _talk_to_player(page, player_id, player_name):
         talk_buttons.append(
             ft.Container(
                 rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=1, controls=[
-                    ft.Text(label, rtl=theme.rtl(), size=13, weight=ft.FontWeight.W_500),
-                    ft.Text(msg, rtl=theme.rtl(), size=10, color=ft.Colors.GREY_500, italic=True),
+                    ft.Text(display_news(label, conn), rtl=theme.rtl(), size=13, weight=ft.FontWeight.W_500),
+                    ft.Text(display_news(msg, conn), rtl=theme.rtl(), size=10, color=ft.Colors.GREY_500, italic=True),
                 ]),
                 padding=ft.padding.symmetric(horizontal=10, vertical=10),
                 border_radius=10,
@@ -653,12 +654,12 @@ def _talk_to_player(page, player_id, player_name):
         )
 
     dlg = ft.AlertDialog(
-        rtl=theme.rtl(), title=ft.Text(f"🗣️ Talk to {player_name}", rtl=theme.rtl(), size=15,
+        rtl=theme.rtl(), title=ft.Text(display_news(f"🗣️ Talk to {player_name}", conn), rtl=theme.rtl(), size=15,
                        weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
             rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=6, controls=[
-                ft.Text(f"Current mood: {morale_desc}", rtl=theme.rtl(), size=12, color=ft.Colors.GREY_400),
-                ft.Text(f"Morale: {player.morale}/100", rtl=theme.rtl(), size=12),
+                ft.Text(display_news(f"Current mood: {morale_desc}", conn), rtl=theme.rtl(), size=12, color=ft.Colors.GREY_400),
+                ft.Text(display_news(f"Morale: {player.morale}/100", conn), rtl=theme.rtl(), size=12),
                 ft.Divider(rtl=theme.rtl(), height=1),
                 *talk_buttons,
                 ft.Divider(rtl=theme.rtl(), height=1),
@@ -667,7 +668,7 @@ def _talk_to_player(page, player_id, player_name):
             width=290, height=320,
         ),
         actions=[
-            ft.TextButton("Done", rtl=theme.rtl(), on_click=lambda e: (page.pop_dialog(), navigate(page, "/squad"))),
+            ft.TextButton(display_news("Done"), rtl=theme.rtl(), on_click=lambda e: (page.pop_dialog(), navigate(page, "/squad"))),
         ],
     )
     page.show_dialog(dlg)

@@ -184,6 +184,9 @@ def entity_names(conn):
     for table in ("players", "clubs"):
         for row in conn.execute(f"SELECT name, name_ar FROM {table} WHERE name_ar != ''"):
             names[row[0]] = row[1]
+    for row in conn.execute("SELECT short_name, name_ar FROM clubs WHERE name_ar != ''"):
+        if row[0]:
+            names[row[0]] = row[1]
     return names
 
 
@@ -202,12 +205,14 @@ def visible_body(body):
         if not re.match(r"^(TRANSFER_OFFER|FEE_AGREED|COUNTER_OFFER|WAGE_REJECTED)\|", line.strip()))
 
 
-def translate_text(text, names=None):
+def translate_text(text, names=None, _depth=0):
     names = names or {}
-    def values(value):
+    def values(value, nested=True):
+        if nested and _depth < 4:
+            value = translate_text(value, names, _depth + 1)[0]
         for source, target in sorted(names.items(), key=lambda pair: len(pair[0]), reverse=True):
             value = value.replace(source, target)
-        for source, target in TERMS.items():
+        for source, target in sorted(TERMS.items(), key=lambda pair: len(pair[0]), reverse=True):
             value = re.sub(r"(?<![A-Za-z])" + re.escape(source) + r"(?![A-Za-z])", lambda m: target, value)
         return value
     output, missing = [], False
@@ -236,7 +241,7 @@ def translate_text(text, names=None):
             if translated is not None:
                 break
         if translated is None:
-            translated = values(prose)
+            translated = values(prose, nested=False)
             # Numeric result/player lines are factual data, not untranslated prose.
             remaining = prose
             for name in names:
@@ -249,6 +254,21 @@ def translate_text(text, names=None):
 
 
 TERMS = {
+    "Ecstatic": "سعيد للغاية", "Happy": "سعيد", "Content": "راضٍ", "Unsettled": "قلق", "Unhappy": "غير سعيد", "Furious": "غاضب",
+    "wants to leave — no playing time": "يريد الرحيل بسبب غياب المشاركة", "wants more playing time": "يريد مشاركة أكبر",
+    "injured": "مصاب", "suspended": "موقوف",
+    "Fee": "المقابل المالي", "Personal Terms": "الشروط الشخصية",
+    "Untouchable": "راسخة", "Secure": "آمنة", "Uncertain": "مترددة",
+    "Under Pressure": "تحت الضغط", "On the Brink": "على حافة الإقالة",
+    "Top 4 Finish": "إنهاء الموسم ضمن الأربعة الأوائل", "Top Half Finish": "إنهاء الموسم في النصف الأعلى",
+    "Mid-Table Finish": "إنهاء الموسم في وسط الجدول", "high": "مهم", "medium": "متوسط الأهمية", "low": "منخفض الأهمية",
+    "Hamstring": "العضلة الخلفية", "Ankle": "الكاحل", "Knee": "الركبة", "Groin": "العضلة الضامة",
+    "Calf": "السمانة", "Thigh": "الفخذ", "Shoulder": "الكتف", "Back": "الظهر", "Concussion": "ارتجاج",
+    "GK": "حارس", "CB": "قلب دفاع", "LB": "ظهير أيسر", "RB": "ظهير أيمن", "CDM": "ارتكاز",
+    "CM": "وسط", "CAM": "وسط هجومي", "LM": "وسط أيسر", "RM": "وسط أيمن", "LW": "جناح أيسر", "RW": "جناح أيمن", "ST": "مهاجم",
+    "Finisher": "الهداف", "Playmaker": "صانع اللعب", "Engine": "اللياقة", "Rock": "الصخرة الدفاعية", "Speedster": "السرعة",
+    "finisher": "الهداف", "playmaker": "صانع اللعب", "engine": "اللياقة", "rock": "الصخرة الدفاعية", "speedster": "السرعة",
+    "conv_st": "التحول لمهاجم", "conv_cdm": "التحول لارتكاز", "conv_cb": "التحول لقلب دفاع", "conv_cm": "التحول لوسط",
     "Stable": "مستقرة",
     "hamstring": "شد في العضلة الخلفية", "ankle": "إصابة في الكاحل", "knee": "إصابة في الركبة",
     "Egyptian Premier League": "الدوري المصري الممتاز", "Egypt Cup": "كأس مصر",
@@ -277,4 +297,11 @@ TERMS = {
 }
 
 
+from src.utils.news_ar import CATALOG as NEWS_CATALOG
+CATALOG.update(NEWS_CATALOG)
 PATTERNS = [(_compile(source), target) for source, target in CATALOG.items()]
+
+
+def display_news(text, conn=None):
+    """Use the same catalog for live dialogs and archived messages."""
+    return translate_text(text, entity_names(conn) if conn else {})[0] if get_language() == 'ar' else text

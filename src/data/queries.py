@@ -689,6 +689,8 @@ def insert_message(conn: sqlite3.Connection, msg: InboxMessage) -> int:
         INSERT INTO inbox (message_date, subject, body, category, is_read)
         VALUES (?, ?, ?, ?, ?)
     """, (msg.date.isoformat(), msg.subject, msg.body, msg.category, int(msg.is_read)))
+    from src.core.incoming_offers import import_letter
+    import_letter(conn, cursor.lastrowid, msg.date.isoformat(), msg.body)
     conn.commit()
     return cursor.lastrowid
 
@@ -854,7 +856,7 @@ def transfer_player(conn: sqlite3.Connection, player_id: int,
     # Look up the player's current wage so we can adjust wage bills
     row = conn.execute("SELECT wage_weekly, club_id FROM players WHERE id = ?",
                        (player_id,)).fetchone()
-    if row is None or row["club_id"] != from_club_id or from_club_id == to_club_id:
+    if row is None or (row["club_id"] or 0) != (from_club_id or 0) or from_club_id == to_club_id:
         raise ValueError("Player is no longer available from this club")
     old_wage = row["wage_weekly"] if row else 0
 

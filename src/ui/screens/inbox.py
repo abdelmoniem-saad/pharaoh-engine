@@ -40,10 +40,16 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
 
     conn = app_state.db_conn
     gs = app_state.game_state
+    from src.core.incoming_offers import refresh_offers
+    refresh_offers(conn, gs.current_date)
     messages = queries.get_inbox(conn, limit=30)
     unread = queries.get_unread_count(conn)
     names = entity_names(conn)
     displays = {msg.id: localize_message(msg, names=names) for msg in messages}
+    offer_states = {row[0]: row[1] for row in conn.execute("SELECT message_id,status FROM incoming_offers")}
+    def preview(msg):
+        status = t("offer_state_" + offer_states[msg.id]) + " — " if msg.id in offer_states else ""
+        return f"{msg.date.strftime('%d / %m')} — {status}{displays[msg.id].body}"
 
     msg_tiles = []
     if not messages:
@@ -110,7 +116,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                                     *unread_badge,
                                 ]),
                                 ft.Text(
-                                    f"{msg.date.strftime('%d / %m')} — {displays[msg.id].body}",
+                                    preview(msg),
                                     rtl=theme.rtl(), size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY,
                                     max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                 ),
@@ -195,7 +201,7 @@ def build_inbox_screen(page: ft.Page) -> ft.Column:
                                         *unread_badge,
                                     ]),
                                     ft.Text(
-                                        f"{msg.date.strftime('%d / %m')} — {displays[msg.id].body}",
+                                        preview(msg),
                                         rtl=theme.rtl(), size=theme.CAPTION_SIZE, color=theme.TEXT_SECONDARY,
                                         max_lines=1, overflow=ft.TextOverflow.ELLIPSIS,
                                     ),
@@ -293,46 +299,31 @@ def _show_message_detail(page: ft.Page, conn, msg):
     localized = localize_message(msg, conn)
     display_body = localized.body
 
-    if msg.category == "transfer" and "TRANSFER_OFFER|" in msg.body:
-        # Parse transfer offer: TRANSFER_OFFER|player_id|from_club|to_club|fee|wage
-        try:
-            from src.ui.app import app_state
-            gs = app_state.game_state
-            parts = msg.body.split("TRANSFER_OFFER|")[1].split("|")
-            player_id = int(parts[0])
-            from_club_id = int(parts[1])
-            to_club_id = int(parts[2])
-            fee = int(parts[3])
-            wage = int(parts[4])
-
-            def accept_offer(e):
-                try:
-                    queries.transfer_player(conn, player_id, from_club_id, to_club_id,
-                                             fee=fee, wage=wage,
-                                             current_date=gs.current_date)
-                except ValueError:
+    from src.core.incoming_offers import refresh_offers, get_offer, decide_offer
+    from src.ui.app import app_state
+    gs = app_state.game_state
+    refresh_offers(conn, gs.current_date)
+    offer = get_offer(conn, msg.id)
+    if offer:
+        display_body += "\n\n" + t("offer_state_" + offer["status"])
+        display_body += "\n" + t("offer_expiry").format(date=offer["expires_on"])
+        if offer["status"] == "pending" and offer["seller_id"] == gs.user_club_id:
+            def decide(decision):
+                def handler(e):
+                    try:
+                        state = decide_offer(conn, msg.id, decision, gs.current_date, gs.user_club_id)
+                    except Exception:
+                        show_snackbar(page, t("offer_save_failed"))
+                        return
                     page.pop_dialog()
-                    show_snackbar(page, t("offer_unavailable"))
-                    return
-                if not msg.is_read:
-                    queries.mark_message_read(conn, msg.id)
-                page.pop_dialog()
-                show_snackbar(page, f"✅ {t_format('transfer_accepted', fee=f'{fee:,}')}")
-                navigate(page, "/inbox")
-
-            def decline_offer(e):
-                if not msg.is_read:
-                    queries.mark_message_read(conn, msg.id)
-                page.pop_dialog()
-                show_snackbar(page, f"❌ {t('offer_declined')}")
-                navigate(page, "/inbox")
-
+                    show_snackbar(page, t("offer_state_" + state) if state != "unavailable" else t("offer_unavailable"))
+                    navigate(page, "/inbox")
+                return handler
             actions = [
-                ft.TextButton(t("decline"), rtl=theme.rtl(), on_click=decline_offer),
-                ft.ElevatedButton(t("accept"), rtl=theme.rtl(), on_click=accept_offer),
+                ft.TextButton(t("close_btn"), rtl=theme.rtl(), on_click=close_handler),
+                ft.TextButton(t("decline"), rtl=theme.rtl(), on_click=decide("declined")),
+                ft.ElevatedButton(t("accept"), rtl=theme.rtl(), on_click=decide("accepted")),
             ]
-        except (IndexError, ValueError):
-            pass  # Not a valid offer format, show normally
 
     dlg = ft.AlertDialog(
         rtl=theme.rtl(), title=ft.Text(localized.subject, rtl=theme.rtl(), size=16,

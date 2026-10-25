@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import flet as ft
 from src.ui import theme
+from src.utils.inbox_localization import display_news
 
 from src.data import queries
 from src.core.calendar import simulate_user_match, advance_to_next_match, advance_day
@@ -827,7 +828,7 @@ def _show_event_dialog(page, event):
                 gs = app_state.game_state
                 if conn and gs:
                     response = apply_event_choice(conn, gs, event, idx)
-                    show_snackbar(page, response[:80], bgcolor=theme.ACCENT_DARK)
+                    show_snackbar(page, display_news(response, conn)[:80], bgcolor=theme.ACCENT_DARK)
                 page.pop_dialog()
             return handler
 
@@ -849,12 +850,12 @@ def _show_event_dialog(page, event):
             hints.append(f"😊+{choice.morale_delta}")
         elif choice.morale_delta < 0:
             hints.append(f"😊{choice.morale_delta}")
-        hint_text = "  ".join(hints) if hints else ""
+        hint_text = "\u2066" + "  ".join(hints) + "\u2069" if hints else ""
 
         choice_buttons.append(
             ft.Container(
                 rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=2, controls=[
-                    ft.Text(choice.text, rtl=theme.rtl(), size=13, weight=ft.FontWeight.W_500),
+                    ft.Text(display_news(choice.text, app_state.db_conn), rtl=theme.rtl(), size=13, weight=ft.FontWeight.W_500),
                     ft.Text(hint_text, rtl=theme.rtl(), size=9, color=ft.Colors.GREY_500) if hint_text else ft.Container(rtl=theme.rtl()),
                 ]),
                 padding=ft.padding.symmetric(horizontal=12, vertical=12),
@@ -867,11 +868,12 @@ def _show_event_dialog(page, event):
         )
 
     dlg = ft.AlertDialog(
-        rtl=theme.rtl(), title=ft.Text(event.title, rtl=theme.rtl(), size=16, weight=ft.FontWeight.BOLD, color=theme.GOLD),
+        rtl=theme.rtl(), title=ft.Text(display_news(event.title, app_state.db_conn), rtl=theme.rtl(), size=16, weight=ft.FontWeight.BOLD, color=theme.GOLD),
         content=ft.Container(
-            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=8, controls=[
+            rtl=theme.rtl(), content=ft.Column(rtl=theme.rtl(), spacing=8, horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                scroll=ft.ScrollMode.AUTO, controls=[
                 ft.Container(
-                    rtl=theme.rtl(), content=ft.Text(event.body, rtl=theme.rtl(), size=13),
+                    rtl=theme.rtl(), content=ft.Text(display_news(event.body, app_state.db_conn), rtl=theme.rtl(), size=13),
                     padding=10,
                     border_radius=8,
                     bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.BLUE),
@@ -880,7 +882,7 @@ def _show_event_dialog(page, event):
                 ft.Text(t("choose_your_response"), rtl=theme.rtl(), size=12, color=ft.Colors.GREY_400),
                 *choice_buttons,
             ]),
-            width=300, height=min(320, 100 + len(event.choices) * 65),
+            width=theme.dialog_width(page), height=min(420, (page.height or 844) - 240),
         ),
     )
     page.show_dialog(dlg)
